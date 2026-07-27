@@ -4,3 +4,99 @@
 
 .notice form{margin:0}
 .form-error{display:block;margin:-2px 0 10px;color:#b95353;font-size:11px;line-height:1.5}
+
+/* ===== Приложение (M2): аутентификация, оболочка, дневник ===== */
+
+.link-button{border:0;background:transparent;font-size:12px;font-weight:700;text-decoration:underline;color:var(--muted)}
+.danger-button{border:1px solid #b95353;background:transparent;color:#b95353;border-radius:3px;padding:11px 16px;font-size:11px;font-weight:800}
+
+/* Аутентификация */
+.auth-page{min-height:100vh;display:grid;place-items:center;padding:24px}
+.auth-card{width:min(400px,100%);background:var(--white);border:1px solid var(--line);padding:36px}
+.auth-card h1{margin:22px 0 8px;font:500 42px/.95 var(--serif);letter-spacing:-.04em}
+.auth-lead{color:var(--muted);font-size:13px;line-height:1.6;margin:0 0 8px}
+.auth-card form{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+.auth-card label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:700;color:var(--muted)}
+.auth-card input{padding:12px;border:1px solid var(--line);background:white;outline-color:var(--coral);font-size:14px}
+.auth-switch{margin-top:18px;font-size:12px;color:var(--muted)}
+.auth-switch a{text-decoration:underline}
+
+/* Оболочка приложения */
+.shell{min-height:100vh}
+.shell-header{height:64px;padding:0 max(20px,calc((100% - 960px)/2));display:flex;align-items:center;gap:28px;background:var(--white);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
+.shell-nav{display:flex;gap:20px;margin-left:8px}
+.shell-nav a{font-size:12px;font-weight:700}
+.shell-header form{margin-left:auto}
+.shell-content{max-width:960px;margin:0 auto;padding:28px 20px 80px}
+
+/* День */
+.day-nav{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.day-nav h1{font:500 30px/1 var(--serif);letter-spacing:-.03em;margin:0;flex:1;text-align:center}
+.day-nav a{font-size:20px;padding:6px 12px;border:1px solid var(--line);background:var(--white)}
+.day-totals,.draft-summary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px}
+.day-totals div,.draft-summary div{flex:1;min-width:96px;background:var(--white);border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:2px}
+.day-totals strong,.draft-summary strong{font:600 24px var(--serif)}
+.day-totals span,.draft-summary span{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.day-empty{background:var(--white);border:1px solid var(--line);padding:32px;display:flex;flex-direction:column;gap:18px;align-items:flex-start}
+.day-empty p{margin:0;color:var(--muted);line-height:1.6;max-width:420px}
+.day-meals{display:flex;flex-direction:column;gap:10px}
+.day-meal{display:flex;align-items:center;gap:16px;background:var(--white);border:1px solid var(--line);padding:16px}
+.day-meal time{font-size:12px;font-weight:700;color:var(--muted);width:44px}
+.day-meal>div{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.day-meal b{font-size:14px}
+.day-meal span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.day-meal strong{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font:600 18px var(--serif);white-space:nowrap}
+.day-meal strong em{font:400 11px var(--sans);color:var(--muted);font-style:normal}
+.day-add{align-self:flex-start;margin-top:12px}
+.black-button{display:inline-flex;align-items:center;text-decoration:none}
+
+/* Добавление еды */
+.addflow h1{font:500 34px/1 var(--serif);letter-spacing:-.03em;margin:0 0 14px}
+.addflow-hint{color:var(--muted);font-size:13px;line-height:1.6;margin:0 0 18px}
+.addflow-tabs{display:flex;gap:8px;margin-bottom:14px}
+.addflow-tabs button{border:1px solid var(--line);background:var(--white);padding:9px 18px;font-size:12px;font-weight:700}
+.addflow-tabs button.active{background:var(--black);color:white;border-color:var(--black)}
+.addflow textarea,.addflow-photo input[type=text]{width:100%;padding:13px;border:1px solid var(--line);background:white;outline-color:var(--coral);font-size:14px;line-height:1.5}
+.addflow-photo{display:flex;flex-direction:column;gap:12px}
+.addflow-photo img{max-width:320px;max-height:240px;object-fit:cover;border:1px solid var(--line)}
+.addflow-actions{display:flex;align-items:center;gap:18px;margin-top:18px}
+.clarification{background:var(--lime);padding:16px;margin-bottom:14px}
+.clarification p{margin:0 0 10px;font:500 17px var(--serif)}
+.clarification div{display:flex;gap:8px;flex-wrap:wrap}
+.clarification button{border:1px solid var(--black);background:transparent;border-radius:999px;padding:7px 15px;font-size:12px;font-weight:700}
+.draft-items{display:flex;flex-direction:column;gap:10px;align-items:flex-start;margin-bottom:20px}
+.draft-item{width:100%;background:var(--white);border:1px solid var(--line);padding:12px 14px}
+.draft-item-main{display:flex;gap:10px;align-items:center}
+.draft-item-main input[type=text]{flex:1;padding:9px;border:1px solid var(--line);font-size:14px;min-width:0}
+.draft-grams{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.draft-grams input{width:68px;padding:9px;border:1px solid var(--line);font-size:14px}
+.draft-remove{border:0;background:transparent;font-size:18px;color:var(--muted);padding:4px}
+.draft-item-meta{display:flex;align-items:center;gap:14px;margin-top:8px;font-size:12px;color:var(--muted)}
+.draft-item-meta i{font-style:normal;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:10px;font-weight:700}
+.draft-item-meta details{margin-left:auto}
+.draft-item-meta summary{cursor:pointer;font-size:11px;text-decoration:underline}
+.per100-grid{display:flex;gap:10px;flex-wrap:wrap;padding-top:10px}
+.per100-grid label{display:flex;flex-direction:column;gap:4px;font-size:10px;font-weight:700}
+.per100-grid input{width:72px;padding:7px;border:1px solid var(--line)}
+.draft-meta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+.draft-meta label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:700;color:var(--muted)}
+.draft-meta input,.draft-meta select{padding:10px;border:1px solid var(--line);background:white;font-size:14px}
+
+/* Детали приёма */
+.back-link{font-size:12px;font-weight:700;color:var(--muted)}
+.meal-detail h1{font:500 30px/1 var(--serif);letter-spacing:-.03em;margin:12px 0 18px}
+.meal-photo{max-width:420px;width:100%;border:1px solid var(--line);margin-bottom:14px}
+.meal-source{color:var(--muted);font-size:13px;font-style:italic;margin:0 0 18px}
+.meal-items{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--line);font-size:13px;margin-bottom:20px}
+.meal-items th{text-align:left;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.meal-items th,.meal-items td{padding:11px 14px;border-bottom:1px solid var(--line)}
+.meal-items td i{font-style:normal;font-size:11px;color:var(--coral)}
+.meal-items tfoot td{font-weight:700;border-bottom:0}
+.meal-detail-actions{display:flex;gap:18px;align-items:center}
+
+/* Настройки */
+.settings h1{font:500 34px/1 var(--serif);letter-spacing:-.03em;margin:0 0 20px}
+.settings-block{background:var(--white);border:1px solid var(--line);padding:20px;margin-bottom:14px;max-width:560px}
+.settings-label{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.settings-block p{margin:0 0 12px;font-size:14px;line-height:1.6}
+a.header-cta{display:inline-flex;align-items:center}

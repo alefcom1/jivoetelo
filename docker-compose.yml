@@ -22,6 +22,13 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://jivoetelo:${POSTGRES_PASSWORD}@db:5432/jivoetelo
+      UPLOADS_DIR: /app/data/uploads
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+      AI_PROVIDER: ${AI_PROVIDER:-}
+      APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Moscow}
+    volumes:
+      - uploads:/app/data
     # Наружу порт не открываем: TLS и домен обслуживает reverse proxy на VPS
     # (см. docs/deploy-vps.md).
     ports:
@@ -29,3 +36,4 @@ services:
 
 volumes:
   pgdata:
+  uploads:

@@ -22,7 +22,7 @@ cp .env.example .env
 docker compose up -d --build
 
 # применить миграции (пока вручную, по одному файлу в порядке номеров):
-docker compose exec -T db psql -U jivoetelo -d jivoetelo < drizzle/0000_init-waitlist.sql
+for f in drizzle/*.sql; do docker compose exec -T db psql -U jivoetelo -d jivoetelo < "$f"; done
 ```
 
 Проверка: `curl -I http://127.0.0.1:3000` должен вернуть `200`.

@@ -24,7 +24,7 @@ export default function Home() {
       <nav className="main-nav" aria-label="Навигация">
         {navItems.map((item, index) => <button key={item} onClick={() => index < 2 ? setMenu(!menu) : document.getElementById(index === 2 ? "journal" : "about")?.scrollIntoView({ behavior: "smooth" })}>{item}{index < 2 && <small>⌄</small>}</button>)}
       </nav>
-      <div className="header-actions"><button className="login" onClick={() => setNotice(true)}>Войти</button><button className="header-cta" onClick={() => setNotice(true)}>Начать <b>↗</b></button></div>
+      <div className="header-actions"><a className="login" href="/login">Войти</a><a className="header-cta" href="/register">Начать <b>↗</b></a></div>
       {menu && <div className="mega-menu"><div><p>Продукт</p><a href="#experience">Дневник питания <b>→</b></a><a href="#experience">Персональный план <b>→</b></a><a href="#experience">Прогресс и привычки <b>→</b></a></div><div><p>Решения</p><a href="#specialists">Для себя <b>→</b></a><a href="#specialists">Для специалистов <b>→</b></a><a href="#specialists">Для команд <b>→</b></a></div><aside>Не «идеальный» рацион.<br /><em>Ваш устойчивый ритм.</em></aside></div>}
     </header>
 
