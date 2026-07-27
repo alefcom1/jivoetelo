@@ -45,6 +45,18 @@ The current food photography uses remote Unsplash images as a visual prototype. 
 
 Login, registration, contact and waitlist controls are visual product prototypes. Connect them to the production authentication, database and notification services before collecting real user information.
 
+## Validation before merge
+
+Run the following in a networked development environment or repository preview runner:
+
+```bash
+npm install
+npm run lint
+npm test
+```
+
+Review desktop and mobile routes, keyboard navigation in the mega menu, form focus states and the responsive layouts before merging the redesign PR.
+
 ## Included starter infrastructure
 
 The repository retains optional Cloudflare D1 and Drizzle support from the vinext starter. `.openai/hosting.json` declares optional Sites bindings and `vite.config.ts` supports local development.
