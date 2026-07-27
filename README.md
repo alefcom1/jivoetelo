@@ -32,6 +32,8 @@ npm test
 - `/login` — login UI prototype
 - `/register` — early-access registration UI prototype
 
+Every desktop mega-menu item, mobile navigation item and footer link resolves to one of these routes or a documented section anchor.
+
 ## Design system
 
 - `app/globals.css` contains the original homepage tokens and component styling.
