@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import { SiteFooter, SiteHeader } from "./components/site-chrome";
 import "./globals.css";
+import "./marketing.css";
 
 const display = Cormorant_Garamond({
   variable: "--font-display",
