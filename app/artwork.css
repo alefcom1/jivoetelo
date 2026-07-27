@@ -1,0 +1,126 @@
+/* JIVELO approved-artwork integration: premium card visuals, pricing previews, launch CTA and footer */
+
+/* 01–03 product principle cards */
+.bento{gap:20px}
+.bento article{min-height:620px;padding:30px 30px 300px;border:1px solid rgba(32,35,31,.07);box-shadow:0 20px 54px rgba(32,35,31,.07)}
+.bento article h3{margin:74px 0 14px;max-width:92%;font-size:34px!important;line-height:1.02!important}
+.bento article p{max-width:92%;font-size:11px;line-height:1.65}
+.bento .dark{background:linear-gradient(160deg,#304967,#263b57)!important}
+.bento .blue{background:linear-gradient(160deg,#f1f3ff,#e8ecff)!important}
+.bento .coral{background:linear-gradient(160deg,#fff0ea,#f8ddd3)!important}
+
+.bento .dark:after,.bento .coral:after{content:"";position:absolute;left:20px;right:20px;bottom:20px;height:255px;border-radius:22px;background-repeat:no-repeat;background-size:cover;background-position:center;box-shadow:0 16px 34px rgba(32,35,31,.14);border:1px solid rgba(255,255,255,.28)}
+.bento .dark:after{background-image:linear-gradient(180deg,rgba(26,39,55,.05),rgba(26,39,55,.28)),url('https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1000&q=88')}
+.bento .coral:after{background-image:linear-gradient(180deg,rgba(255,255,255,.02),rgba(241,193,176,.16)),url('https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&w=1000&q=88')}
+.bento .dark:before{content:"Фото сделано  •  Распознаём блюдо";position:absolute;left:42px;bottom:216px;z-index:3;padding:10px 13px;border-radius:12px;background:rgba(247,249,252,.9);color:#26384c;font-size:8px;font-weight:800;box-shadow:0 9px 24px rgba(19,28,39,.16)}
+.bento .dark .chips{display:flex!important;left:42px;right:auto;bottom:38px;z-index:3}
+.bento .dark .chips span{background:rgba(255,255,255,.9);color:#24354a;box-shadow:0 7px 20px rgba(19,28,39,.12)}
+
+.bento .blue:before{content:"92%";position:absolute;left:50%;bottom:116px;z-index:3;transform:translateX(-50%);width:112px;height:112px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--primary) 0 92%,#d9def2 92%);box-shadow:0 12px 26px rgba(47,74,203,.14);font:700 28px/1 var(--body);color:var(--ink)}
+.bento .blue:after{content:"уверенность";position:absolute;left:50%;bottom:144px;z-index:4;transform:translateX(-50%);font-size:8px;color:#777b8f}
+.bento .blue .levels{display:grid!important;left:28px;right:28px;bottom:24px;z-index:5;grid-template-columns:repeat(3,1fr);gap:8px}
+.bento .blue .levels span{display:flex;align-items:center;justify-content:center;min-height:48px;padding:9px 10px;background:rgba(255,255,255,.9);box-shadow:0 8px 18px rgba(47,74,203,.08);text-align:center}
+
+.bento .coral .next-card{display:block!important;left:36px;right:36px;bottom:34px;z-index:3;background:rgba(255,255,255,.92);box-shadow:0 14px 32px rgba(151,90,68,.14);backdrop-filter:blur(12px)}
+.bento .coral .next-card:after{content:"Остаток дня 760 ккал  ·  до 20 минут  ·  бюджет до 250 ₽";display:block;margin-top:14px;padding-top:12px;border-top:1px solid rgba(32,35,31,.08);font-size:8px;color:#777}
+
+/* Pricing cards with useful mini-previews */
+.plans article{min-height:770px;padding:30px 30px 28px;overflow:hidden}
+.plans article:before{content:"";position:absolute;left:22px;right:22px;top:160px;height:245px;border-radius:20px;background-color:#fff;background-repeat:no-repeat;background-size:cover;background-position:center;box-shadow:0 14px 34px rgba(32,35,31,.10);border:1px solid rgba(32,35,31,.06)}
+.plans article:nth-child(1):before{background-image:linear-gradient(90deg,rgba(255,255,255,.97),rgba(255,255,255,.82)),repeating-linear-gradient(180deg,#edf0e9 0 1px,transparent 1px 42px)}
+.plans article:nth-child(1):after{content:"Сегодня\AЗавтрак        320 ккал\AОбед            520 ккал\AУжин             310 ккал\A\AТренд веса  ↘";white-space:pre;position:absolute;left:42px;right:42px;top:187px;color:#32352f;font-size:10px;line-height:2.25;font-weight:700}
+.plans article:nth-child(2):before{background-image:linear-gradient(90deg,rgba(255,255,255,.08),rgba(255,255,255,.03)),url('https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=900&q=88')}
+.plans article:nth-child(2):after{content:"AI-распознавание готово\AЛосось · киноа · овощи\A560 ккал   ✓";white-space:pre;position:absolute;left:42px;right:42px;top:292px;padding:14px;border-radius:15px;background:rgba(255,255,255,.92);color:#263052;font-size:9px;line-height:1.8;font-weight:800;box-shadow:0 10px 24px rgba(23,38,114,.16)}
+.plans article:nth-child(3):before{background:linear-gradient(145deg,#f8faf5,#edf3e9)}
+.plans article:nth-child(3):after{content:"Мария, нутрициолог   • online\A\AВаш план на неделю\AПн  ✓   Вт  ✓   Ср  ✓   Чт  ✓\A\AПрогресс целей          85%";white-space:pre;position:absolute;left:42px;right:42px;top:188px;color:#333730;font-size:9px;line-height:2;font-weight:700}
+.plans article>strong{margin-top:315px!important}
+.plans article.featured{background:linear-gradient(155deg,#3553d6,#2d49ca)!important}
+.plans ul{min-height:140px}
+
+.plans-full>article{min-height:830px;overflow:hidden;position:relative}
+.plans-full>article:before{content:"";position:absolute;left:24px;right:24px;top:245px;height:235px;border-radius:20px;box-shadow:0 14px 34px rgba(32,35,31,.10);border:1px solid rgba(32,35,31,.06)}
+.plans-full>article:nth-child(1):before{background:linear-gradient(135deg,#fff,#edf1e9)}
+.plans-full>article:nth-child(2):before{background-image:linear-gradient(180deg,rgba(49,80,214,.12),rgba(49,80,214,.18)),url('https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=900&q=88');background-size:cover;background-position:center}
+.plans-full>article:nth-child(3):before{background:linear-gradient(135deg,#f8faf5,#eaf1e7)}
+.plans-full>article:nth-child(1):after{content:"Дневник дня\A1 310 ккал\AБелок 98 г   Жиры 52 г\AТренд веса ↘";white-space:pre;position:absolute;left:48px;top:280px;font-size:10px;line-height:2;font-weight:700}
+.plans-full>article:nth-child(2):after{content:"AI-анализ\AЛосось + киноа + овощи\A560 ккал   ✓\A\AЧто съесть сейчас?\AСмузи с протеином";white-space:pre;position:absolute;left:48px;right:48px;top:280px;padding:14px;border-radius:14px;background:rgba(255,255,255,.9);font-size:9px;line-height:1.75;color:#263052;font-weight:800}
+.plans-full>article:nth-child(3):after{content:"Ваш план\A7 дней сопровождения\A\AМария, нутрициолог   • online\AПрогресс целей 85%";white-space:pre;position:absolute;left:48px;top:280px;font-size:9px;line-height:2;color:#333730;font-weight:700}
+.plans-full>article>ul{margin-top:270px!important}
+
+/* Light launch banner with real food and a readable phone-style UI mockup */
+.final{padding-top:18px!important}
+.final>div{min-height:520px;padding:58px 62px;grid-template-columns:.86fr 1.14fr;gap:54px;background:linear-gradient(135deg,#fffdf9 0%,#f7f1e7 52%,#eef2e7 100%)!important;color:var(--ink)!important;border:1px solid rgba(32,35,31,.08);box-shadow:0 26px 70px rgba(32,35,31,.08)}
+.final .eyebrow.light{color:var(--primary)!important}
+.final h2{font-size:clamp(45px,5vw,70px)!important;line-height:.98!important;margin:24px 0 18px!important}
+.final em{color:var(--primary)!important}
+.final p{color:var(--muted)!important;max-width:600px}
+.final .button.light{background:var(--primary)!important;border-color:var(--primary)!important;color:#fff!important;box-shadow:0 14px 34px rgba(47,74,203,.20)}
+.final .orbit{height:410px;border-radius:30px;background-image:linear-gradient(90deg,rgba(255,255,255,.03),rgba(255,255,255,.08)),url('https://images.unsplash.com/photo-1543353071-873f17a7a088?auto=format&fit=crop&w=1200&q=88');background-size:cover;background-position:center;box-shadow:0 20px 54px rgba(32,35,31,.12);border:1px solid rgba(255,255,255,.72);overflow:visible}
+.final .orbit>span{z-index:4;background:rgba(255,255,255,.92)!important;color:var(--ink)!important;box-shadow:0 10px 26px rgba(32,35,31,.12)}
+.final .orbit>span:nth-child(1){top:12%;left:8%;color:var(--primary)!important}
+.final .orbit>span:nth-child(2){top:14%;right:5%}
+.final .orbit>span:nth-child(3){bottom:7%;left:14%}
+.final .big-mark{position:absolute;right:7%;bottom:8%;width:190px;height:330px;border:8px solid #20231f;border-radius:34px;background:linear-gradient(180deg,#fff,#f3f4ef);box-shadow:0 22px 50px rgba(32,35,31,.23);display:block}
+.final .big-mark:before{content:"Ваш план на день\A\A82%\Aбаланс питания\A\AБелки   94 / 120 г\AЖиры      56 / 70 г\AУглеводы 128 / 170 г";white-space:pre;position:absolute;inset:22px 16px;color:#30342f;font-size:9px;line-height:1.7;font-weight:700}
+.final .big-mark span{left:20px!important;right:20px!important;width:auto!important;height:5px!important;border-radius:99px!important;background:var(--primary)!important}
+.final .big-mark span:nth-child(1){bottom:93px!important}
+.final .big-mark span:nth-child(2){bottom:66px!important;background:var(--sage)!important}
+.final .big-mark span:nth-child(3){bottom:39px!important;background:var(--coral)!important}
+
+.page-cta-visual{min-height:390px;border-radius:30px;background-image:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.1)),url('https://images.unsplash.com/photo-1543353071-873f17a7a088?auto=format&fit=crop&w=1200&q=88');background-size:cover;background-position:center;box-shadow:0 20px 54px rgba(32,35,31,.12);border:1px solid rgba(255,255,255,.72)}
+.page-cta-visual .cta-meal-photo{inset:18px 58px 72px 18px;background:transparent!important;box-shadow:none}
+.page-cta-visual .cta-daily-card{right:10px;top:22px}
+.page-cta-visual .cta-next-card{left:34px;right:22px;bottom:16px}
+
+/* Premium aligned footer */
+.site-footer{background:#fbfaf6!important;border-top:1px solid rgba(32,35,31,.08)!important;padding-top:36px!important;padding-bottom:0!important}
+.site-footer-main{position:relative;grid-template-columns:1.5fr repeat(3,.66fr)!important;gap:52px!important;padding-top:46px;padding-bottom:58px;align-items:start}
+.site-footer-brand{min-height:410px!important;padding-right:390px!important}
+.site-footer-brand:after{right:0!important;top:0!important;width:350px!important;height:410px!important;border-radius:32px!important;background-image:linear-gradient(180deg,rgba(255,255,255,.02),rgba(32,35,31,.10)),url('https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=900&q=88')!important;background-size:cover!important;background-position:center!important;box-shadow:0 22px 56px rgba(32,35,31,.11)!important}
+.site-footer-brand h2{max-width:310px;margin:64px 0 20px!important;font-family:var(--body)!important;font-size:50px!important;font-weight:500!important;line-height:1.12!important;letter-spacing:-.055em!important}
+.site-footer-brand h2 em{display:block;color:var(--primary)!important;font-family:var(--body)!important;font-weight:500!important;letter-spacing:-.055em!important}
+.site-footer-brand p{max-width:290px!important;font-size:13px!important;line-height:1.65!important;color:var(--muted)!important}
+.site-footer-main>div:not(:first-child){padding-top:24px;gap:0!important}
+.site-footer-main>div>b{display:flex;align-items:center;gap:10px;margin-bottom:24px!important;font-size:10px!important;letter-spacing:.14em!important;color:var(--ink)!important}
+.site-footer-main>div>b:before{content:"";width:18px;height:18px;border:1.5px solid var(--primary);border-radius:6px}
+.site-footer-main>div>a{position:relative;padding:11px 28px 11px 0;font-size:13px!important;line-height:1.35;color:#656961!important;border-bottom:1px solid rgba(32,35,31,.055)}
+.site-footer-main>div>a:after{content:"→";position:absolute;right:0;color:#969990;transition:.2s}
+.site-footer-main>div>a:hover{color:var(--primary)!important}
+.site-footer-main>div>a:hover:after{transform:translateX(3px);color:var(--primary)}
+.site-footer-bottom{margin-top:0!important;padding-top:22px!important;padding-bottom:24px!important;border-top:1px solid rgba(32,35,31,.09)!important;font-size:11px!important;gap:34px!important;color:#888b83!important}
+.site-footer-bottom a:nth-of-type(1){margin-left:auto!important}
+
+@media(max-width:1100px){
+  .bento article{min-height:590px;padding-bottom:280px}
+  .plans article{min-height:750px}
+  .site-footer-main{grid-template-columns:1fr 1fr!important}
+  .site-footer-brand{grid-column:1/3;padding-right:390px!important}
+}
+
+@media(max-width:780px){
+  .bento{grid-template-columns:1fr!important}
+  .bento article{min-height:575px;padding:26px 22px 285px}
+  .bento article h3{margin-top:66px;font-size:30px!important}
+  .bento .dark:after,.bento .coral:after{left:14px;right:14px;bottom:14px;height:250px}
+  .bento .blue .levels{left:14px;right:14px;grid-template-columns:1fr}
+  .bento .blue:before{bottom:132px}
+  .bento .blue:after{bottom:158px}
+  .plans article{min-height:720px;padding-left:22px;padding-right:22px}
+  .plans article:before{left:14px;right:14px;top:160px;height:225px}
+  .plans article>strong{margin-top:285px!important}
+  .plans-full>article{min-height:790px}
+  .plans-full>article:before{left:16px;right:16px;top:245px;height:215px}
+  .plans-full>article>ul{margin-top:240px!important}
+  .final>div{padding:32px 22px;grid-template-columns:1fr;gap:34px}
+  .final h2{font-size:42px!important}
+  .final .orbit{height:360px;background-position:center}
+  .final .big-mark{width:150px;height:275px;right:4%;bottom:5%}
+  .page-cta-visual{min-height:340px}
+  .site-footer-main{grid-template-columns:1fr!important;padding-top:26px}
+  .site-footer-brand{grid-column:1!important;padding-right:0!important;padding-bottom:360px!important;min-height:620px!important}
+  .site-footer-brand:after{left:0!important;right:auto!important;top:auto!important;bottom:0!important;width:100%!important;height:330px!important}
+  .site-footer-brand h2{font-size:42px!important;margin-top:48px!important}
+  .site-footer-main>div:not(:first-child){padding-top:8px}
+  .site-footer-bottom{flex-wrap:wrap;gap:16px!important}
+  .site-footer-bottom a:nth-of-type(1){margin-left:0!important}
+}
