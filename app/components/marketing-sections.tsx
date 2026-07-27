@@ -65,7 +65,11 @@ export function FeatureGrid({ items, className = "" }: { items: { number?: strin
 
 export function PageCta({ eyebrow = "Начните с одного приёма пищи", title, text, button = "Получить ранний доступ", href = "/register" }: { eyebrow?: string; title: React.ReactNode; text: string; button?: string; href?: string }) {
   return <section className="page-cta shell"><div>
-    <div><PageEyebrow icon="leaf" light>{eyebrow}</PageEyebrow><h2>{title}</h2><p>{text}</p><Link href={href} className="button light large">{button}<SiteIcon name="arrow"/></Link></div>
-    <div className="page-cta-mark"><span>AI</span><span>42 г</span><span>15 мин</span><div className="big-mark"><span/><span/><span/></div></div>
+    <div className="page-cta-copy"><PageEyebrow icon="leaf">{eyebrow}</PageEyebrow><h2>{title}</h2><p>{text}</p><Link href={href} className="button large">{button}<SiteIcon name="arrow"/></Link></div>
+    <div className="page-cta-visual" aria-hidden="true">
+      <div className="cta-meal-photo"><span><SiteIcon name="camera" size={15}/> AI-анализ готов</span><i>Высокая уверенность</i></div>
+      <div className="cta-daily-card"><small>ОСТАЛОСЬ СЕГОДНЯ</small><strong>684 <i>ккал</i></strong><div><span><b>42 г</b> белка</span><span><b>9 г</b> клетчатки</span></div></div>
+      <div className="cta-next-card"><span><SiteIcon name="spark" size={16}/></span><div><small>СЛЕДУЮЩИЙ ШАГ</small><b>Подобрать ужин на 15 минут</b></div></div>
+    </div>
   </div></section>;
 }
