@@ -5,11 +5,12 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("landing page carries the JIVELO premium product experience", async () => {
-  const [page, layout, css, refinement, sections] = await Promise.all([
+  const [page, layout, css, refinement, artwork, sections] = await Promise.all([
     read("../app/page.tsx"),
     read("../app/layout.tsx"),
     read("../app/globals.css"),
     read("../app/refinement.css"),
+    read("../app/artwork.css"),
     read("../app/components/marketing-sections.tsx"),
   ]);
 
@@ -22,10 +23,15 @@ test("landing page carries the JIVELO premium product experience", async () => {
   assert.match(layout, /Onest/);
   assert.match(layout, /Prata/);
   assert.match(layout, /refinement\.css/);
+  assert.match(layout, /artwork\.css/);
   assert.match(css, /--primary/);
   assert.match(css, /--coral/);
   assert.match(refinement, /Correct food-photo semantics/);
-  assert.match(refinement, /\.site-footer\{background:#ecefe6/);
+  assert.match(artwork, /approved-artwork integration/);
+  assert.match(artwork, /\.bento \.dark:after/);
+  assert.match(artwork, /\.plans article:before/);
+  assert.match(artwork, /\.final \.big-mark/);
+  assert.match(artwork, /Premium aligned footer/);
   assert.match(sections, /page-cta-visual/);
   assert.match(sections, /AI-анализ готов/);
 });
