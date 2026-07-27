@@ -62,4 +62,5 @@ test("core marketing routes have distinct product experiences", async () => {
   assert.match(resources, /register/);
   assert.match(readme, /\/ai-food-camera/);
   assert.match(readme, /\/security/);
+  assert.match(readme, /keyboard navigation/);
 });
