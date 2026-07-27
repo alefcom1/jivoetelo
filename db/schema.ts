@@ -1,4 +1,7 @@
-// Intentionally empty by default.
-// Add Drizzle tables here when the site actually needs a database.
-// See examples/d1/db/schema.ts for an opt-in example.
-export {};
+import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+
+export const waitlistSubscribers = pgTable("waitlist_subscribers", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
