@@ -5,10 +5,12 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("landing page carries the JIVELO premium product experience", async () => {
-  const [page, layout, css] = await Promise.all([
+  const [page, layout, css, refinement, sections] = await Promise.all([
     read("../app/page.tsx"),
     read("../app/layout.tsx"),
     read("../app/globals.css"),
+    read("../app/refinement.css"),
+    read("../app/components/marketing-sections.tsx"),
   ]);
 
   assert.match(page, /JIVELO/);
@@ -17,9 +19,15 @@ test("landing page carries the JIVELO premium product experience", async () => {
   assert.match(page, /JIVELO Pro/);
   assert.match(layout, /lang="ru"/);
   assert.match(layout, /SiteHeader/);
-  assert.match(layout, /marketing\.css/);
+  assert.match(layout, /Onest/);
+  assert.match(layout, /Prata/);
+  assert.match(layout, /refinement\.css/);
   assert.match(css, /--primary/);
   assert.match(css, /--coral/);
+  assert.match(refinement, /Correct food-photo semantics/);
+  assert.match(refinement, /\.site-footer\{background:#ecefe6/);
+  assert.match(sections, /page-cta-visual/);
+  assert.match(sections, /AI-анализ готов/);
 });
 
 test("shared site chrome exposes a premium mega menu", async () => {
