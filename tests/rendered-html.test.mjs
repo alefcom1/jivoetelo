@@ -38,7 +38,7 @@ test("shared site chrome exposes a premium mega menu", async () => {
 });
 
 test("core marketing routes have distinct product experiences", async () => {
-  const [product, camera, eat, adaptive, pro, pricing, science, resources] = await Promise.all([
+  const [product, camera, eat, adaptive, pro, pricing, science, resources, readme] = await Promise.all([
     read("../app/product/page.tsx"),
     read("../app/ai-food-camera/page.tsx"),
     read("../app/what-to-eat/page.tsx"),
@@ -47,6 +47,7 @@ test("core marketing routes have distinct product experiences", async () => {
     read("../app/pricing/page.tsx"),
     read("../app/science/page.tsx"),
     read("../app/[slug]/page.tsx"),
+    read("../README.md"),
   ]);
 
   assert.match(product, /любой способ/);
@@ -59,4 +60,6 @@ test("core marketing routes have distinct product experiences", async () => {
   assert.match(resources, /recipes/);
   assert.match(resources, /security/);
   assert.match(resources, /register/);
+  assert.match(readme, /\/ai-food-camera/);
+  assert.match(readme, /\/security/);
 });
