@@ -1,0 +1,176 @@
+/* Final homepage completion pass: unify all remaining sections with the approved JIVELO visual language */
+
+/* Shared rhythm and section transitions */
+.hero,.camera,.difference,.next,.adaptive,.kind,.dashboard,.pro,.pricing,.faq,.final{position:relative}
+.hero:after,.camera:before,.adaptive:before,.dashboard:before,.faq:before{content:"";position:absolute;pointer-events:none;border-radius:50%;filter:blur(2px);opacity:.65}
+.hero:after{width:280px;height:280px;left:-160px;bottom:20px;background:radial-gradient(circle,rgba(120,147,111,.16),transparent 70%)}
+.camera:before{width:360px;height:360px;right:-220px;top:90px;background:radial-gradient(circle,rgba(47,74,203,.10),transparent 70%)}
+.adaptive:before{width:320px;height:320px;left:-210px;bottom:20px;background:radial-gradient(circle,rgba(239,129,107,.12),transparent 70%)}
+.dashboard:before{width:420px;height:420px;right:-260px;top:80px;background:radial-gradient(circle,rgba(47,74,203,.09),transparent 70%)}
+.faq:before{width:280px;height:280px;left:-180px;top:80px;background:radial-gradient(circle,rgba(120,147,111,.12),transparent 70%)}
+
+/* Hero finishing: cleaner product-first composition */
+.hero{padding-top:66px!important;padding-bottom:72px!important}
+.hero-copy>p{max-width:620px!important;font-size:16px!important}
+.hero-visual{min-height:570px!important}
+.hero-photo{height:535px!important;border-radius:44px!important;background-position:center 48%!important;box-shadow:0 28px 78px rgba(36,40,32,.12)!important}
+.hero-photo:after{content:"JIVELO VISION  •  3 КОМПОНЕНТА";position:absolute;left:18px;bottom:18px;padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.91);backdrop-filter:blur(14px);color:#30342f;font-size:8px;font-weight:800;letter-spacing:.06em;box-shadow:0 10px 28px rgba(32,35,31,.13)}
+.analysis{right:-12px!important;bottom:-8px!important;border-radius:22px!important}
+.balance{left:-38px!important;top:34px!important;border-radius:18px!important}
+
+/* Premium metrics ribbon */
+.metrics{max-width:1360px;margin:0 auto 8px;padding:16px!important;gap:12px;background:transparent!important;border:0!important}
+.metrics div{position:relative;min-height:126px;padding:22px 22px 20px!important;border:1px solid rgba(32,35,31,.07)!important;border-radius:22px;background:rgba(255,253,250,.92);box-shadow:0 16px 42px rgba(32,35,31,.055);display:block!important;overflow:hidden}
+.metrics div:before{content:"";position:absolute;right:18px;top:18px;width:38px;height:38px;border-radius:13px;background:var(--primary-soft);box-shadow:inset 0 0 0 1px rgba(47,74,203,.05)}
+.metrics div:after{content:"";position:absolute;left:22px;right:22px;bottom:17px;height:22px;background-repeat:no-repeat;background-position:center;background-size:100% 100%;opacity:.82}
+.metrics div:nth-child(1):before{background:var(--primary-soft) radial-gradient(circle at 50% 50%,var(--primary) 0 3px,transparent 4px)}
+.metrics div:nth-child(1):after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 26'%3E%3Cpath d='M2 19 C28 18 34 9 57 12 S89 22 112 11 S147 5 168 10 S196 16 218 4' fill='none' stroke='%232f4acb' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E")}
+.metrics div:nth-child(2):before{background:#f4e9cb radial-gradient(circle at 50% 50%,#bf8e35 0 3px,transparent 4px)}
+.metrics div:nth-child(2):after{background-image:linear-gradient(90deg,#78936f 0 34%,transparent 34% 38%,#d3a248 38% 63%,transparent 63% 67%,#2f4acb 67% 100%);height:5px;border-radius:99px;bottom:24px}
+.metrics div:nth-child(3):before{background:var(--sage-soft) radial-gradient(circle at 50% 50%,var(--sage) 0 3px,transparent 4px)}
+.metrics div:nth-child(3):after{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 26'%3E%3Cpath d='M2 7 C31 6 42 13 64 12 S102 17 127 15 S163 19 188 18 S207 20 218 18' fill='none' stroke='%2378936f' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E")}
+.metrics div:nth-child(4):before{background:var(--coral-soft) radial-gradient(circle at 50% 50%,var(--coral) 0 3px,transparent 4px)}
+.metrics div:nth-child(4):after{background-image:linear-gradient(90deg,rgba(239,129,107,.18),rgba(120,147,111,.65));height:5px;border-radius:99px;bottom:24px}
+.metrics b{display:block;font-family:var(--body)!important;font-size:32px!important;font-weight:650!important;letter-spacing:-.05em;margin-bottom:6px}
+.metrics span{display:block;max-width:150px;font-size:10px!important;line-height:1.45;color:var(--muted)!important}
+
+/* AI camera: correct food image and richer product scene */
+.camera{background:linear-gradient(180deg,#fffdfa 0%,#f8f4ec 100%)!important}
+.camera-demo{grid-template-columns:1.02fr .98fr!important;min-height:650px!important;background:#eef0e9!important;border:1px solid rgba(32,35,31,.07);box-shadow:0 30px 80px rgba(32,35,31,.09)!important}
+.camera-image{min-height:650px!important;background-image:linear-gradient(180deg,rgba(14,17,12,.02),rgba(14,17,12,.22)),url('https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1400&q=90')!important;background-position:center!important}
+.camera-image:after{content:"ЛОСОСЬ  •  ПЕЧЁНЫЙ КАРТОФЕЛЬ  •  ЗЕЛЁНЫЙ САЛАТ";position:absolute;left:34px;bottom:34px;padding:11px 14px;border-radius:13px;background:rgba(255,255,255,.91);backdrop-filter:blur(14px);font-size:8px;font-weight:800;letter-spacing:.05em;color:#31352f;box-shadow:0 12px 30px rgba(32,35,31,.15)}
+.camera-panel{padding:38px 40px!important;background:rgba(255,253,250,.96)!important}
+.panel-head>span{border-width:6px!important;box-shadow:0 8px 22px rgba(120,147,111,.12)}
+.foods article{padding:16px 0!important}
+.foods article:before{content:"";width:42px;height:42px;grid-column:1;border-radius:12px;background-size:cover;background-position:center;box-shadow:0 8px 16px rgba(32,35,31,.10)}
+.foods article>i{display:none!important}
+.foods article:nth-child(1):before{background-image:url('https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=260&q=82')}
+.foods article:nth-child(2):before{background-image:url('https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=260&q=82')}
+.foods article:nth-child(3):before{background-image:url('https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=260&q=82')}
+.foods article{grid-template-columns:42px 1fr auto!important}
+.clarify{background:linear-gradient(135deg,#eef1ff,#f8f9ff)!important;border:1px solid rgba(47,74,203,.08)}
+.total{padding-top:4px}
+
+/* Recommendation section: light editorial environment, not a dark slab */
+.next{background:linear-gradient(135deg,#edf1e8 0%,#f8f3eb 52%,#eef1ff 100%)!important;color:var(--ink)!important;overflow:hidden}
+.next:before{content:"";position:absolute;right:-110px;top:-150px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(47,74,203,.15),transparent 70%)}
+.next-inner{grid-template-columns:.78fr 1.22fr!important;gap:68px!important;align-items:center}
+.next .eyebrow.light{color:var(--primary)!important}
+.next h2 em{color:var(--primary)!important}
+.next-copy p{color:var(--muted)!important;max-width:570px}
+.context{gap:8px!important}
+.context span{background:rgba(255,255,255,.88)!important;color:#4e524b!important;border:1px solid rgba(32,35,31,.07);box-shadow:0 8px 20px rgba(32,35,31,.05)}
+.console{padding:18px!important;border-radius:30px!important;background:rgba(255,253,250,.96)!important;color:var(--ink)!important;border:1px solid rgba(32,35,31,.07);box-shadow:0 28px 76px rgba(32,35,31,.12)!important;transform:rotate(.7deg)}
+.console-stats{padding:10px 8px 16px!important}
+.console-stats span{background:#f2f2ec!important;border:1px solid rgba(32,35,31,.05);border-radius:14px;padding:12px!important}
+.console-stats small{color:#85887f!important}
+.console-stats b{color:var(--ink)!important}
+.dinner{height:300px!important;border-radius:22px!important;box-shadow:0 16px 34px rgba(32,35,31,.10)}
+.dinner-one{background-image:linear-gradient(180deg,transparent,rgba(14,16,12,.16)),url('https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&w=1200&q=88')!important}
+.dinner-two{background-image:linear-gradient(180deg,transparent,rgba(14,16,12,.16)),url('https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1200&q=88')!important}
+.dinner-three{background-image:linear-gradient(180deg,transparent,rgba(14,16,12,.16)),url('https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=1200&q=88')!important}
+.dinner>span{background:rgba(255,255,255,.91)!important;color:var(--primary)!important;backdrop-filter:blur(12px)}
+.dinner-title h3{font-family:var(--body)!important;font-weight:650!important;letter-spacing:-.045em}
+.why{background:linear-gradient(135deg,var(--primary-soft),#f3f5ff)!important;border:1px solid rgba(47,74,203,.07)}
+.switch button:not(.save){background:#efefe9!important;color:#555a52!important}
+.switch button.active:not(.save){background:var(--primary)!important;color:#fff!important}
+.switch .save{background:var(--ink)!important;color:#fff!important;border-radius:13px!important}
+
+/* Adaptive plan: more visual mass, less empty white */
+.adaptive{background:linear-gradient(180deg,#fffdfa,#f6f2ea)!important;grid-template-columns:1.22fr .78fr!important;gap:72px!important}
+.chart-card{position:relative;overflow:hidden;padding:30px 30px 26px!important;background:linear-gradient(145deg,#f4f6ff 0%,#fffdfa 62%,#edf3e9 100%)!important;border:1px solid rgba(32,35,31,.07)!important;box-shadow:0 28px 72px rgba(32,35,31,.09)!important}
+.chart-card:before{content:"СРЕДНИЙ ДЕФИЦИТ  •  340 ККАЛ";position:absolute;right:28px;top:78px;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.90);font-size:7px;font-weight:800;letter-spacing:.06em;color:#5f635b;box-shadow:0 8px 20px rgba(32,35,31,.07)}
+.chart-card:after{content:"Белок 96 г  ·  Сон 7 ч 24 мин  ·  Голод 2,8 / 5";display:block;margin-top:15px;padding:13px 15px;border-radius:14px;background:rgba(255,255,255,.82);border:1px solid rgba(32,35,31,.06);font-size:8px;font-weight:750;color:#676b63}
+.chart-head h3{font-family:var(--body)!important;font-weight:650!important;letter-spacing:-.045em}
+.chart-card svg{filter:drop-shadow(0 9px 14px rgba(47,74,203,.08))}
+.adjust{background:rgba(255,255,255,.92)!important;border:1px solid rgba(32,35,31,.06);box-shadow:0 14px 30px rgba(32,35,31,.06)}
+.adaptive-copy{padding:22px 0}
+.adaptive-copy ul{margin-top:28px!important}
+.adaptive-copy li{padding:11px 13px;border-radius:13px;background:rgba(255,255,255,.72);border:1px solid rgba(32,35,31,.055)}
+
+/* Non-judgement section: warm, human and optimistic */
+.kind{background:#f6f2ea!important}
+.kind-inner{position:relative;overflow:hidden;min-height:510px!important;padding:62px!important;background:linear-gradient(135deg,#f8e5dc 0%,#f7f2e8 48%,#eaf0e6 100%)!important;color:var(--ink)!important;border:1px solid rgba(32,35,31,.07);box-shadow:0 24px 66px rgba(32,35,31,.08)}
+.kind-inner:before{content:"";position:absolute;right:-20px;top:-25px;width:46%;height:110%;border-radius:48% 0 0 48%;background-image:linear-gradient(180deg,rgba(255,255,255,.05),rgba(32,35,31,.12)),url('https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=1000&q=86');background-size:cover;background-position:center;opacity:.94}
+.kind-inner>div,.kind article{position:relative;z-index:2}
+.kind .eyebrow.light{color:var(--primary)!important}
+.kind h2 em{color:var(--primary)!important}
+.kind-inner>div>p{color:var(--muted)!important;max-width:560px}
+.kind article{margin-left:auto;width:min(100%,520px);padding:28px 30px!important;background:rgba(255,255,255,.93)!important;backdrop-filter:blur(18px);box-shadow:0 24px 62px rgba(32,35,31,.16)!important;transform:rotate(1.1deg)!important}
+.kind article:after{content:"Вместо наказания — спокойный следующий шаг";display:block;margin-top:18px;padding-top:15px;border-top:1px solid rgba(32,35,31,.08);font-size:8px;font-weight:800;color:var(--sage)}
+.kind article p{font-family:var(--body)!important;font-size:24px!important;font-weight:550!important;line-height:1.18!important;letter-spacing:-.035em!important}
+
+/* Main app dashboard: polished hardware-like presentation */
+.dashboard{background:linear-gradient(180deg,#f7f3eb 0%,#fffdfa 100%)!important}
+.app{position:relative;min-height:680px!important;margin-top:44px!important;border:10px solid #e7e8e1!important;border-radius:34px!important;background:#faf9f4!important;box-shadow:0 38px 90px rgba(32,35,31,.12)!important}
+.app:before{content:"";position:absolute;left:50%;top:-6px;transform:translateX(-50%);width:78px;height:5px;border-radius:99px;background:#c9cbc3;z-index:5}
+.app>aside{background:linear-gradient(180deg,#f0f1eb,#e9ece4)!important}
+.app>aside nav button{transition:.2s}
+.app>aside nav button:hover{background:rgba(47,74,203,.07);color:var(--primary)}
+.app-main{padding:30px 32px!important}
+.app-grid{grid-template-columns:.9fr 1.1fr .82fr!important;gap:14px!important}
+.app-grid article{box-shadow:0 10px 28px rgba(32,35,31,.045);overflow:hidden}
+.rhythm{background:linear-gradient(145deg,#edf3e9,#fff)!important}
+.rhythm:after{content:"7 дней устойчивого ритма";position:absolute;left:24px;bottom:25px;font-size:8px;color:#66805f;font-weight:800}
+.energy{background:linear-gradient(145deg,#f5f7ff,#fff)!important}
+.meals{background:#fffdfa!important}
+.meals>div:nth-of-type(2):after{content:"";width:42px;height:32px;border-radius:9px;background:url('https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=180&q=80') center/cover;box-shadow:0 5px 12px rgba(32,35,31,.09)}
+.action{background:linear-gradient(145deg,#2f4acb,#4964d8)!important;position:relative}
+.action:after{content:"";position:absolute;right:-28px;bottom:-36px;width:135px;height:135px;border-radius:42px;background:rgba(255,255,255,.08);transform:rotate(18deg)}
+.action button{color:#fff!important}
+
+/* JIVELO Pro: light enterprise styling instead of black */
+.pro{background:linear-gradient(135deg,#eef1ff 0%,#f8f3eb 50%,#edf3e9 100%)!important;color:var(--ink)!important;overflow:hidden}
+.pro:before{content:"";position:absolute;left:-160px;bottom:-210px;width:440px;height:440px;border-radius:50%;background:radial-gradient(circle,rgba(47,74,203,.13),transparent 70%)}
+.pro-inner{grid-template-columns:.72fr 1.28fr!important;gap:76px!important}
+.pro .eyebrow.light{color:var(--primary)!important}
+.pro h2 em{color:var(--primary)!important}
+.pro-copy p{color:var(--muted)!important}
+.pro-copy .button.light{background:var(--primary)!important;border-color:var(--primary)!important;color:#fff!important;box-shadow:0 14px 32px rgba(47,74,203,.18)}
+.pro-screen{padding:14px!important;border:1px solid rgba(32,35,31,.07);box-shadow:18px 18px 0 rgba(239,129,107,.75),0 32px 72px rgba(32,35,31,.12)!important;transform:rotate(.6deg)}
+.pro-head{padding:8px 10px 16px!important}
+.pro-body>aside{background:linear-gradient(180deg,#eef0e8,#e7ebe3)!important}
+.clients article{border-radius:12px;padding:13px 10px!important;margin:4px 0;border-bottom:0!important;background:rgba(255,255,255,.72)}
+.clients article:nth-child(2){background:#fff0ea}
+.clients article:nth-child(3){background:#eef3ea}
+
+/* FAQ: add an editorial visual instead of a blank left column */
+.faq{grid-template-columns:.78fr 1.22fr!important;gap:72px!important;background:linear-gradient(180deg,#fffdfa,#f7f3eb)!important}
+.faq>div:first-child{position:relative;min-height:600px;padding-right:20px}
+.faq>div:first-child:after{content:"";position:absolute;left:0;right:20px;bottom:0;height:330px;border-radius:28px;background-image:linear-gradient(180deg,rgba(255,255,255,.02),rgba(32,35,31,.15)),url('https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=1000&q=86');background-size:cover;background-position:center;box-shadow:0 24px 60px rgba(32,35,31,.11)}
+.faq>div:first-child:before{content:"Без весов  •  Без стыда  •  С контролем данных";position:absolute;left:20px;bottom:24px;z-index:2;padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.92);font-size:8px;font-weight:800;color:#343833;box-shadow:0 10px 24px rgba(32,35,31,.12)}
+.faq-list{border-top:0!important;padding:12px;border-radius:28px;background:rgba(255,253,250,.88);border:1px solid rgba(32,35,31,.07);box-shadow:0 24px 64px rgba(32,35,31,.075)}
+.faq-list article{border-bottom:1px solid rgba(32,35,31,.07)!important}
+.faq-list article:last-child{border-bottom:0!important}
+.faq-list article>button{padding:20px 14px!important}
+.faq-list button b{font-family:var(--body)!important;font-size:19px!important;font-weight:600!important;letter-spacing:-.025em}
+.faq-list article.open{border-radius:18px;background:var(--primary-soft)}
+.faq-list article.open>div p{padding:0 52px 22px!important;color:#585d70!important}
+
+/* Gentle hover polish */
+.metrics div,.camera-demo,.chart-card,.kind-inner,.app,.pro-screen,.faq-list{transition:transform .28s ease,box-shadow .28s ease}
+.metrics div:hover{transform:translateY(-4px);box-shadow:0 22px 52px rgba(32,35,31,.08)}
+.camera-demo:hover,.chart-card:hover,.app:hover,.pro-screen:hover{transform:translateY(-2px)}
+
+@media(max-width:1100px){
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .next-inner,.adaptive,.pro-inner{grid-template-columns:1fr!important}
+  .kind-inner:before{width:38%;opacity:.45}
+  .faq{grid-template-columns:1fr!important}.faq>div:first-child{min-height:500px}.faq>div:first-child:after{right:0}
+  .app-grid{grid-template-columns:1fr 1fr!important}.energy,.meals{grid-column:span 2!important}.action{grid-column:span 1}
+}
+
+@media(max-width:780px){
+  .hero-photo{height:430px!important;border-radius:30px!important}
+  .analysis{width:calc(100% - 16px)!important;right:8px!important}.balance{left:8px!important;top:12px!important}
+  .metrics{grid-template-columns:1fr;padding:12px 18px!important}.metrics div{min-height:112px}
+  .camera-demo{grid-template-columns:1fr!important}.camera-image{min-height:430px!important}.camera-panel{padding:28px 20px!important}.camera-image:after{left:18px;right:18px;bottom:18px}
+  .next-inner{gap:36px!important}.console{transform:none}.dinner{height:245px!important}
+  .adaptive{gap:36px!important}.chart-card{padding:22px 18px!important}.chart-card:before{position:static;display:inline-block;margin-top:10px}.adjust{grid-template-columns:38px 1fr}.adjust button{grid-column:1/3}
+  .kind-inner{grid-template-columns:1fr!important;padding:32px 22px 300px!important}.kind-inner:before{left:0;right:0;top:auto;bottom:0;width:100%;height:285px;border-radius:32px 32px 0 0;opacity:.75}.kind article{width:100%;transform:none!important}
+  .app{grid-template-columns:56px 1fr!important;border-width:6px!important}.app-main{padding:22px 14px!important}.app-grid{grid-template-columns:1fr!important}.energy,.meals,.action{grid-column:1!important}.energy{grid-template-columns:1fr!important}
+  .pro-inner{gap:40px!important}.pro-screen{transform:none;box-shadow:8px 8px 0 rgba(239,129,107,.55),0 24px 58px rgba(32,35,31,.11)!important}
+  .faq>div:first-child{min-height:470px;padding-right:0}.faq>div:first-child:after{right:0;height:270px}.faq-list{padding:6px}.faq-list button b{font-size:17px!important}
+}
+
+@media(prefers-reduced-motion:reduce){.metrics div,.camera-demo,.chart-card,.kind-inner,.app,.pro-screen,.faq-list{transition:none!important}}
