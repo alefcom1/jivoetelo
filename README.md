@@ -1,98 +1,50 @@
-# vinext-starter
+# JIVELO
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Premium AI nutrition navigator running on Next.js / vinext.
 
-## Prerequisites
+## Local development
 
-- Node.js `>=22.13.0`
-
-## Quick Start
+Prerequisites: Node.js `>=22.13.0`.
 
 ```bash
 npm install
 npm run dev
 npm run build
+npm test
 ```
 
-This starter does not use `wrangler.jsonc`.
+## Marketing routes
 
-## Included Shape
+- `/` — premium homepage and interactive product demo
+- `/product` — complete product overview
+- `/ai-food-camera` — JIVELO Vision and confidence workflow
+- `/what-to-eat` — contextual meal recommendation engine
+- `/adaptive-plan` — adaptive energy model and weekly review
+- `/pro` — JIVELO Pro for specialists and organisations
+- `/pricing` — plans and feature comparison
+- `/science` — methodology, limits and future references
+- `/recipes` — recipe discovery concept
+- `/articles` — editorial journal concept
+- `/security` — privacy and security model
+- `/privacy` — privacy policy draft structure
+- `/terms` — terms draft structure
+- `/contact` — contact and early partnership form
+- `/login` — login UI prototype
+- `/register` — early-access registration UI prototype
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+## Design system
 
-## Workspace Auth Headers
+- `app/globals.css` contains the original homepage tokens and component styling.
+- `app/marketing.css` contains the shared premium multi-page system, mega menu, responsive layouts and route-specific visual scenes.
+- `app/components/site-chrome.tsx` owns the global header, desktop mega menu, mobile navigation and footer.
+- `app/components/marketing-sections.tsx` contains reusable page hero, intro, feature grid and CTA components.
 
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
+The current food photography uses remote Unsplash images as a visual prototype. Replace approved images with licensed local assets in `/public` before production launch.
 
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
+## Authentication and forms
 
-Treat the full name as optional and fall back to email when it is absent:
+Login, registration, contact and waitlist controls are visual product prototypes. Connect them to the production authentication, database and notification services before collecting real user information.
 
-```tsx
-import { headers } from "next/headers";
+## Included starter infrastructure
 
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
-```
-
-## Optional Dispatch-Owned ChatGPT Sign-In
-
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+The repository retains optional Cloudflare D1 and Drizzle support from the vinext starter. `.openai/hosting.json` declares optional Sites bindings and `vite.config.ts` supports local development.
