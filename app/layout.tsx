@@ -1,16 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { Onest, Prata } from "next/font/google";
 import { SiteFooter, SiteHeader } from "./components/site-chrome";
 import "./globals.css";
 import "./marketing.css";
+import "./refinement.css";
 
-const display = Cormorant_Garamond({
+const display = Prata({
   variable: "--font-display",
   subsets: ["cyrillic", "latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400",
 });
 
-const body = Manrope({
+const body = Onest({
   variable: "--font-body",
   subsets: ["cyrillic", "latin"],
   weight: ["400", "500", "600", "700", "800"],
@@ -45,7 +46,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f5f1e8",
+  themeColor: "#f6f2ea",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
