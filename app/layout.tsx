@@ -4,6 +4,7 @@ import { SiteFooter, SiteHeader } from "./components/site-chrome";
 import "./globals.css";
 import "./marketing.css";
 import "./refinement.css";
+import "./artwork.css";
 
 const display = Prata({
   variable: "--font-display",
