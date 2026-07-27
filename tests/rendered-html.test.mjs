@@ -5,12 +5,13 @@ import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 
 test("landing page carries the JIVELO premium product experience", async () => {
-  const [page, layout, css, refinement, artwork, sections] = await Promise.all([
+  const [page, layout, css, refinement, artwork, completion, sections] = await Promise.all([
     read("../app/page.tsx"),
     read("../app/layout.tsx"),
     read("../app/globals.css"),
     read("../app/refinement.css"),
     read("../app/artwork.css"),
+    read("../app/home-completion.css"),
     read("../app/components/marketing-sections.tsx"),
   ]);
 
@@ -24,6 +25,7 @@ test("landing page carries the JIVELO premium product experience", async () => {
   assert.match(layout, /Prata/);
   assert.match(layout, /refinement\.css/);
   assert.match(layout, /artwork\.css/);
+  assert.match(layout, /home-completion\.css/);
   assert.match(css, /--primary/);
   assert.match(css, /--coral/);
   assert.match(refinement, /Correct food-photo semantics/);
@@ -32,6 +34,11 @@ test("landing page carries the JIVELO premium product experience", async () => {
   assert.match(artwork, /\.plans article:before/);
   assert.match(artwork, /\.final \.big-mark/);
   assert.match(artwork, /Premium aligned footer/);
+  assert.match(completion, /Premium metrics ribbon/);
+  assert.match(completion, /Recommendation section/);
+  assert.match(completion, /Non-judgement section/);
+  assert.match(completion, /JIVELO Pro: light enterprise styling/);
+  assert.match(completion, /FAQ: add an editorial visual/);
   assert.match(sections, /page-cta-visual/);
   assert.match(sections, /AI-анализ готов/);
 });
