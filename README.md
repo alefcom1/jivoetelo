@@ -59,6 +59,10 @@ npm test
 
 Review desktop and mobile routes, keyboard navigation in the mega menu, form focus states and the responsive layouts before merging the redesign PR.
 
+## Pull request scope
+
+The redesign PR is intentionally limited to the public marketing experience, visual prototypes for access forms, shared navigation and the reusable design system. Backend authentication, database persistence, subscriptions and production image licensing remain separate implementation milestones.
+
 ## Included starter infrastructure
 
 The repository retains optional Cloudflare D1 and Drizzle support from the vinext starter. `.openai/hosting.json` declares optional Sites bindings and `vite.config.ts` supports local development.
