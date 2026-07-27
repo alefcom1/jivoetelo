@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { SiteFooter, SiteHeader } from "./components/site-chrome";
 import "./globals.css";
 
 const display = Cormorant_Garamond({
@@ -16,7 +17,10 @@ const body = Manrope({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://jivoetelo.ru"),
-  title: "JIVELO — AI-навигатор питания",
+  title: {
+    default: "JIVELO — AI-навигатор питания",
+    template: "%s — JIVELO",
+  },
   description: "Распознавайте еду по фото, получайте честную оценку и узнавайте, что лучше съесть дальше.",
   applicationName: "JIVELO",
   keywords: ["счётчик калорий", "дневник питания", "AI питание", "распознавание еды", "план питания"],
@@ -44,5 +48,5 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="ru"><body className={`${display.variable} ${body.variable}`}>{children}</body></html>;
+  return <html lang="ru"><body className={`${display.variable} ${body.variable}`}><SiteHeader/>{children}<SiteFooter/></body></html>;
 }
