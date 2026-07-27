@@ -86,7 +86,8 @@ const solutionGroups = [
 ];
 
 function MegaLink({ item, current }: { item: { href: string; icon: SiteIconName; title: string; text: string }; current: string }) {
-  const active = item.href === "/" ? current === "/" : current.startsWith(item.href.split("#")[0]);
+  const path = item.href.split("#")[0];
+  const active = path === "/" ? current === "/" : current === path || current.startsWith(`${path}/`);
   return <Link href={item.href} className={active ? "mega-link active" : "mega-link"}>
     <span><SiteIcon name={item.icon} size={19}/></span>
     <div><b>{item.title}</b><small>{item.text}</small></div>
