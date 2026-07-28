@@ -1,4 +1,5 @@
 import { localToday } from "@/lib/dates";
+import { markProcessed } from "@/lib/inbox";
 import { normalizeMealItems, saveMeal } from "@/lib/meals";
 import { photoBelongsTo } from "@/lib/storage";
 import { authorize } from "../_auth";
@@ -38,6 +39,9 @@ export async function POST(request: Request) {
       analysis: body.analysis ?? null,
       items,
     });
+    // Снимок уходит из инбокса только теперь, когда приём пищи сохранён.
+    const inboxId = Number(body.inboxId);
+    if (Number.isInteger(inboxId)) await markProcessed(auth.user.id, inboxId, id);
     return Response.json({ ok: true, id });
   } catch (error) {
     console.error("tg saveMeal failed", error);

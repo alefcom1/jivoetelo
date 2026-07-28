@@ -24,14 +24,19 @@ export const LEGAL_VERSION = "1.0";
  *   документ покрывает передачу обезличенных данных AI-провайдеру за
  *   пределы РФ — без неё разбор еды невозможен.
  * - `waitlist` — e-mail из формы на лендинге, до появления аккаунта.
+ * - `email_series` — e-mail из формы под калькулятором, для серии писем с
+ *   разбором расчёта. Отдельно от `waitlist`: там ожидание приглашения,
+ *   здесь рассылка, и отписаться от одного, оставшись в другом, человек
+ *   должен иметь возможность.
  */
-export const CONSENT_KINDS = ["terms", "ai_processing", "waitlist"] as const;
+export const CONSENT_KINDS = ["terms", "ai_processing", "waitlist", "email_series"] as const;
 export type ConsentKind = (typeof CONSENT_KINDS)[number];
 
 export const CONSENT_LABELS: Record<ConsentKind, string> = {
   terms: "Пользовательское соглашение и Политика конфиденциальности",
   ai_processing: "Согласие на обработку данных о питании, весе и фотографий еды",
   waitlist: "Согласие на обработку e-mail для приглашения в сервис",
+  email_series: "Согласие на обработку e-mail для получения разбора расчёта",
 };
 
 export function isConsentKind(value: string): value is ConsentKind {

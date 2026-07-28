@@ -6,6 +6,7 @@ import {
   saveMeal,
   type AnalysisItemDto,
   type ClarificationDto,
+  type InboxItemDto,
 } from "./api";
 import { scaleGrams } from "@/lib/portions";
 import { haptic, useMainButtonApi } from "./telegram";
@@ -54,8 +55,19 @@ function guessMealType(): string {
   return "snack";
 }
 
-export function AddTab({ showCalories, onSaved }: { showCalories: boolean; onSaved: () => void }) {
-  const [mode, setMode] = useState<"text" | "photo">("text");
+export function AddTab({
+  showCalories,
+  onSaved,
+  inbox,
+  onCancelInbox,
+}: {
+  showCalories: boolean;
+  onSaved: () => void;
+  /** Снимок из фото-инбокса, если разбор начат оттуда. */
+  inbox?: InboxItemDto | null;
+  onCancelInbox?: () => void;
+}) {
+  const [mode, setMode] = useState<"text" | "photo">(inbox ? "photo" : "text");
   const [text, setText] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -72,8 +84,10 @@ export function AddTab({ showCalories, onSaved }: { showCalories: boolean; onSav
   async function handleAnalyze() {
     setError(null);
     const formData = new FormData();
-    formData.set("mode", mode);
-    if (mode === "photo") {
+    formData.set("mode", inbox ? "inbox" : mode);
+    if (inbox) {
+      formData.set("inboxId", String(inbox.id));
+    } else if (mode === "photo") {
       const file = fileRef.current?.files?.[0];
       if (!file) { setError("Выберите фото."); return; }
       formData.set("photo", file);
@@ -106,10 +120,13 @@ export function AddTab({ showCalories, onSaved }: { showCalories: boolean; onSav
     setError(null);
     try {
       const now = new Date();
+      // Для снимка из инбокса дата и время берутся из момента съёмки, а не
+      // из момента разбора: снятый в обед и разобранный вечером — всё ещё обед.
       // suggestedGrams — служебное поле только для интерфейса, API его не ждёт.
       await saveMeal({
-        eatenOn: now.toLocaleDateString("en-CA"),
-        eatenTime: now.toTimeString().slice(0, 5),
+        inboxId: inbox?.id ?? null,
+        eatenOn: inbox?.takenOn ?? now.toLocaleDateString("en-CA"),
+        eatenTime: inbox?.takenTime ?? now.toTimeString().slice(0, 5),
         mealType,
         sourceText,
         photoKey,
@@ -141,7 +158,7 @@ export function AddTab({ showCalories, onSaved }: { showCalories: boolean; onSav
       ? mainButton.show("Сохранить", () => void handleSave())
       : mainButton.show("Разобрать", () => void handleAnalyze());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, busy, text, mode, mealType]);
+  }, [items, busy, text, mode, mealType, inbox?.id]);
 
   function updateItem(index: number, patch: Partial<DraftItem>) {
     setItems((current) => current && current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
@@ -152,6 +169,32 @@ export function AddTab({ showCalories, onSaved }: { showCalories: boolean; onSav
     const option = clarifications[clarIndex]?.options[optionIndex];
     if (option?.addItem) setItems((current) => (current ? [...current, toDraft(option.addItem!)] : current));
     setClarifications((current) => current.filter((_, i) => i !== clarIndex));
+  }
+
+  if (!items && inbox) {
+    return <div className="tg-page">
+      <header className="tg-hero">
+        <p className="tg-kicker">Из инбокса</p>
+        <h1>Снимок за {inbox.takenTime}</h1>
+      </header>
+
+      <div className="tg-photo">
+        <div className="tg-photo-drop">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/api/photos/${inbox.photoKey}`} alt="Снимок еды из инбокса" />
+        </div>
+      </div>
+      {inbox.note && <p className="tg-hint">Ваша подпись: «{inbox.note}»</p>}
+
+      {error && <p className="tg-error">{error}</p>}
+      {busy && <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
+
+      <button className="tg-button tg-button-block" onClick={() => void handleAnalyze()} disabled={busy}>
+        {busy ? "Разбираем…" : "Разобрать"}
+      </button>
+      {onCancelInbox &&
+        <button className="tg-link-button" onClick={onCancelInbox} disabled={busy}>← В инбокс</button>}
+    </div>;
   }
 
   if (!items) {

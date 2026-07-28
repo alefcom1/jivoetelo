@@ -93,6 +93,45 @@ if (!botToken) {
   ok("Токен Telegram-бота задан.");
 }
 
+const webhookSecret = value("TELEGRAM_WEBHOOK_SECRET");
+if (botToken && !webhookSecret) {
+  warn("TELEGRAM_WEBHOOK_SECRET не задан — вебхук бота отвечает 503, фото в инбокс приниматься не будут (docs/bot.md).");
+} else if (webhookSecret && webhookSecret.length < 24) {
+  fail("TELEGRAM_WEBHOOK_SECRET короче 24 символов. Сгенерируйте: openssl rand -hex 32");
+} else if (webhookSecret) {
+  ok("Секрет вебхука бота задан.");
+}
+
+// --- Почта ------------------------------------------------------------------
+
+const smtpHost = value("SMTP_HOST");
+const smtpUser = value("SMTP_USER");
+const smtpPassword = value("SMTP_PASSWORD");
+const emailDisabled = value("EMAIL_ENABLED") === "false";
+
+if (emailDisabled) {
+  warn("EMAIL_ENABLED=false — письма серии не отправляются, только пишутся в лог.");
+} else if (smtpHost && smtpUser && smtpPassword) {
+  ok(`Почта уходит через ${smtpHost}.`);
+} else if (smtpHost || smtpUser || smtpPassword) {
+  fail("SMTP заполнен частично: нужны SMTP_HOST, SMTP_USER и SMTP_PASSWORD вместе, иначе письма молча не уйдут.");
+} else {
+  warn("SMTP не настроен — письма после калькулятора будут писаться в лог вместо отправки (docs/email-series.md).");
+}
+
+const siteUrl = value("SITE_URL");
+if (siteUrl && !/^https?:\/\//.test(siteUrl)) {
+  fail(`SITE_URL="${siteUrl}" — нужен абсолютный адрес со схемой.`);
+} else if (siteUrl && siteUrl.startsWith("http://")) {
+  warn("SITE_URL по http — ссылки в письмах и кнопках бота будут вести на незащищённый адрес.");
+} else {
+  ok(`Адрес сайта в письмах: ${siteUrl || "https://jivoetelo.ru (по умолчанию)"}.`);
+}
+
+if (value("SCHEDULER_ENABLED") === "false") {
+  warn("SCHEDULER_ENABLED=false — письма и напоминания отправляться не будут.");
+}
+
 // --- Оплата -----------------------------------------------------------------
 
 const paymentsEnabled = value("PAYMENTS_ENABLED") === "true";

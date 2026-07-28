@@ -155,6 +155,110 @@ export const payments = pgTable("payments", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Фото-инбокс: снимок, присланный боту в любой момент дня, попадает сюда, а
+ * не сразу в дневник. Разбор откладывается на вечер — в этом весь смысл:
+ * сфотографировать можно за секунду, а отвечать на уточняющие вопросы
+ * посреди обеда никто не станет.
+ *
+ * Состояние строки читается по двум полям: пока `processedAt` и `dismissedAt`
+ * пусты, фото ждёт разбора. Разобранное получает `mealId`, отклонённое —
+ * `dismissedAt`. Отдельного статуса нет намеренно: два времени всегда
+ * согласованы с фактом, а строковый статус пришлось бы держать в синхроне.
+ */
+export const photoInbox = pgTable(
+  "photo_inbox",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    photoKey: text("photo_key").notNull(),
+    // Подпись к фото в Telegram, если она была: «омлет с сыром» экономит
+    // потом целый раунд уточнений.
+    note: text("note"),
+    // Локальные дата и время съёмки. Сохраняем их сразу, иначе фото,
+    // присланное в 23:50 и разобранное в 00:10, уедет на следующий день.
+    takenOn: date("taken_on").notNull(),
+    takenTime: text("taken_time").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+    dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
+    // Приём пищи, в который превратилось фото. При удалении приёма пищи
+    // связь обнуляется, а строка инбокса остаётся историей.
+    mealId: integer("meal_id").references(() => meals.id, { onDelete: "set null" }),
+  },
+  (table) => [index("photo_inbox_user_pending").on(table.userId, table.createdAt)],
+);
+
+/**
+ * Настройки бота и следы уже отправленных сообщений. Второе здесь не ради
+ * статистики: планировщик решает «отправлять ли сегодня» именно по этим
+ * полям, и запись даты — это захват права на отправку, а не отчёт о ней.
+ */
+export const botPreferences = pgTable("bot_preferences", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  remindersEnabled: boolean("reminders_enabled").notNull().default(true),
+  // Час по местному времени продукта, в который приходит вечерний дайджест.
+  digestHour: integer("digest_hour").notNull().default(20),
+  // «Напомнить позже»: до этого момента бот молчит.
+  snoozedUntil: timestamp("snoozed_until", { withTimezone: true }),
+  // Дата последнего отправленного напоминания — не больше одного в день.
+  lastReminderOn: date("last_reminder_on"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Подписчики почтовой серии после калькулятора. Отдельно от
+ * `waitlist_subscribers`: там ожидание приглашения, здесь — серия писем,
+ * и отписка должна работать независимо.
+ */
+export const emailSubscribers = pgTable("email_subscribers", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  // Откуда пришёл адрес: raschet_energiya | raschet_belok | raschet_kviz.
+  source: text("source").notNull(),
+  consentVersion: text("consent_version"),
+  // Секрет для ссылки отписки. Одноразовым его делать нельзя: ссылка живёт
+  // во всех письмах серии и должна работать всегда.
+  unsubscribeToken: text("unsubscribe_token").notNull().unique(),
+  // Данные расчёта, чтобы первое письмо повторяло увиденные цифры.
+  context: jsonb("context"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
+});
+
+/**
+ * По строке на каждое письмо серии. Строки создаются сразу при подписке — все
+ * три, с рассчитанными сроками. Планировщику тогда достаточно спросить «что
+ * пора отправить», а не пересчитывать серию заново для каждого подписчика.
+ *
+ * `claimedAt` — метка «взято в работу»: письмо отправляется вне транзакции,
+ * и без такой метки перезапуск контейнера в неудачный момент отправил бы его
+ * дважды. Просроченный захват (старше 15 минут) считается неудачным.
+ */
+export const emailDeliveries = pgTable(
+  "email_deliveries",
+  {
+    id: serial("id").primaryKey(),
+    subscriberId: integer("subscriber_id")
+      .notNull()
+      .references(() => emailSubscribers.id, { onDelete: "cascade" }),
+    letter: integer("letter").notNull(),
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true }).notNull(),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    attempts: integer("attempts").notNull().default(0),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    lastError: text("last_error"),
+  },
+  (table) => [
+    uniqueIndex("email_deliveries_subscriber_letter").on(table.subscriberId, table.letter),
+    index("email_deliveries_due").on(table.sentAt, table.scheduledFor),
+  ],
+);
+
 export const mealItems = pgTable("meal_items", {
   id: serial("id").primaryKey(),
   mealId: integer("meal_id")

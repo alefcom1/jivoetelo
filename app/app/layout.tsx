@@ -14,6 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <nav className="shell-nav">
         <Link href="/app">Сегодня</Link>
         <Link href="/app/add">Добавить</Link>
+        <Link href="/app/inbox">Инбокс</Link>
         <Link href="/app/weight">Вес</Link>
         <Link href="/app/review">Обзор</Link>
         <Link href="/app/settings">Настройки</Link>

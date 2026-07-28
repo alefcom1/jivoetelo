@@ -53,6 +53,13 @@ function emptyItem(): DraftItem {
   return { name: "", grams: 100, suggestedGrams: 100, kcalPer100: 0, proteinPer100: 0, fatPer100: 0, carbsPer100: 0, fiberPer100: 0, confidence: "high" };
 }
 
+function formatTakenAt(inbox: InboxDraft): string {
+  const day = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(
+    new Date(`${inbox.takenOn}T12:00:00Z`),
+  );
+  return `Снято ${day} в ${inbox.takenTime}`;
+}
+
 function guessMealType(time: string): string {
   const hour = Number(time.slice(0, 2));
   if (hour < 11) return "breakfast";
@@ -61,24 +68,38 @@ function guessMealType(time: string): string {
   return "snack";
 }
 
-export function AddMealFlow({ showCalories }: { showCalories: boolean }) {
+/** Снимок из фото-инбокса, если разбор начат оттуда. */
+export type InboxDraft = {
+  id: number;
+  photoKey: string;
+  note: string | null;
+  takenOn: string;
+  takenTime: string;
+};
+
+export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; inbox?: InboxDraft | null }) {
   const now = new Date();
-  const [mode, setMode] = useState<"text" | "photo">("text");
+  const [mode, setMode] = useState<"text" | "photo">(inbox ? "photo" : "text");
   const [text, setText] = useState("");
   const [note, setNote] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [date, setDate] = useState(now.toLocaleDateString("en-CA"));
-  const [time, setTime] = useState(now.toTimeString().slice(0, 5));
+  // Для снимка из инбокса дата и время берутся из момента съёмки, а не из
+  // момента разбора: фото, снятое в обед и разобранное вечером, — это всё
+  // равно обед.
+  const [date, setDate] = useState(inbox?.takenOn ?? now.toLocaleDateString("en-CA"));
+  const [time, setTime] = useState(inbox?.takenTime ?? now.toTimeString().slice(0, 5));
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function handleAnalyze() {
     setError(null);
     const formData = new FormData();
-    formData.set("mode", mode);
-    if (mode === "photo") {
+    formData.set("mode", inbox ? "inbox" : mode);
+    if (inbox) {
+      formData.set("inboxId", String(inbox.id));
+    } else if (mode === "photo") {
       const file = fileRef.current?.files?.[0];
       if (!file) { setError("Выберите фото."); return; }
       formData.set("photo", file);
@@ -144,6 +165,7 @@ export function AddMealFlow({ showCalories }: { showCalories: boolean }) {
     setBusy(true);
     try {
       const result = await saveMeal({
+        inboxId: inbox?.id ?? null,
         eatenOn: date,
         eatenTime: time,
         mealType: draft.mealType,
@@ -170,6 +192,24 @@ export function AddMealFlow({ showCalories }: { showCalories: boolean }) {
   }
 
   if (!draft) {
+    if (inbox) {
+      return <main className="addflow">
+        <h1>Снимок из инбокса</h1>
+        <p className="addflow-hint">{formatTakenAt(inbox)}. Разберём его и подставим это же время в приём пищи.</p>
+        <div className="addflow-photo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/api/photos/${inbox.photoKey}`} alt="Снимок еды из инбокса" />
+          {inbox.note && <p className="addflow-hint">Ваша подпись: «{inbox.note}»</p>}
+        </div>
+        {error && <p className="form-error">{error}</p>}
+        <div className="addflow-actions">
+          <button className="black-button" onClick={handleAnalyze} disabled={busy}>{busy ? "Разбираем…" : "Разобрать"}</button>
+          <a className="link-button" href="/app/inbox">← В инбокс</a>
+        </div>
+        {busy && <p className="addflow-hint">Обычно это занимает несколько секунд.</p>}
+      </main>;
+    }
+
     return <main className="addflow">
       <h1>Что вы ели?</h1>
       <div className="addflow-tabs" role="tablist">

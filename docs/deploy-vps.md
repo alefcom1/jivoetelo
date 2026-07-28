@@ -151,13 +151,24 @@ crontab -e
 Скрипт останавливает приложение, переименовывает текущую базу в `*_old`
 и разворачивает дамп рядом — откатиться можно, пока `*_old` не удалена.
 
-### 8. Telegram Mini App
+### 8. Telegram Mini App и бот
 
 В @BotFather: `/newapp` → выбрать бота → URL `https://jivoetelo.ru/tg`.
 Токен бота — в `TELEGRAM_BOT_TOKEN`. Без токена `/api/tg/*` отвечает 503:
 это защита от запуска без проверки подписи, а не ошибка.
 
-### 9. Юридические реквизиты
+Бот с фото-инбоксом и напоминаниями требует ещё двух шагов: секрета
+`TELEGRAM_WEBHOOK_SECRET` в `.env` и регистрации вебхука через `setWebhook`.
+Пошагово — в [bot.md](./bot.md).
+
+### 9. Почтовая серия
+
+Письма после калькулятора не уходят, пока не заполнены `SMTP_*`: вместо
+отправки они пишутся в лог. Это осознанное умолчание — включать рассылку
+стоит после того, как в DNS домена появятся SPF, DKIM и DMARC, иначе первые
+же письма уедут в спам. Подробности — в [email-series.md](./email-series.md).
+
+### 10. Юридические реквизиты
 
 Заполнить `LEGAL_*` в `.env` после регистрации ИП или ООО и перезапустить
 `app`. До этого страницы `/legal/*` открываются и честно пишут, что реквизиты
@@ -213,4 +224,7 @@ docker compose exec db psql -U jivoetelo -d jivoetelo -c \
 | Разбор еды выдаёт одинаковые «Гречка с курицей» | Работает mock-провайдер: нет `ANTHROPIC_AUTH_TOKEN` или задан `AI_PROVIDER=mock`. Проверьте `npm run preflight` |
 | Mini App показывает «Откройте приложение из Telegram» | Не задан `TELEGRAM_BOT_TOKEN` или Mini App открыт не из Telegram |
 | Mini App не открывается в веб-версии Telegram | Проверьте `frame-ancestors` в Caddyfile: `/tg` должен быть разрешён к встраиванию |
+| Бот не отвечает на фото | `getWebhookInfo` покажет причину. 503 — не задан `TELEGRAM_WEBHOOK_SECRET`, 403 — секрет не совпадает с переданным в `setWebhook` ([bot.md](./bot.md)) |
+| Письма не приходят, в логах `[mail:noop]` | SMTP не настроен или задан `EMAIL_ENABLED=false` ([email-series.md](./email-series.md)) |
+| Напоминания и письма не отправляются вовсе | В логе при старте нет строки `[scheduler] запущен` — проверьте `SCHEDULER_ENABLED` и `DATABASE_URL` |
 | `no space left on device` | Логи или старые образы: `docker system prune -a`, проверьте `/root/backups` |

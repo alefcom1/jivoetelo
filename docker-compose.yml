@@ -47,6 +47,18 @@ services:
       ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
       AI_DAILY_BUDGET_USD: ${AI_DAILY_BUDGET_USD:-}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      TELEGRAM_MINIAPP_URL: ${TELEGRAM_MINIAPP_URL:-}
+      SITE_URL: ${SITE_URL:-https://jivoetelo.ru}
+      # Почтовая серия (docs/email-series.md). Без SMTP_* письма печатаются
+      # в лог и никуда не уходят — так задумано для первого запуска.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-}
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-}
       UNITPAY_PUBLIC_KEY: ${UNITPAY_PUBLIC_KEY:-}
       UNITPAY_SECRET_KEY: ${UNITPAY_SECRET_KEY:-}
       PAYMENTS_ENABLED: ${PAYMENTS_ENABLED:-}

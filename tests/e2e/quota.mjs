@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { createHmac } from "node:crypto";
-import { chromium } from "playwright";
+import { launchBrowser } from "./browser.mjs";
 
 const BASE = "http://127.0.0.1:3111";
 const BOT_TOKEN = "123456:TEST-BOT-TOKEN-FOR-UNIT-TESTS";
@@ -50,7 +50,7 @@ async function analyze(text) {
 // прошлых прогонов пришлось бы разгребать вручную — чистим заранее.
 sql("DELETE FROM ai_usage WHERE output_tokens >= 1000000");
 
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const browser = await launchBrowser();
 try {
   const page = await browser.newPage();
   page.on("dialog", (d) => d.accept());

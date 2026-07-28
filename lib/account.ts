@@ -4,6 +4,7 @@ import {
   aiUsage,
   mealItems,
   meals,
+  photoInbox,
   profiles,
   userConsents,
   users,
@@ -59,11 +60,12 @@ export async function exportAccount(userId: number): Promise<AccountExport> {
         .where(inArray(mealItems.mealId, mealRows.map((meal) => meal.id)))
     : [];
 
-  const [weights, consents, usage, waitlist] = await Promise.all([
+  const [weights, consents, usage, waitlist, inbox] = await Promise.all([
     db.select().from(weightEntries).where(eq(weightEntries.userId, userId)).orderBy(asc(weightEntries.onDate)),
     db.select().from(userConsents).where(eq(userConsents.userId, userId)).orderBy(asc(userConsents.acceptedAt)),
     db.select().from(aiUsage).where(eq(aiUsage.userId, userId)).orderBy(asc(aiUsage.createdAt)),
     db.select().from(waitlistSubscribers).where(eq(waitlistSubscribers.email, account.email)),
+    db.select().from(photoInbox).where(eq(photoInbox.userId, userId)).orderBy(asc(photoInbox.createdAt)),
   ]);
 
   return {
@@ -79,6 +81,10 @@ export async function exportAccount(userId: number): Promise<AccountExport> {
       состав: itemRows.filter((item) => item.mealId === meal.id),
     })),
     вес: weights,
+    фото_инбокс: inbox.map((item) => ({
+      ...item,
+      фото: item.dismissedAt ? null : `/api/photos/${item.photoKey}`,
+    })),
     обращения_к_ai: usage,
     лист_ожидания: waitlist,
     примечание:
@@ -99,12 +105,14 @@ export async function exportAccount(userId: number): Promise<AccountExport> {
 export async function deleteAccount(userId: number): Promise<void> {
   const db = getDb();
 
-  const photos = await db
-    .select({ photoKey: meals.photoKey })
-    .from(meals)
-    .where(eq(meals.userId, userId));
+  const [mealPhotos, inboxPhotos] = await Promise.all([
+    db.select({ photoKey: meals.photoKey }).from(meals).where(eq(meals.userId, userId)),
+    db.select({ photoKey: photoInbox.photoKey }).from(photoInbox).where(eq(photoInbox.userId, userId)),
+  ]);
 
-  for (const { photoKey } of photos) {
+  // Ключи из инбокса и из приёмов пищи пересекаются: разобранное фото
+  // остаётся тем же файлом. Множество убирает повторное удаление.
+  for (const photoKey of new Set([...mealPhotos, ...inboxPhotos].map((row) => row.photoKey))) {
     if (photoKey) await deletePhoto(photoKey);
   }
 

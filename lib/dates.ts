@@ -4,10 +4,43 @@ export function isValidDay(value: string | undefined): value is string {
   return !!value && DATE_RE.test(value);
 }
 
+export function appTimeZone(): string {
+  return process.env.APP_TIMEZONE ?? "Europe/Moscow";
+}
+
 /** Сегодняшняя дата в таймзоне продукта (по умолчанию московской). */
 export function localToday(): string {
-  const timeZone = process.env.APP_TIMEZONE ?? "Europe/Moscow";
-  return new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date());
+  return new Intl.DateTimeFormat("en-CA", { timeZone: appTimeZone() }).format(new Date());
+}
+
+export type LocalMoment = { day: string; time: string; hour: number };
+
+/**
+ * Раскладывает момент времени на локальные дату, время и час.
+ *
+ * Момент передаётся аргументом, а не берётся из `new Date()`, потому что от
+ * этих значений зависят и планировщик напоминаний, и дата приёма пищи из
+ * фото-инбокса, — а такие правила должны проверяться тестами на фиксированном
+ * времени, а не на «сейчас».
+ */
+export function localMoment(now: Date, timeZone: string = appTimeZone()): LocalMoment {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? "00";
+  const hour = get("hour");
+  return {
+    day: `${get("year")}-${get("month")}-${get("day")}`,
+    time: `${hour}:${get("minute")}`,
+    hour: Number(hour),
+  };
 }
 
 export function shiftDay(day: string, delta: number): string {

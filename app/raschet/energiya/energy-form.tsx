@@ -9,6 +9,7 @@ import {
   type Goal,
   type SexForFormula,
 } from "@/lib/targets";
+import EmailCapture from "./email-capture";
 
 type FormValues = {
   goal: Goal;
@@ -149,7 +150,10 @@ export default function EnergyForm({ currentYear }: { currentYear: number }) {
     window.setTimeout(() => setCopied(false), 2000);
   }
 
-  return <form className="raschet-form" onSubmit={(event) => event.preventDefault()}>
+  // Обёртка — div, а не form: считать нечего отправлять, расчёт идёт прямо
+  // при вводе. К тому же ниже стоит настоящая форма подписки, а вложенные
+  // формы браузер не разбирает.
+  return <div className="raschet-form">
     <fieldset>
       <legend>Цель</legend>
       <div className="radio-row">
@@ -268,6 +272,7 @@ export default function EnergyForm({ currentYear }: { currentYear: number }) {
               {copied ? "Ссылка скопирована" : "Скопировать ссылку на расчёт"}
             </button>}
         </div>
+        <EmailCapture targets={targets} />
       </div>}
-  </form>;
+  </div>;
 }

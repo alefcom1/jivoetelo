@@ -87,6 +87,27 @@ export async function saveMeal(payload: unknown): Promise<{ ok: true; id: number
   return handle<{ ok: true; id: number }>(response);
 }
 
+export type InboxItemDto = {
+  id: number;
+  photoKey: string;
+  note: string | null;
+  takenOn: string;
+  takenTime: string;
+};
+
+export async function fetchInbox(): Promise<{ items: InboxItemDto[] }> {
+  return handle<{ items: InboxItemDto[] }>(await fetch("/api/tg/inbox", { headers: initDataHeader(), cache: "no-store" }));
+}
+
+export async function dismissInboxItem(id: number): Promise<{ ok: boolean }> {
+  const response = await fetch("/api/tg/inbox", {
+    method: "POST",
+    headers: { ...initDataHeader(), "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  });
+  return handle<{ ok: boolean }>(response);
+}
+
 export type SuggestResponse = {
   needsPlan: boolean;
   context?: { remainingKcal: number; remainingProtein: number; remainingFiber: number; mealTypeLabel: string };

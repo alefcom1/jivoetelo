@@ -1,20 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, fetchToday, type TodayResponse } from "./api";
+import { ApiError, fetchToday, type InboxItemDto, type TodayResponse } from "./api";
 import { AddTab } from "./add-tab";
-import { IconAdd, IconSuggest, IconToday } from "./icons";
+import { IconAdd, IconInbox, IconSuggest, IconToday } from "./icons";
+import { InboxTab } from "./inbox-tab";
 import { LinkScreen } from "./link-screen";
 import { SuggestTab } from "./suggest-tab";
 import { TodayTab } from "./today-tab";
 import { applyTheme, getWebApp, haptic } from "./telegram";
 
-type Tab = "today" | "add" | "suggest";
+type Tab = "today" | "add" | "inbox" | "suggest";
 type Status = "loading" | "ready" | "needs_link" | "no_telegram" | "error";
 
 const TABS: Array<{ key: Tab; label: string; Icon: (props: { active?: boolean }) => React.ReactElement }> = [
   { key: "today", label: "Сегодня", Icon: IconToday },
   { key: "add", label: "Добавить", Icon: IconAdd },
+  { key: "inbox", label: "Инбокс", Icon: IconInbox },
   { key: "suggest", label: "Совет", Icon: IconSuggest },
 ];
 
@@ -23,6 +25,9 @@ export default function MiniApp() {
   const [tab, setTab] = useState<Tab>("today");
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [firstName, setFirstName] = useState<string | null>(null);
+  // Снимок, выбранный в инбоксе: разбор идёт тем же экраном, что и обычное
+  // добавление, поэтому второго редактора черновика не появляется.
+  const [inboxItem, setInboxItem] = useState<InboxItemDto | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -62,6 +67,8 @@ export default function MiniApp() {
 
   function switchTab(next: Tab) {
     haptic("tap");
+    // Уход с разбора снимка отменяет его: вернуться можно из инбокса.
+    if (next !== "add") setInboxItem(null);
     setTab(next);
   }
 
@@ -94,9 +101,19 @@ export default function MiniApp() {
     <div className="tg-screen">
       {tab === "today" && <TodayTab data={today} firstName={firstName} onAdd={() => switchTab("add")} />}
       {tab === "add" && <AddTab
+        key={inboxItem?.id ?? "manual"}
         showCalories={today.showCalories}
-        onSaved={() => { haptic("success"); setTab("today"); void load(); }}
+        inbox={inboxItem}
+        onCancelInbox={() => { setInboxItem(null); setTab("inbox"); }}
+        onSaved={() => {
+          haptic("success");
+          const returnTo = inboxItem ? "inbox" : "today";
+          setInboxItem(null);
+          setTab(returnTo);
+          void load();
+        }}
       />}
+      {tab === "inbox" && <InboxTab onPick={(item) => { setInboxItem(item); setTab("add"); }} />}
       {tab === "suggest" && <SuggestTab showCalories={today.showCalories} />}
     </div>
 

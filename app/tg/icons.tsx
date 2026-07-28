@@ -32,6 +32,17 @@ export function IconAdd({ active }: IconProps) {
   </svg>;
 }
 
+/** Лоток входящих — снимки, которые ждут разбора. */
+export function IconInbox({ active }: IconProps) {
+  return <svg {...base}>
+    <path d="M4 13.5 6 5.5h12l2 8" />
+    <path
+      d="M4 13.5h4l1 2.5h6l1-2.5h4v4a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-4Z"
+      fill={active ? "currentColor" : "none"}
+    />
+  </svg>;
+}
+
 /** Искра — подсказка, что съесть дальше. */
 export function IconSuggest({ active }: IconProps) {
   return <svg {...base}>

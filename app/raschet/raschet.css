@@ -347,3 +347,70 @@
     padding: 20px;
   }
 }
+
+/* Подписка на разбор письмом: лёгкое продолжение результата, а не отдельная
+   форма — поэтому только верхняя линия-разделитель, без своей рамки. */
+.raschet-capture {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.raschet-capture h3 {
+  margin: 0 0 8px;
+  font: 500 20px var(--serif);
+  letter-spacing: -0.03em;
+}
+
+/* :not(.field-note) — внутри блока есть готовый глобальный .field-note
+   (подпись «Всего писем будет три…»), и его трогать нельзя; обычный
+   селектор "p" задел бы и его тоже. */
+.raschet-capture p:not(.field-note) {
+  margin: 0 0 18px;
+  max-width: 480px;
+  color: #3d3f3a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.raschet-capture-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.raschet-capture input[type="email"] {
+  flex: 1;
+  min-width: 220px;
+  padding: 13px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  font-size: 14px;
+  outline-color: var(--coral);
+}
+
+/* Кнопка не должна сжиматься, когда поле и кнопка переносятся на узком
+   экране друг под друга. */
+.raschet-capture-row .black-button {
+  flex: none;
+}
+
+/* Состояние «письмо отправлено»: та же обёртка, но без разделителя сверху —
+   вместо него заметный блок на --lime, как у .raschet-adjusted. */
+.raschet-capture-done {
+  padding: 20px 22px;
+  border-top: 0;
+  background: var(--lime);
+}
+
+.raschet-capture-done p:not(.field-note) {
+  margin: 0 0 8px;
+  max-width: 480px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.raschet-capture-done .field-note {
+  margin: 0;
+}

@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { chromium } from "playwright";
+import { launchBrowser } from "./browser.mjs";
 
 // Сквозная проверка юридического блока: документы, согласия, выгрузка и
 // удаление аккаунта. Всё, что обещано в /legal/privacy разделом «Ваши права»,
@@ -23,7 +23,7 @@ function sql(query) {
   ).trim();
 }
 
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const browser = await launchBrowser();
 try {
   const page = await browser.newPage();
 

@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { createHmac } from "node:crypto";
-import { chromium } from "playwright";
+import { launchBrowser } from "./browser.mjs";
 
 const BASE = "http://127.0.0.1:3111";
 const BOT_TOKEN = "123456:TEST-BOT-TOKEN-FOR-UNIT-TESTS";
@@ -48,7 +48,7 @@ async function api(path, options = {}) {
   return { status: response.status, body };
 }
 
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const browser = await launchBrowser();
 try {
   step("1. Регистрация в вебе + план (нужен для целей и советов)");
   const page = await browser.newPage();

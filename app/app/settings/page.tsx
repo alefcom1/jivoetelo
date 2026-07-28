@@ -5,7 +5,10 @@ import { getDb } from "@/db";
 import { userConsents, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
+import { getBotPreferences } from "@/lib/bot/store";
+import { DEFAULT_DIGEST_HOUR } from "@/lib/reminders";
 import { setShowCalories } from "../meal-actions";
+import { BotReminders } from "./bot-reminders";
 import { DangerZone } from "./danger-zone";
 import { TelegramLink } from "./telegram-link";
 import { UsagePanel } from "./usage-panel";
@@ -23,6 +26,8 @@ export default async function SettingsPage() {
     .where(eq(users.id, user.id))
     .limit(1);
   const linked = !!rows[0]?.telegramUserId;
+
+  const preferences = linked ? await getBotPreferences(user.id) : null;
 
   const consents = await db
     .select({ kind: userConsents.kind, version: userConsents.version, acceptedAt: userConsents.acceptedAt })
@@ -52,6 +57,15 @@ export default async function SettingsPage() {
       <p className="settings-label">Telegram</p>
       <TelegramLink linked={linked} />
     </section>
+    {linked &&
+      <section className="settings-block">
+        <p className="settings-label">Напоминания в боте</p>
+        <BotReminders
+          remindersEnabled={preferences?.remindersEnabled ?? true}
+          digestHour={preferences?.digestHour ?? DEFAULT_DIGEST_HOUR}
+          snoozedUntil={preferences?.snoozedUntil ?? null}
+        />
+      </section>}
     <section className="settings-block">
       <p className="settings-label">Видимость калорий</p>
       <p>

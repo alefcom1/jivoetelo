@@ -7,8 +7,17 @@ import { getDb } from "@/db";
 import { mealItems, meals, users } from "@/db/schema";
 import { getMealProvider, MealAnalysisError, type MealAnalysis } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
+import { getPendingItem, markProcessed } from "@/lib/inbox";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
-import { ALLOWED_PHOTO_TYPES, deletePhoto, MAX_PHOTO_BYTES, photoBelongsTo, savePhoto } from "@/lib/storage";
+import {
+  ALLOWED_PHOTO_TYPES,
+  deletePhoto,
+  MAX_PHOTO_BYTES,
+  photoBelongsTo,
+  photoMimeType,
+  readPhoto,
+  savePhoto,
+} from "@/lib/storage";
 
 export type AnalyzeResult =
   | { ok: true; analysis: MealAnalysis; photoKey: string | null; sourceText: string | null }
@@ -27,7 +36,7 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
   const mode = String(formData.get("mode") ?? "text");
 
   // Все функции бесплатны; лимит защищает от неумеренного расхода токенов.
-  const operation = mode === "photo" ? "analyze_photo" : "analyze_text";
+  const operation = mode === "text" ? "analyze_text" : "analyze_photo";
   const decision = await checkQuota(user.id, user.plan, operation);
   if (!decision.allowed) return { ok: false, error: quotaMessage(decision) };
   let photoKey: string | null = null;
@@ -35,7 +44,25 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
 
   try {
     let analysis: MealAnalysis;
-    if (mode === "photo") {
+    if (mode === "inbox") {
+      // Фото уже лежит на диске: его прислали боту раньше. Здесь мы его
+      // только читаем — заново загружать и заново класть на диск не нужно.
+      const item = await getPendingItem(user.id, Number(formData.get("inboxId")));
+      if (!item) return { ok: false, error: "Этот снимок уже разобран или удалён." };
+      const data = await readPhoto(item.photoKey);
+      if (!data) return { ok: false, error: "Файл снимка не найден. Попробуйте отклонить его в инбоксе." };
+
+      photoKey = item.photoKey;
+      sourceText = item.note;
+      const result = await getMealProvider().analyseMeal({
+        kind: "photo",
+        data,
+        mediaType: photoMimeType(item.photoKey) as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
+        note: item.note ?? undefined,
+      });
+      analysis = result.analysis;
+      await recordUsage(user.id, operation, result.usage);
+    } else if (mode === "photo") {
       const file = formData.get("photo");
       if (!(file instanceof File) || file.size === 0) {
         return { ok: false, error: "Выберите фото." };
@@ -68,7 +95,9 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
     }
     return { ok: true, analysis, photoKey, sourceText };
   } catch (error) {
-    if (photoKey) await deletePhoto(photoKey).catch(() => {});
+    // Снимок из инбокса не удаляем: он попал на диск не в этом вызове и
+    // должен остаться в инбоксе, чтобы разбор можно было повторить.
+    if (photoKey && mode !== "inbox") await deletePhoto(photoKey).catch(() => {});
     if (error instanceof MealAnalysisError) {
       return { ok: false, error: ANALYSIS_ERRORS[error.reason] };
     }
@@ -84,6 +113,8 @@ export type SaveMealInput = {
   sourceText: string | null;
   photoKey: string | null;
   analysis: MealAnalysis | null;
+  /** Запись фото-инбокса, из которой вырос приём пищи, если он оттуда. */
+  inboxId?: number | null;
   items: Array<{
     name: string;
     grams: number;
@@ -144,6 +175,9 @@ export async function saveMeal(input: SaveMealInput): Promise<{ ok: false; error
       })
       .returning({ id: meals.id });
     await db.insert(mealItems).values(items.map((item) => ({ ...item, mealId: inserted[0].id })));
+    // Снимок уходит из инбокса только теперь, когда приём пищи действительно
+    // сохранён: до этого момента разбор можно было бросить на полпути.
+    if (input.inboxId) await markProcessed(user.id, input.inboxId, inserted[0].id);
   } catch (error) {
     console.error("saveMeal failed", error);
     return { ok: false, error: "Не получилось сохранить. Попробуйте ещё раз." };

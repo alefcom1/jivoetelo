@@ -1,6 +1,14 @@
 import { getMealProvider, MealAnalysisError } from "@/lib/ai";
+import { getPendingItem } from "@/lib/inbox";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
-import { ALLOWED_PHOTO_TYPES, deletePhoto, MAX_PHOTO_BYTES, savePhoto } from "@/lib/storage";
+import {
+  ALLOWED_PHOTO_TYPES,
+  deletePhoto,
+  MAX_PHOTO_BYTES,
+  photoMimeType,
+  readPhoto,
+  savePhoto,
+} from "@/lib/storage";
 import { authorize } from "../_auth";
 
 const ANALYSIS_ERRORS: Record<string, string> = {
@@ -17,13 +25,31 @@ export async function POST(request: Request) {
   const mode = String(formData.get("mode") ?? "text");
 
   // Все функции бесплатны; лимит защищает от неумеренного расхода токенов.
-  const operation = mode === "photo" ? "analyze_photo" : "analyze_text";
+  const operation = mode === "text" ? "analyze_text" : "analyze_photo";
   const decision = await checkQuota(auth.user.id, auth.user.plan, operation);
   if (!decision.allowed) return Response.json({ error: quotaMessage(decision) }, { status: 429 });
 
   let photoKey: string | null = null;
 
   try {
+    if (mode === "inbox") {
+      // Снимок уже на диске: его прислали боту раньше. Заново загружать и
+      // заново класть на диск нечего.
+      const item = await getPendingItem(auth.user.id, Number(formData.get("inboxId")));
+      if (!item) return Response.json({ error: "Этот снимок уже разобран или удалён." }, { status: 404 });
+      const data = await readPhoto(item.photoKey);
+      if (!data) return Response.json({ error: "Файл снимка не найден." }, { status: 404 });
+
+      const result = await getMealProvider().analyseMeal({
+        kind: "photo",
+        data,
+        mediaType: photoMimeType(item.photoKey) as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
+        note: item.note ?? undefined,
+      });
+      await recordUsage(auth.user.id, operation, result.usage);
+      return Response.json({ analysis: result.analysis, photoKey: item.photoKey, sourceText: item.note });
+    }
+
     if (mode === "photo") {
       const file = formData.get("photo");
       if (!(file instanceof File) || file.size === 0) {

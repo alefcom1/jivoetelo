@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { chromium } from "/home/user/jivoetelo/node_modules/playwright/index.mjs";
+import { launchBrowser } from "./browser.mjs";
 
 const BASE = "http://127.0.0.1:3111";
 const email = `e2e-m4-${Date.now()}@example.com`;
@@ -17,7 +17,7 @@ function sql(query) {
   return out.split("\n")[0].trim();
 }
 
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const browser = await launchBrowser();
 try {
   const page = await browser.newPage();
   page.on("dialog", (dialog) => dialog.accept());
