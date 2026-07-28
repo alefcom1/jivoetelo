@@ -181,3 +181,14 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
 .shell-footer{max-width:760px;margin:0 auto;padding:34px 24px 46px}
 .shell-footer p{margin:0;color:#8a8b84;font-size:11px;line-height:1.65}
 .shell-footer .legal-links{margin-top:14px}
+
+/* Множители порции в черновике разбора еды */
+.portion-multipliers{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}
+.portion-multipliers button{border:1px solid var(--line);border-radius:3px;padding:4px 8px;background:transparent;color:var(--black);font-size:11px;font-weight:700}
+.portion-multipliers button:hover{background:var(--black);color:var(--white)}
+.portion-multipliers .portion-reset{border:0;padding:4px 2px;background:transparent;color:var(--muted);font-size:11px;font-weight:700;text-decoration:underline}
+.portion-multipliers .portion-reset:hover{background:transparent;color:var(--black)}
+/* letter-spacing в em вычисляется от размера родителя и наследуется уже в
+   пикселях: −0.04em от 32px даёт −1.28px, и на подписи в 12px буквы жмутся.
+   Шорткат font её не сбрасывает, поэтому сбрасываем явно. */
+.energy small{letter-spacing:normal}

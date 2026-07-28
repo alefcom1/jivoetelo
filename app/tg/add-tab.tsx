@@ -7,11 +7,14 @@ import {
   type AnalysisItemDto,
   type ClarificationDto,
 } from "./api";
+import { scaleGrams } from "@/lib/portions";
 import { haptic, useMainButtonApi } from "./telegram";
 
 type DraftItem = {
   name: string;
   grams: number;
+  // Вес, который предложила модель — нужен только для кнопки «сброс», в БД не уходит.
+  suggestedGrams: number;
   kcalPer100: number;
   proteinPer100: number;
   fatPer100: number;
@@ -33,6 +36,7 @@ function toDraft(item: AnalysisItemDto): DraftItem {
   return {
     name: item.name,
     grams: item.estimatedGrams,
+    suggestedGrams: item.estimatedGrams,
     kcalPer100: item.per100g.kcal,
     proteinPer100: item.per100g.protein,
     fatPer100: item.per100g.fat,
@@ -102,6 +106,7 @@ export function AddTab({ showCalories, onSaved }: { showCalories: boolean; onSav
     setError(null);
     try {
       const now = new Date();
+      // suggestedGrams — служебное поле только для интерфейса, API его не ждёт.
       await saveMeal({
         eatenOn: now.toLocaleDateString("en-CA"),
         eatenTime: now.toTimeString().slice(0, 5),
@@ -109,7 +114,16 @@ export function AddTab({ showCalories, onSaved }: { showCalories: boolean; onSav
         sourceText,
         photoKey,
         analysis,
-        items,
+        items: items.map((item) => ({
+          name: item.name,
+          grams: item.grams,
+          kcalPer100: item.kcalPer100,
+          proteinPer100: item.proteinPer100,
+          fatPer100: item.fatPer100,
+          carbsPer100: item.carbsPer100,
+          fiberPer100: item.fiberPer100,
+          confidence: item.confidence,
+        })),
       });
       onSaved();
     } catch (err) {
@@ -209,6 +223,17 @@ export function AddTab({ showCalories, onSaved }: { showCalories: boolean; onSav
             <span>{item.grams} г</span>
             <button aria-label="Больше" onClick={() => { haptic("tap"); updateItem(index, { grams: Math.min(3000, item.grams + 10) }); }}>+</button>
           </div>
+        </div>
+        <div className="tg-portions">
+          <button type="button" onClick={() => { haptic("tap"); updateItem(index, { grams: scaleGrams(item.grams, 0.5) }); }} aria-label="Уменьшить порцию вдвое">½</button>
+          <button type="button" onClick={() => { haptic("tap"); updateItem(index, { grams: scaleGrams(item.grams, 0.75) }); }} aria-label="Уменьшить порцию на четверть">¾</button>
+          <button type="button" onClick={() => { haptic("tap"); updateItem(index, { grams: scaleGrams(item.grams, 1.5) }); }} aria-label="Увеличить порцию в полтора раза">1½</button>
+          <button type="button" onClick={() => { haptic("tap"); updateItem(index, { grams: scaleGrams(item.grams, 2) }); }} aria-label="Увеличить порцию вдвое">2×</button>
+          {item.grams !== item.suggestedGrams && (
+            <button type="button" className="tg-portions-reset"
+              onClick={() => { haptic("tap"); updateItem(index, { grams: item.suggestedGrams }); }}
+              aria-label="Вернуть вес, предложенный моделью">сброс</button>
+          )}
         </div>
         <div className="tg-draft-meta">
           {CONFIDENCE_LABELS[item.confidence] && <i>{CONFIDENCE_LABELS[item.confidence]}</i>}

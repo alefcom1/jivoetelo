@@ -4,11 +4,14 @@ import { useRef, useState } from "react";
 import type { AnalysisItem, Clarification, MealAnalysis } from "@/lib/ai";
 import { MEAL_TYPE_LABELS } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
+import { scaleGrams } from "@/lib/portions";
 import { analyzeMeal, saveMeal } from "../meal-actions";
 
 type DraftItem = {
   name: string;
   grams: number;
+  // Вес, который предложила модель — нужен только для кнопки «сброс», в БД не уходит.
+  suggestedGrams: number;
   kcalPer100: number;
   proteinPer100: number;
   fatPer100: number;
@@ -36,6 +39,7 @@ function toDraftItem(item: AnalysisItem): DraftItem {
   return {
     name: item.name,
     grams: item.estimatedGrams,
+    suggestedGrams: item.estimatedGrams,
     kcalPer100: item.per100g.kcal,
     proteinPer100: item.per100g.protein,
     fatPer100: item.per100g.fat,
@@ -46,7 +50,7 @@ function toDraftItem(item: AnalysisItem): DraftItem {
 }
 
 function emptyItem(): DraftItem {
-  return { name: "", grams: 100, kcalPer100: 0, proteinPer100: 0, fatPer100: 0, carbsPer100: 0, fiberPer100: 0, confidence: "high" };
+  return { name: "", grams: 100, suggestedGrams: 100, kcalPer100: 0, proteinPer100: 0, fatPer100: 0, carbsPer100: 0, fiberPer100: 0, confidence: "high" };
 }
 
 function guessMealType(time: string): string {
@@ -146,7 +150,17 @@ export function AddMealFlow({ showCalories }: { showCalories: boolean }) {
         sourceText: draft.sourceText,
         photoKey: draft.photoKey,
         analysis: draft.analysis,
-        items: draft.items,
+        // suggestedGrams — служебное поле только для интерфейса, серверный экшен его не ждёт.
+        items: draft.items.map((item) => ({
+          name: item.name,
+          grams: item.grams,
+          kcalPer100: item.kcalPer100,
+          proteinPer100: item.proteinPer100,
+          fatPer100: item.fatPer100,
+          carbsPer100: item.carbsPer100,
+          fiberPer100: item.fiberPer100,
+          confidence: item.confidence,
+        })),
       });
       // При успехе saveMeal делает redirect и сюда не возвращается.
       if (result && !result.ok) setError(result.error);
@@ -208,6 +222,15 @@ export function AddMealFlow({ showCalories }: { showCalories: boolean }) {
           <label className="draft-grams"><input type="number" min={1} max={3000} value={item.grams}
             onChange={(e) => updateItem(index, { grams: Number(e.target.value) })} aria-label="Вес в граммах" /> г</label>
           <button className="draft-remove" onClick={() => removeItem(index)} aria-label="Убрать позицию">×</button>
+        </div>
+        <div className="portion-multipliers">
+          <button type="button" onClick={() => updateItem(index, { grams: scaleGrams(item.grams, 0.5) })} aria-label="Уменьшить порцию вдвое">½</button>
+          <button type="button" onClick={() => updateItem(index, { grams: scaleGrams(item.grams, 0.75) })} aria-label="Уменьшить порцию на четверть">¾</button>
+          <button type="button" onClick={() => updateItem(index, { grams: scaleGrams(item.grams, 1.5) })} aria-label="Увеличить порцию в полтора раза">1½</button>
+          <button type="button" onClick={() => updateItem(index, { grams: scaleGrams(item.grams, 2) })} aria-label="Увеличить порцию вдвое">2×</button>
+          {item.grams !== item.suggestedGrams && (
+            <button type="button" className="portion-reset" onClick={() => updateItem(index, { grams: item.suggestedGrams })} aria-label="Вернуть вес, предложенный моделью">сброс</button>
+          )}
         </div>
         <div className="draft-item-meta">
           {item.confidence !== "high" && <i>{CONFIDENCE_LABELS[item.confidence]}</i>}

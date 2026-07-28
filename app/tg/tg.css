@@ -203,3 +203,13 @@
 .tg-legal p { margin: 0; color: var(--tg-hint); font-size: 11px; line-height: 1.55; }
 .tg-legal div { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
 .tg-legal a { color: var(--tg-link); font-size: 11px; font-weight: 600; text-decoration: none; }
+
+/* Множители порции в черновике разбора еды */
+.tg-portions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.tg-portions button {
+  min-height: 36px; padding: 0 12px; border: 0; border-radius: 10px; cursor: pointer;
+  background: color-mix(in srgb, var(--tg-hint) 15%, transparent); color: var(--tg-text); font-size: 13px; font-weight: 700;
+}
+.tg-portions button.tg-portions-reset {
+  background: transparent; color: var(--tg-link); text-decoration: underline;
+}
