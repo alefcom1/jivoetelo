@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { formatDayRu, isValidDay, localToday, MEAL_TYPE_LABELS, shiftDay } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
-import { getLatestWeight } from "./profile-actions";
+import { getLatestWeightKg } from "@/lib/weight";
 
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const user = await getCurrentUser();
@@ -34,7 +34,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 
   const profileRows = await db.select().from(profiles).where(eq(profiles.userId, user.id)).limit(1);
   const profile = profileRows[0];
-  const weightKg = profile ? await getLatestWeight(user.id) : null;
+  const weightKg = profile ? await getLatestWeightKg(user.id) : null;
   let targets: Targets | null = null;
   if (profile && weightKg) {
     targets = computeTargets({

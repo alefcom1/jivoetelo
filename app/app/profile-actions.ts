@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
@@ -79,16 +79,6 @@ export async function addWeight(_prev: WeightState, formData: FormData): Promise
   }
   revalidatePath("/app/weight");
   return { status: "saved" };
-}
-
-export async function getLatestWeight(userId: number): Promise<number | null> {
-  const rows = await getDb()
-    .select({ weightKg: weightEntries.weightKg })
-    .from(weightEntries)
-    .where(eq(weightEntries.userId, userId))
-    .orderBy(desc(weightEntries.onDate))
-    .limit(1);
-  return rows[0]?.weightKg ?? null;
 }
 
 /**

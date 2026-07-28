@@ -29,6 +29,13 @@
       "when": 1785203164702,
       "tag": "0003_m4-adjustment",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785214074887,
+      "tag": "0004_m5-telegram",
+      "breakpoints": true
     }
   ]
 }

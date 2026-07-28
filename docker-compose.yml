@@ -26,6 +26,8 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
       AI_PROVIDER: ${AI_PROVIDER:-}
+      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Moscow}
     volumes:
       - uploads:/app/data

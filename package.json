@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
+    "@telegram-apps/init-data-node": "^2.0.10",
     "drizzle-orm": "0.45.2",
     "next": "16.2.6",
     "pg": "8.16.3",

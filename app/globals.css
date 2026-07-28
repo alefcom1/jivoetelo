@@ -138,3 +138,10 @@ a.header-cta{display:inline-flex;align-items:center}
 .review-proposal{background:var(--lime);padding:20px;margin:18px 0;max-width:640px}
 .review-proposal h2{margin:0 0 8px;font:500 21px var(--serif)}
 .review-proposal p{margin:0 0 10px;font-size:14px;line-height:1.6}
+
+/* ===== Привязка Telegram в настройках ===== */
+.tg-link-settings{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.tg-link-settings p{margin:0;font-size:14px;line-height:1.6}
+.link-code-box{display:flex;flex-direction:column;gap:6px;background:var(--paper);border:1px solid var(--line);padding:14px 18px;width:100%;box-sizing:border-box}
+.link-code-box strong{font:700 26px var(--sans);letter-spacing:.22em}
+.link-code-box span{font-size:11px;color:var(--muted)}

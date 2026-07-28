@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { localToday } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
 import { computeTargets, type Activity, type Goal, type SexForFormula } from "@/lib/targets";
-import { getLatestWeight } from "../profile-actions";
+import { getLatestWeightKg } from "@/lib/weight";
 import { NextMealSuggestions } from "./next-meal-suggestions";
 
 function nextMealLabel(): string {
@@ -28,7 +28,7 @@ export default async function NextMealPage() {
   const db = getDb();
   const profileRows = await db.select().from(profiles).where(eq(profiles.userId, user.id)).limit(1);
   const profile = profileRows[0];
-  const weightKg = await getLatestWeight(user.id);
+  const weightKg = await getLatestWeightKg(user.id);
 
   if (!profile || !weightKg) {
     return <main className="next-meal">

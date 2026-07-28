@@ -1,0 +1,199 @@
+/* Telegram Mini App «Живое Тело».
+   Палитра берётся из themeParams Telegram (переменные --tg-*), поверх идут
+   фирменные акценты бренда — чтобы продукт узнавался без логотипа, но не
+   спорил с темой пользователя (разделы 10.1 и 10.12 спецификации). */
+
+.tg-root {
+  --tg-bg: #f4f1ea;
+  --tg-surface: #fffefa;
+  --tg-text: #171917;
+  --tg-hint: #75766f;
+  --tg-link: #2946c6;
+  --tg-button: #171917;
+  --tg-button-text: #ffffff;
+
+  --brand-coral: #e56d55;
+  --brand-lime: #d9e49c;
+  --brand-serif: var(--font-display), Georgia, serif;
+  --radius: 16px;
+
+  min-height: 100dvh;
+  background: var(--tg-bg);
+  color: var(--tg-text);
+  font-family: var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root[data-tg-scheme="dark"] .tg-root { --brand-lime: #3d4a1f; }
+
+.tg-app { display: flex; flex-direction: column; min-height: 100dvh; }
+.tg-screen { flex: 1; padding-bottom: 84px; }
+.tg-page { padding: 20px 16px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+.tg-center { min-height: 100dvh; display: grid; place-items: center; padding: 24px; }
+.tg-center-block { text-align: center; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.tg-notice { text-align: center; gap: 14px; display: flex; flex-direction: column; align-items: center; }
+.tg-notice h1, .tg-center-block h1 { margin: 0; font: 500 30px/1.05 var(--brand-serif); letter-spacing: -0.03em; }
+.tg-notice p, .tg-center-block p { margin: 0; color: var(--tg-hint); font-size: 14px; line-height: 1.6; max-width: 320px; }
+
+.tg-mark {
+  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--tg-text); color: var(--tg-bg); font: 600 26px var(--brand-serif);
+}
+
+/* Шапка экрана */
+.tg-hero { display: flex; flex-direction: column; gap: 6px; }
+.tg-kicker { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
+.tg-hero h1 { margin: 0; font: 500 30px/1.05 var(--brand-serif); letter-spacing: -0.03em; }
+.tg-hint { margin: 0; color: var(--tg-hint); font-size: 13px; line-height: 1.6; }
+.tg-error { margin: 0; color: #b95353; font-size: 13px; line-height: 1.5; }
+
+/* Кольцо энергии */
+.tg-ring { position: relative; display: grid; place-items: center; padding: 4px 0 8px; }
+.tg-ring svg { width: 168px; height: 168px; transform: rotate(-90deg); }
+.tg-ring-track { fill: none; stroke: color-mix(in srgb, var(--tg-hint) 22%, transparent); stroke-width: 10; }
+.tg-ring-value {
+  fill: none; stroke: var(--brand-coral); stroke-width: 10; stroke-linecap: round;
+  transition: stroke-dashoffset 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tg-ring-center { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.tg-ring-center strong { font: 500 40px/1 var(--brand-serif); letter-spacing: -0.03em; }
+.tg-ring-center span { font-size: 11px; color: var(--tg-hint); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-ring-value, .tg-bar-fill { transition: none; }
+}
+
+/* Карточки */
+.tg-card { background: var(--tg-surface); border-radius: var(--radius); padding: 16px; }
+.tg-macros { display: flex; flex-direction: column; gap: 14px; }
+.tg-hint-card { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; background: var(--brand-lime); }
+.tg-hint-card p { margin: 0; font-size: 14px; line-height: 1.55; }
+
+.tg-bar { display: flex; flex-direction: column; gap: 7px; }
+.tg-bar-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+.tg-bar-head span { color: var(--tg-hint); font-weight: 600; }
+.tg-bar-head b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tg-bar-head i { font-style: normal; color: var(--tg-hint); font-weight: 500; }
+.tg-bar-track { height: 6px; border-radius: 999px; background: color-mix(in srgb, var(--tg-hint) 18%, transparent); overflow: hidden; }
+.tg-bar-fill { height: 100%; border-radius: 999px; background: var(--tg-text); transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Список приёмов пищи */
+.tg-section { display: flex; flex-direction: column; gap: 10px; }
+.tg-section h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
+.tg-meals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tg-meals li { display: flex; align-items: center; gap: 12px; background: var(--tg-surface); border-radius: var(--radius); padding: 14px; }
+.tg-meals time { font-size: 12px; font-weight: 700; color: var(--tg-hint); width: 42px; font-variant-numeric: tabular-nums; }
+.tg-meals li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tg-meals b { font-size: 14px; }
+.tg-meals li > div span { font-size: 12px; color: var(--tg-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-meals strong { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font: 500 17px var(--brand-serif); white-space: nowrap; }
+.tg-meals strong em { font: 500 11px var(--font-body), sans-serif; font-style: normal; color: var(--tg-hint); }
+
+.tg-empty { background: var(--tg-surface); border-radius: var(--radius); padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.tg-empty svg { color: color-mix(in srgb, var(--tg-hint) 55%, transparent); }
+.tg-empty p { margin: 0; color: var(--tg-hint); font-size: 14px; line-height: 1.55; }
+
+/* Управление */
+.tg-button {
+  appearance: none; border: 0; border-radius: 12px; padding: 14px 20px;
+  background: var(--tg-button); color: var(--tg-button-text);
+  font: 600 15px var(--font-body), sans-serif; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; transition: opacity 180ms ease;
+}
+.tg-button:disabled { opacity: 0.55; }
+.tg-button:active:not(:disabled) { opacity: 0.85; }
+.tg-button-block { width: 100%; }
+
+.tg-link { color: var(--tg-link); font-size: 14px; font-weight: 600; background: none; border: 0; cursor: pointer; text-decoration: none; padding: 0; }
+.tg-link-block { display: block; text-align: center; padding: 12px; min-height: 44px; }
+
+.tg-segment { display: flex; gap: 8px; }
+.tg-segment-wrap { flex-wrap: wrap; }
+.tg-segment button {
+  flex: 1; min-width: fit-content; min-height: 44px; border: 0; border-radius: 12px; padding: 11px 14px;
+  background: var(--tg-surface); color: var(--tg-text); font: 600 14px var(--font-body), sans-serif; cursor: pointer;
+}
+.tg-segment button.active { background: var(--tg-text); color: var(--tg-bg); }
+
+.tg-input {
+  width: 100%; box-sizing: border-box; border: 0; border-radius: 12px; padding: 14px;
+  background: var(--tg-surface); color: var(--tg-text);
+  font: 400 16px/1.5 var(--font-body), sans-serif; resize: none; outline: 2px solid transparent;
+}
+.tg-input:focus-visible { outline-color: var(--brand-coral); }
+.tg-code { text-align: center; letter-spacing: 0.28em; font-weight: 700; font-size: 20px; text-transform: uppercase; }
+
+.tg-photo-drop {
+  display: grid; place-items: center; min-height: 180px; border-radius: var(--radius);
+  background: var(--tg-surface); border: 1px dashed color-mix(in srgb, var(--tg-hint) 40%, transparent);
+  cursor: pointer; overflow: hidden; padding: 12px; text-align: center;
+}
+.tg-photo-drop input { display: none; }
+.tg-photo-drop span { color: var(--tg-hint); font-size: 14px; }
+.tg-photo-drop img { max-width: 100%; max-height: 260px; border-radius: 12px; object-fit: cover; }
+
+/* Уточняющие вопросы */
+.tg-clarify { background: var(--brand-lime); border-radius: var(--radius); padding: 16px; }
+.tg-clarify p { margin: 0 0 10px; font: 500 17px/1.3 var(--brand-serif); }
+.tg-clarify div { display: flex; gap: 8px; flex-wrap: wrap; }
+.tg-clarify button {
+  border: 1px solid var(--tg-text); background: transparent; color: var(--tg-text);
+  border-radius: 999px; padding: 9px 16px; font: 600 13px var(--font-body), sans-serif;
+  cursor: pointer; min-height: 40px;
+}
+
+/* Черновик разбора */
+.tg-draft { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tg-draft li { background: var(--tg-surface); border-radius: var(--radius); padding: 14px; }
+.tg-draft-row { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+.tg-draft-row b { font-size: 15px; flex: 1; min-width: 0; }
+.tg-stepper { display: flex; align-items: center; gap: 4px; }
+.tg-stepper button {
+  width: 36px; height: 36px; border: 0; border-radius: 10px; cursor: pointer;
+  background: color-mix(in srgb, var(--tg-hint) 15%, transparent); color: var(--tg-text); font-size: 18px; line-height: 1;
+}
+.tg-stepper span { min-width: 58px; text-align: center; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tg-draft-meta { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--tg-hint); }
+.tg-draft-meta i {
+  font-style: normal; border-radius: 999px; padding: 3px 9px; font-size: 10px; font-weight: 700;
+  background: color-mix(in srgb, var(--brand-coral) 18%, transparent); color: var(--brand-coral);
+}
+.tg-remove { margin-left: auto; width: 36px; height: 36px; border: 0; background: transparent; color: var(--tg-hint); font-size: 20px; cursor: pointer; }
+
+.tg-draft-total { display: flex; gap: 12px; }
+.tg-draft-total div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.tg-draft-total strong { font: 500 24px var(--brand-serif); }
+.tg-draft-total span { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
+
+/* Рекомендации */
+.tg-suggestions { display: flex; flex-direction: column; gap: 10px; }
+.tg-suggestion h3 { margin: 0 0 6px; font: 500 19px var(--brand-serif); }
+.tg-suggestion p { margin: 0 0 10px; font-size: 13px; line-height: 1.6; }
+.tg-suggestion footer { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; font-weight: 700; color: var(--tg-hint); }
+
+/* Нижняя навигация */
+.tg-tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  display: flex; background: var(--tg-surface);
+  border-top: 1px solid color-mix(in srgb, var(--tg-hint) 18%, transparent);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.tg-tabs button {
+  flex: 1; border: 0; background: none; cursor: pointer; padding: 9px 0 7px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  color: var(--tg-hint); min-height: 56px;
+}
+.tg-tabs button.active { color: var(--brand-coral); }
+.tg-tabs svg { display: block; }
+.tg-tabs span { font-size: 10.5px; font-weight: 600; }
+
+/* Загрузка */
+.tg-spinner {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--tg-hint) 25%, transparent);
+  border-top-color: var(--brand-coral); animation: tg-spin 800ms linear infinite;
+}
+@keyframes tg-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tg-spinner { animation-duration: 2s; } }

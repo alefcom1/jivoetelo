@@ -10,6 +10,8 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  // Привязка Telegram-аккаунта для Mini App (раздел 17 спеки).
+  telegramUserId: text("telegram_user_id").unique(),
   // Режим «скрыть калории» (раздел 4.2 спеки): пользователь видит белок и
   // клетчатку, но не цифры энергии.
   showCalories: boolean("show_calories").notNull().default(true),
@@ -23,6 +25,20 @@ export const sessions = pgTable("sessions", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Одноразовые коды привязки Telegram: пользователь генерирует код в веб-профиле
+ * и подтверждает им вход в Mini App, не вводя пароль внутри Telegram.
+ */
+export const telegramLinkCodes = pgTable("telegram_link_codes", {
+  code: text("code").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

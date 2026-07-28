@@ -109,7 +109,7 @@ export class AnthropicSuggestionProvider implements SuggestionProvider {
   private model: string;
 
   constructor(apiKey: string, model?: string) {
-    this.client = new Anthropic({ apiKey });
+    this.client = new Anthropic({ apiKey, baseURL: process.env.ANTHROPIC_BASE_URL || undefined });
     this.model = model ?? DEFAULT_MODEL;
   }
 

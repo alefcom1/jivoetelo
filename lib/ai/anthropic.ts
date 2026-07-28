@@ -22,7 +22,9 @@ export class AnthropicMealProvider implements MealVisionProvider {
   private model: string;
 
   constructor(apiKey: string, model?: string) {
-    this.client = new Anthropic({ apiKey });
+    // ANTHROPIC_BASE_URL позволяет ходить через свой прокси — нужно, если
+    // api.anthropic.com недоступен напрямую с сервера (см. docs/ai-proxy.md).
+    this.client = new Anthropic({ apiKey, baseURL: process.env.ANTHROPIC_BASE_URL || undefined });
     this.model = model ?? DEFAULT_MODEL;
   }
 
