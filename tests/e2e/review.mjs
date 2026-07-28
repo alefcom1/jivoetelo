@@ -69,18 +69,21 @@ try {
   step("4. Предложение корректировки: вес не снижается → −150 ккал");
   if (!reviewText.includes("Предложение по плану")) throw new Error("Нет блока предложения");
   if (!reviewText.includes("уменьшить дневной диапазон на 150")) throw new Error("Ожидали предложение −150");
-  const before = reviewText.match(/Сейчас: (\d+)–(\d+) ккал/);
-  if (!before) throw new Error("Нет текущего диапазона в предложении");
+  const before = reviewText.match(/Сейчас: ~(\d+) ккал, вероятный диапазон (\d+)–(\d+)/);
+  if (!before) throw new Error("Нет текущего ориентира и диапазона в предложении");
 
   step("5. Подтверждение корректировки");
   await page.click('button:has-text("Применить -150")');
   await page.waitForLoadState("networkidle");
   await page.goto(`${BASE}/app`);
-  const dayText = await page.textContent("main");
-  const after = dayText.match(/из (\d+)–(\d+)/);
-  if (!after) throw new Error("Нет диапазона на главной");
+  // Читаем именно подпись под калориями, а не текст всей страницы: соседние
+  // блоки идут вплотную, и в склеенном тексте «из ~1440» и следующее за ним
+  // число сливаются в «14400».
+  const kcalCaption = await page.textContent(".day-totals div:first-child span");
+  const after = kcalCaption.match(/из ~(\d+)/);
+  if (!after) throw new Error(`Нет ориентира на главной: ${kcalCaption}`);
   const drop = Number(before[1]) - Number(after[1]);
-  if (drop < 100 || drop > 200) throw new Error(`Диапазон должен снизиться на ~150: было ${before[1]}, стало ${after[1]}`);
+  if (drop < 100 || drop > 200) throw new Error(`Ориентир должен снизиться на ~150: было ${before[1]}, стало ${after[1]}`);
 
   step("6. Корректировка сохранена в профиле");
   const adjustment = sql(`SELECT kcal_adjustment FROM profiles WHERE user_id = ${userId}`);

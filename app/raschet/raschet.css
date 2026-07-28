@@ -306,3 +306,44 @@
     padding: 20px;
   }
 }
+
+/* Квиз «Стоит ли снижать вес»: блок вердикта появляется под формой, как
+   только отвечены все пять вопросов. */
+.raschet-verdict {
+  margin-top: 28px;
+  padding: 28px 24px;
+  background: var(--white);
+  border: 1px solid var(--line);
+}
+
+.raschet-verdict-title {
+  margin: 0 0 14px;
+  font: 500 28px var(--serif);
+  letter-spacing: -0.03em;
+}
+
+.raschet-verdict-summary {
+  margin: 0 0 20px;
+  max-width: 640px;
+  color: #3d3f3a;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.raschet-verdict-advice {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.raschet-verdict-advice li {
+  margin-bottom: 10px;
+  color: #3d3f3a;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+@media (max-width: 720px) {
+  .raschet-verdict {
+    padding: 20px;
+  }
+}

@@ -59,9 +59,8 @@ export default async function NextMealPage() {
   const items = ids.length > 0 ? await db.select().from(mealItems).where(inArray(mealItems.mealId, ids)) : [];
   const consumed = sumTotals(items);
 
-  const kcalMid = Math.round((targets.kcalMin + targets.kcalMax) / 2);
   const context = {
-    remainingKcal: Math.max(0, kcalMid - consumed.kcal),
+    remainingKcal: Math.max(0, targets.kcalTarget - consumed.kcal),
     remainingProtein: Math.max(0, targets.proteinTarget - consumed.protein),
     remainingFiber: Math.max(0, targets.fiberTarget - consumed.fiber),
     mealTypeLabel: nextMealLabel(),

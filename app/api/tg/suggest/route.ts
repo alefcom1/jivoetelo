@@ -28,9 +28,8 @@ export async function GET(request: Request) {
     return Response.json({ needsPlan: true, suggestions: [] });
   }
 
-  const kcalMid = Math.round((summary.targets.kcalMin + summary.targets.kcalMax) / 2);
   const context = {
-    remainingKcal: Math.max(0, kcalMid - summary.totals.kcal),
+    remainingKcal: Math.max(0, summary.targets.kcalTarget - summary.totals.kcal),
     remainingProtein: Math.max(0, summary.targets.proteinTarget - summary.totals.protein),
     remainingFiber: Math.max(0, summary.targets.fiberTarget - summary.totals.fiber),
     mealTypeLabel: nextMealLabel(),

@@ -17,6 +17,12 @@ export type TargetInput = {
 };
 
 export type Targets = {
+  /**
+   * Наиболее вероятное значение. Показываем его вместе с диапазоном, а не
+   * вместо: точка помогает сориентироваться, диапазон удерживает от веры в
+   * точность, которой у формулы нет.
+   */
+  kcalTarget: number;
   kcalMin: number;
   kcalMax: number;
   proteinTarget: number;
@@ -69,6 +75,7 @@ export function computeTargets(input: TargetInput, currentYear = new Date().getF
   }
 
   return {
+    kcalTarget: roundTo10(target),
     kcalMin: roundTo10(target * 0.93),
     kcalMax: roundTo10(target * 1.07),
     proteinTarget: Math.round(1.6 * input.weightKg),

@@ -11,10 +11,11 @@ const base = {
   activity: "light",
 };
 
-test("поддержание: диапазон вокруг TDEE по Миффлину-Сан Жеору", () => {
+test("поддержание: точка и диапазон вокруг TDEE по Миффлину-Сан Жеору", () => {
   // BMR = 10*65 + 6.25*168 - 5*36 - 161 = 650 + 1050 - 180 - 161 = 1359
-  // TDEE = 1359 * 1.375 = 1868.6; диапазон ±7%: 1740–2000 (окр. до 10)
+  // TDEE = 1359 * 1.375 = 1868.6 → точка 1870; диапазон ±7%: 1740–2000 (окр. до 10)
   const t = computeTargets(base, 2026);
+  assert.equal(t.kcalTarget, 1870);
   assert.equal(t.kcalMin, 1740);
   assert.equal(t.kcalMax, 2000);
   assert.equal(t.proteinTarget, 104); // 1.6 г/кг
@@ -50,4 +51,20 @@ test("безопасность: несовершеннолетним не выд
   const minorMaintain = computeTargets({ ...base, birthYear: 2010, goal: "maintain" }, 2026);
   assert.equal(minor.kcalMin, minorMaintain.kcalMin);
   assert.equal(minor.adjusted, true);
+});
+
+test("точечная оценка всегда лежит внутри диапазона", () => {
+  // Точка и границы считаются из одной величины, но округляются по отдельности —
+  // проверяем, что округление нигде не выталкивает точку за границы.
+  for (const goal of ["lose", "maintain", "gain"]) {
+    for (const weightKg of [42, 55, 65, 80, 96.5, 140]) {
+      for (const activity of ["sedentary", "light", "moderate", "high"]) {
+        const t = computeTargets({ ...base, goal, weightKg, activity }, 2026);
+        assert.ok(
+          t.kcalMin <= t.kcalTarget && t.kcalTarget <= t.kcalMax,
+          `${goal}/${weightKg}кг/${activity}: ${t.kcalMin} ≤ ${t.kcalTarget} ≤ ${t.kcalMax}`,
+        );
+      }
+    }
+  }
 });

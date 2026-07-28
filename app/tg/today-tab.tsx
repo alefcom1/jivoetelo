@@ -56,7 +56,7 @@ export function TodayTab({
   onAdd: () => void;
 }) {
   const { totals, targets, showCalories } = data;
-  const kcalMid = targets ? Math.round((targets.kcalMin + targets.kcalMax) / 2) : null;
+  const kcalMid = targets?.kcalTarget ?? null;
 
   return <div className="tg-page">
     <header className="tg-hero">

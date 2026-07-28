@@ -250,7 +250,8 @@ export default function EnergyForm({ currentYear }: { currentYear: number }) {
     {targets &&
       <div className="raschet-result">
         <div className="raschet-range-card">
-          <p className="raschet-range">{targets.kcalMin}–{targets.kcalMax}<span>ккал в день</span></p>
+          <p className="raschet-range">{targets.kcalTarget}<span>ккал в день</span></p>
+          <p className="raschet-hint">вероятно между {targets.kcalMin} и {targets.kcalMax} ккал</p>
           <div className="raschet-submetrics">
             <div><strong>{targets.proteinTarget} г</strong><span>Белок</span></div>
             <div><strong>{targets.fiberTarget} г</strong><span>Клетчатка</span></div>

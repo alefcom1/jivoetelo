@@ -31,7 +31,7 @@ export default async function ReviewPage() {
       <h2>Предложение по плану</h2>
       <p>{proposal.reason}</p>
       <p className="field-note">
-        Сейчас: {targets.kcalMin}–{targets.kcalMax} ккал. Изменение применится только после вашего подтверждения,
+        Сейчас: ~{targets.kcalTarget} ккал, вероятный диапазон {targets.kcalMin}–{targets.kcalMax}. Изменение применится только после вашего подтверждения,
         и его всегда можно откатить, изменив план в настройках.
       </p>
       <form action={applyProposedAdjustment}>

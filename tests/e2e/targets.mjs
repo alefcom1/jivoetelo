@@ -39,9 +39,11 @@ try {
   await page.click('button:has-text("Посчитать мой план")');
   await page.waitForURL("**/app", { timeout: 15000 });
 
-  step("4. Цели видны в итогах дня (1740–2000 ккал, белок ~104 г)");
+  step("4. Цели видны в итогах дня (~1870 ккал, белок ~104 г)");
   const dayText = await page.textContent("main");
-  if (!dayText.includes("1740–2000")) throw new Error(`Нет диапазона калорий: ${dayText.slice(0, 300)}`);
+  // На «Сегодня» показываем точечный ориентир: диапазон живёт на странице расчёта
+  // и в предложении по плану, а в дневной сводке от него больше шума, чем пользы.
+  if (!dayText.includes("из ~1870")) throw new Error(`Нет ориентира по калориям: ${dayText.slice(0, 300)}`);
   if (!dayText.includes("104")) throw new Error("Нет цели по белку");
   if (dayText.includes("Настройте стартовый план")) throw new Error("Баннер онбординга не исчез");
 
@@ -83,8 +85,8 @@ try {
   await page.click('button:has-text("Посчитать мой план")');
   await page.waitForURL("**/app", { timeout: 15000 });
   const loseText = await page.textContent("main");
-  const match = loseText.match(/(\d{4})–(\d{4})/);
-  if (!match || Number(match[1]) >= 1740) throw new Error(`Диапазон не уменьшился: ${match?.[0]}`);
+  const match = loseText.match(/из ~(\d{4})/);
+  if (!match || Number(match[1]) >= 1870) throw new Error(`Ориентир не уменьшился: ${match?.[0]}`);
 
   console.log("E2E M3 OK");
 } finally {

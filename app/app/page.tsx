@@ -63,7 +63,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     <section className="day-totals">
       {user.showCalories && <div>
         <strong>{dayTotals.kcal}</strong>
-        <span>ккал{targets ? ` из ${targets.kcalMin}–${targets.kcalMax}` : ""}</span>
+        <span>ккал{targets ? ` из ~${targets.kcalTarget}` : ""}</span>
       </div>}
       <div><strong>{dayTotals.protein}</strong><span>белок, г{targets ? ` из ~${targets.proteinTarget}` : ""}</span></div>
       <div><strong>{dayTotals.fiber}</strong><span>клетчатка, г{targets ? ` из ~${targets.fiberTarget}` : ""}</span></div>

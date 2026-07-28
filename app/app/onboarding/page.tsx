@@ -60,8 +60,11 @@ export default function OnboardingPage() {
       {targets
         ? <>
             <p className="onboarding-preview-range">
-              <strong>{targets.kcalMin}–{targets.kcalMax}</strong>
+              <strong>{targets.kcalTarget}</strong>
               <small>ккал в день</small>
+            </p>
+            <p className="onboarding-preview-detail">
+              вероятно между {targets.kcalMin} и {targets.kcalMax} ккал
             </p>
             <p className="onboarding-preview-detail">
               белок {targets.proteinTarget} г · клетчатка {targets.fiberTarget} г

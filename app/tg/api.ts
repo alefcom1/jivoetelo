@@ -3,7 +3,7 @@
 import { getWebApp } from "./telegram.ts";
 
 export type TgTotals = { kcal: number; protein: number; fat: number; carbs: number; fiber: number };
-export type TgTargets = { kcalMin: number; kcalMax: number; proteinTarget: number; fiberTarget: number };
+export type TgTargets = { kcalTarget: number; kcalMin: number; kcalMax: number; proteinTarget: number; fiberTarget: number };
 export type TgMeal = { id: number; time: string; title: string; items: string[]; kcal: number; protein: number };
 
 export type TodayResponse = {
