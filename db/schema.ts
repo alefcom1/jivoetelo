@@ -1,4 +1,4 @@
-import { boolean, date, doublePrecision, integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, date, doublePrecision, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const waitlistSubscribers = pgTable("waitlist_subscribers", {
   id: serial("id").primaryKey(),
@@ -43,6 +43,33 @@ export const meals = pgTable("meals", {
   analysis: jsonb("analysis"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const profiles = pgTable("profiles", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  goal: text("goal").notNull(), // lose | maintain | gain
+  // Пол для формулы Миффлина-Сан Жеора; в интерфейсе поясняем, зачем он нужен.
+  sexForFormula: text("sex_for_formula").notNull(), // female | male
+  birthYear: integer("birth_year").notNull(),
+  heightCm: doublePrecision("height_cm").notNull(),
+  activity: text("activity").notNull(), // sedentary | light | moderate | high
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const weightEntries = pgTable(
+  "weight_entries",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    onDate: date("on_date").notNull(),
+    weightKg: doublePrecision("weight_kg").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("weight_entries_user_date").on(table.userId, table.onDate)],
+);
 
 export const mealItems = pgTable("meal_items", {
   id: serial("id").primaryKey(),

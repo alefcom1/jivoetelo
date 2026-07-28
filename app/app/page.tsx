@@ -2,10 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
-import { mealItems, meals } from "@/db/schema";
+import { mealItems, meals, profiles } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDayRu, isValidDay, localToday, MEAL_TYPE_LABELS, shiftDay } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
+import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
+import { getLatestWeight } from "./profile-actions";
 
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const user = await getCurrentUser();
@@ -30,6 +32,21 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   }
   const dayTotals = sumTotals(items);
 
+  const profileRows = await db.select().from(profiles).where(eq(profiles.userId, user.id)).limit(1);
+  const profile = profileRows[0];
+  const weightKg = profile ? await getLatestWeight(user.id) : null;
+  let targets: Targets | null = null;
+  if (profile && weightKg) {
+    targets = computeTargets({
+      goal: profile.goal as Goal,
+      sexForFormula: profile.sexForFormula as SexForFormula,
+      birthYear: profile.birthYear,
+      heightCm: profile.heightCm,
+      weightKg,
+      activity: profile.activity as Activity,
+    });
+  }
+
   return <main className="day">
     <div className="day-nav">
       <Link href={`/app?date=${shiftDay(day, -1)}`} aria-label="Предыдущий день">←</Link>
@@ -37,13 +54,26 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       <Link href={`/app?date=${shiftDay(day, 1)}`} aria-label="Следующий день">→</Link>
     </div>
 
+    {!targets && <section className="plan-banner">
+      <p>Настройте стартовый план — и мы покажем, сколько энергии и белка стоит добирать за день.</p>
+      <Link className="black-button" href="/app/onboarding">Настроить план <b>↗</b></Link>
+    </section>}
+
     <section className="day-totals">
-      {user.showCalories && <div><strong>{dayTotals.kcal}</strong><span>ккал</span></div>}
-      <div><strong>{dayTotals.protein}</strong><span>белок, г</span></div>
-      <div><strong>{dayTotals.fiber}</strong><span>клетчатка, г</span></div>
+      {user.showCalories && <div>
+        <strong>{dayTotals.kcal}</strong>
+        <span>ккал{targets ? ` из ${targets.kcalMin}–${targets.kcalMax}` : ""}</span>
+      </div>}
+      <div><strong>{dayTotals.protein}</strong><span>белок, г{targets ? ` из ~${targets.proteinTarget}` : ""}</span></div>
+      <div><strong>{dayTotals.fiber}</strong><span>клетчатка, г{targets ? ` из ~${targets.fiberTarget}` : ""}</span></div>
       <div><strong>{dayTotals.fat}</strong><span>жиры, г</span></div>
       <div><strong>{dayTotals.carbs}</strong><span>углеводы, г</span></div>
     </section>
+
+    {targets && <Link className="next-card" href="/app/next">
+      <b>Что съесть дальше?</b>
+      <span>Подберём {user.showCalories ? "вариант под остаток дня" : "вариант, который поддержит ваш день"} →</span>
+    </Link>}
 
     {dayMeals.length === 0
       ? <section className="day-empty">

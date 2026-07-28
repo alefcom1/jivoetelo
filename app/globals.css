@@ -100,3 +100,32 @@
 .settings-label{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
 .settings-block p{margin:0 0 12px;font-size:14px;line-height:1.6}
 a.header-cta{display:inline-flex;align-items:center}
+
+/* ===== M3: онбординг, вес, «что съесть дальше» ===== */
+.plan-banner{display:flex;align-items:center;gap:20px;flex-wrap:wrap;background:var(--lime);padding:18px 20px;margin-bottom:20px}
+.plan-banner p{margin:0;font:500 17px/1.4 var(--serif);flex:1;min-width:240px}
+.next-card{display:flex;flex-direction:column;gap:4px;background:var(--black);color:var(--white);padding:18px 20px;margin-bottom:24px}
+.next-card b{font:500 20px var(--serif)}
+.next-card span{font-size:12px;color:#cfcfc8}
+.onboarding h1,.weight h1,.next-meal h1{font:500 34px/1 var(--serif);letter-spacing:-.03em;margin:0 0 14px}
+.onboarding-form{display:flex;flex-direction:column;gap:22px;max-width:640px}
+.onboarding-form fieldset{border:0;padding:0;margin:0}
+.onboarding-form legend{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.field-note{font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5}
+.radio-row{display:flex;gap:8px;flex-wrap:wrap}
+.radio-card{cursor:pointer}
+.radio-card input{position:absolute;opacity:0}
+.radio-card span{display:inline-block;border:1px solid var(--line);background:var(--white);padding:10px 16px;font-size:13px;font-weight:600}
+.radio-card input:checked+span{background:var(--black);color:white;border-color:var(--black)}
+.radio-card input:focus-visible+span{outline:2px solid var(--coral)}
+.onboarding-numbers{display:flex;gap:14px;flex-wrap:wrap}
+.onboarding-numbers label,.weight-form label{display:flex;flex-direction:column;gap:6px;font-size:11px;font-weight:700;color:var(--muted)}
+.onboarding-numbers input,.weight-form input{padding:11px;border:1px solid var(--line);background:white;font-size:14px;width:130px}
+.onboarding-form .black-button{align-self:flex-start}
+.weight-form{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.weight-saved{font-size:12px;color:var(--muted)}
+.suggestions{display:flex;flex-direction:column;gap:12px;max-width:640px;align-items:flex-start}
+.suggestion{width:100%;background:var(--white);border:1px solid var(--line);padding:18px 20px}
+.suggestion h3{margin:0 0 6px;font:500 21px var(--serif)}
+.suggestion p{margin:0 0 10px;font-size:13px;line-height:1.6;color:#3d3f3a}
+.suggestion footer{display:flex;gap:14px;font-size:11px;font-weight:700;color:var(--muted)}

@@ -15,6 +15,11 @@ export default async function SettingsPage() {
       <p>{user.email}</p>
     </section>
     <section className="settings-block">
+      <p className="settings-label">План</p>
+      <p>Цель, рост, вес и активность можно поменять в любой момент — план пересчитается сразу.</p>
+      <a className="black-button" href="/app/onboarding">Изменить план</a>
+    </section>
+    <section className="settings-block">
       <p className="settings-label">Видимость калорий</p>
       <p>
         {user.showCalories
