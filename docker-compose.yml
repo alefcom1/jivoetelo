@@ -6,6 +6,17 @@ services:
       POSTGRES_DB: jivoetelo
       POSTGRES_USER: jivoetelo
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    # Настройки под небольшой VPS (docs/shared-infra.md). Умолчания Postgres
+    # рассчитаны на выделенный сервер: сотня соединений резервирует память,
+    # которая нам не нужна — у приложения один пул на 10 соединений.
+    command: >
+      postgres
+      -c max_connections=25
+      -c shared_buffers=96MB
+      -c effective_cache_size=384MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=48MB
+    mem_limit: 384m
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -46,6 +57,10 @@ services:
       LEGAL_OPERATOR_OGRN: ${LEGAL_OPERATOR_OGRN:-}
       LEGAL_OPERATOR_ADDRESS: ${LEGAL_OPERATOR_ADDRESS:-}
       LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:-}
+      # Потолок кучи: при утечке или всплеске на разборе фото процесс упрётся
+      # в свой лимит и перезапустится, а не утащит за собой базу.
+      NODE_OPTIONS: --max-old-space-size=384
+    mem_limit: 512m
     volumes:
       - uploads:/app/data
     healthcheck:

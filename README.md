@@ -6,6 +6,7 @@
 - Продуктовая спецификация: [docs/product-spec.md](docs/product-spec.md)
 - Рабочий план разработки: [docs/implementation-plan.md](docs/implementation-plan.md)
 - Деплой на VPS: [docs/deploy-vps.md](docs/deploy-vps.md)
+- Общая инфраструктура с techperevod: [docs/shared-infra.md](docs/shared-infra.md)
 - Юридический блок и чеклист 152-ФЗ: [docs/legal.md](docs/legal.md)
 - Telegram Mini App: [docs/telegram-mini-app.md](docs/telegram-mini-app.md)
 - Доступ к AI API из РФ: [docs/ai-proxy.md](docs/ai-proxy.md)

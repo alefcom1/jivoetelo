@@ -1,16 +1,23 @@
 import type { AnalysisItem, Clarification, Confidence, MealAnalysis } from "./types.ts";
 import { MealAnalysisError } from "./types.ts";
+import { reconcilePer100g } from "../nutrition-sanity.ts";
 
 const PER_100G_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["kcal", "protein", "fat", "carbs", "fiber"],
+  required: ["kcal", "protein", "fat", "carbs", "fiber", "alcohol"],
   properties: {
     kcal: { type: "number", description: "ккал на 100 г" },
     protein: { type: "number", description: "белки, г на 100 г" },
     fat: { type: "number", description: "жиры, г на 100 г" },
     carbs: { type: "number", description: "углеводы, г на 100 г" },
     fiber: { type: "number", description: "клетчатка, г на 100 г" },
+    // Спирт спрашиваем всегда: без него проверка правдоподобия видит у вина и
+    // пива «калории из ниоткуда» и затирает верную оценку модели.
+    alcohol: {
+      type: "number",
+      description: "этиловый спирт, ГРАММОВ на 100 г (не проценты крепости). Для безалкогольного — 0",
+    },
   },
 } as const;
 
@@ -72,6 +79,14 @@ export const MEAL_ANALYSIS_SCHEMA = {
 const CONFIDENCES: Confidence[] = ["high", "medium", "low"];
 const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack", "other"] as const;
 
+// Если КБЖУ не сошлись по Атуотеру, доверяем распознаванию модели на ступень меньше —
+// пользователь должен честно видеть, что цифры пришлось поправить.
+const DOWNGRADE_CONFIDENCE: Record<Confidence, Confidence> = {
+  high: "medium",
+  medium: "low",
+  low: "low",
+};
+
 function clamp(value: unknown, min: number, max: number): number {
   const n = Number(value);
   if (!Number.isFinite(n)) return min;
@@ -91,17 +106,20 @@ function parseItem(raw: unknown): AnalysisItem | null {
   const name = cleanString(item.name, 120);
   if (!name) return null;
   const per = (typeof item.per100g === "object" && item.per100g !== null ? item.per100g : {}) as Record<string, unknown>;
+  const confidence = CONFIDENCES.includes(item.confidence as Confidence) ? (item.confidence as Confidence) : "medium";
+  const sanity = reconcilePer100g({
+    kcal: clamp(per.kcal, 0, 900),
+    protein: clamp(per.protein, 0, 100),
+    fat: clamp(per.fat, 0, 100),
+    carbs: clamp(per.carbs, 0, 100),
+    fiber: clamp(per.fiber, 0, 50),
+    alcohol: clamp(per.alcohol, 0, 100),
+  });
   return {
     name,
     estimatedGrams: clamp(item.estimatedGrams, 1, 3000),
-    confidence: CONFIDENCES.includes(item.confidence as Confidence) ? (item.confidence as Confidence) : "medium",
-    per100g: {
-      kcal: clamp(per.kcal, 0, 900),
-      protein: clamp(per.protein, 0, 100),
-      fat: clamp(per.fat, 0, 100),
-      carbs: clamp(per.carbs, 0, 100),
-      fiber: clamp(per.fiber, 0, 50),
-    },
+    confidence: sanity.adjusted ? DOWNGRADE_CONFIDENCE[confidence] : confidence,
+    per100g: sanity.per100g,
   };
 }
 

@@ -17,6 +17,21 @@ TLS-сертификаты; nginx + certbot тоже подойдёт, но ко
 
 ## Порядок первого деплоя
 
+### 0. Swap — до первой сборки
+
+Пик `next build` съедает больше гигабайта; без swap на небольшом VPS сборка
+получит OOM ровно в тот момент, когда всё выглядело хорошо. Один раз:
+
+```bash
+fallocate -l 2G /swapfile && chmod 600 /swapfile
+mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+free -m                      # проверить, что swap появился
+```
+
+Расклад по памяти и настройки контейнеров — в
+[shared-infra.md](./shared-infra.md).
+
 ### 1. Код и окружение
 
 ```bash

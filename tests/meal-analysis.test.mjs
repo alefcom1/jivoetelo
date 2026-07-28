@@ -31,9 +31,13 @@ test("валидный разбор проходит без изменений",
 });
 
 test("выходящие за пределы значения зажимаются", () => {
+  // Жир здесь 95 г, а не 1: с одним граммом жира 900 ккал невозможны, и
+  // проверка правдоподобия (lib/nutrition-sanity.ts) справедливо пересчитала бы
+  // их по составу. Этот тест про другое — про зажатие диапазонов в parseItem,
+  // поэтому состав подобран так, чтобы проверка правдоподобия молчала.
   const result = validateMealAnalysis({
     mealType: "dinner",
-    items: [{ ...validItem, estimatedGrams: 99999, per100g: { kcal: 5000, protein: -3, fat: 1, carbs: 1, fiber: 1 } }],
+    items: [{ ...validItem, estimatedGrams: 99999, per100g: { kcal: 5000, protein: -3, fat: 95, carbs: 1, fiber: 1 } }],
     clarifications: [],
   });
   assert.equal(result.items[0].estimatedGrams, 3000);
