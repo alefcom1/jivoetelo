@@ -24,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <footer className="shell-footer">
       <p>{NOT_MEDICAL_DISCLAIMER}</p>
       <div className="legal-links">
+        <Link href="/legal/health">Границы сервиса</Link>
         <Link href="/legal/terms">Соглашение</Link>
         <Link href="/legal/privacy">Конфиденциальность</Link>
         <Link href="/legal/consent">Согласие</Link>

@@ -255,6 +255,44 @@
   margin-top: 64px;
 }
 
+/* Хаб раздела: карточки-ссылки на калькуляторы */
+.raschet-index {
+  display: grid;
+  gap: 1px;
+  max-width: 640px;
+  margin-top: 44px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.raschet-index a {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 24px;
+  background: var(--white);
+  color: inherit;
+  text-decoration: none;
+}
+
+.raschet-index a:hover {
+  background: var(--paper);
+}
+
+.raschet-index b {
+  font: 500 21px var(--serif);
+  letter-spacing: -0.03em;
+}
+
+.raschet-index span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 @media (max-width: 720px) {
   .raschet-header {
     padding: 0 20px;

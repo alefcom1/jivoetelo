@@ -109,9 +109,9 @@ export function TodayTab({
     <footer className="tg-legal">
       <p>{NOT_MEDICAL_DISCLAIMER}</p>
       <div>
+        <a href="/legal/health" target="_blank" rel="noreferrer">Границы сервиса</a>
         <a href="/legal/terms" target="_blank" rel="noreferrer">Соглашение</a>
         <a href="/legal/privacy" target="_blank" rel="noreferrer">Конфиденциальность</a>
-        <a href="/legal/consent" target="_blank" rel="noreferrer">Согласие</a>
       </div>
     </footer>
   </div>;

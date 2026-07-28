@@ -33,6 +33,7 @@ try {
     ["/legal/terms", "не медицинское изделие"],
     ["/legal/privacy", "152-ФЗ"],
     ["/legal/consent", "трансграничную передачу"],
+    ["/legal/health", "дозы инсулина"],
     ["/legal/cookies", "jt_session"],
   ];
   for (const [href, expected] of documents) {

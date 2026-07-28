@@ -192,3 +192,6 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
    пикселях: −0.04em от 32px даёт −1.28px, и на подписи в 12px буквы жмутся.
    Шорткат font её не сбрасывает, поэтому сбрасываем явно. */
 .energy small{letter-spacing:normal}
+.footer-disclaimer a{text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
+.footer-disclaimer a:hover,.auth-note a:hover{color:var(--coral)}
+.auth-note a{text-decoration:underline;text-underline-offset:2px}

@@ -41,7 +41,7 @@ export default function RegisterPage() {
         <button className="black-button" type="submit" disabled={pending}>{pending ? "Создаём…" : "Создать аккаунт"}</button>
       </form>
       <p className="auth-switch">Уже есть аккаунт? <Link href="/login">Войти</Link></p>
-      <p className="auth-note">{NOT_MEDICAL_DISCLAIMER}</p>
+      <p className="auth-note">{NOT_MEDICAL_DISCLAIMER} <Link href="/legal/health">Подробнее</Link></p>
     </div>
   </main>;
 }
