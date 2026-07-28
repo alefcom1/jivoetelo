@@ -57,13 +57,37 @@ free -m                      # проверить, что swap появился
 
 ### 1. Код и окружение
 
+**Важно про ветку.** Весь продукт живёт в ветке
+`claude/project-concept-review-3382m5`; в `main` пока только первый коммит.
+Клонировать и сразу переключиться:
+
 ```bash
 git clone https://github.com/alefcom1/jivoetelo.git /root/jivoetelo
 cd /root/jivoetelo
+git checkout claude/project-concept-review-3382m5
 cp .env.example .env
 openssl rand -hex 24        # → POSTGRES_PASSWORD
+openssl rand -hex 32        # → TELEGRAM_WEBHOOK_SECRET
 nano .env                   # заполнить переменные
 ```
+
+Когда сайт заработает, ветку стоит влить в `main`: автодеплой
+(`.github/workflows/deploy.yml`) срабатывает на пуш именно в `main`, а до
+слияния его придётся запускать кнопкой, выбирая ветку вручную.
+
+**Что заполнить в `.env` при первом деплое:**
+
+| Переменная | Обязательно | Если оставить пустой |
+|---|---|---|
+| `POSTGRES_PASSWORD` | да | база не поднимется |
+| `DATABASE_URL` | да | подставить сюда тот же пароль вместо `<POSTGRES_PASSWORD>` |
+| `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` | да | AI молча уйдёт в mock и покажет выдуманные цифры |
+| `SITE_URL` | да | `https://jivoetelo.ru` |
+| `TELEGRAM_BOT_TOKEN` | для бота | `/api/tg/*` отвечает 503 |
+| `TELEGRAM_WEBHOOK_SECRET` | для бота | вебхук отвечает 503, фото не принимаются |
+| `SMTP_*`, `EMAIL_FROM` | нет | письма пишутся в лог вместо отправки |
+| `TELEGRAM_MINIAPP_URL` | нет | кнопка «Разобрать» ведёт на веб-страницу |
+| `LEGAL_*` | нет | документы честно пишут «реквизиты будут указаны позже» |
 
 ### 2. Проверить окружение до сборки
 
@@ -168,7 +192,35 @@ crontab -e
 стоит после того, как в DNS домена появятся SPF, DKIM и DMARC, иначе первые
 же письма уедут в спам. Подробности — в [email-series.md](./email-series.md).
 
-### 10. Юридические реквизиты
+### 10. Проверка после первого деплоя
+
+Пять команд, которые показывают, что заработало не только «главная
+открывается». Выполнять с сервера:
+
+```bash
+# 1. Приложение достучалось до базы
+curl -s https://jivoetelo.ru/api/health
+
+# 2. Планировщик писем и напоминаний поднялся
+docker compose logs app | grep scheduler
+#    Ожидаем: [scheduler] запущен, шаг 60 с
+
+# 3. Вебхук бота защищён секретом (без заголовка — 403, а не 200)
+curl -s -o /dev/null -w '%s\n' -X POST https://jivoetelo.ru/api/tg/webhook -d '{}'
+
+# 4. Публичные страницы отдаются статикой
+curl -s -o /dev/null -w '%s\n' https://jivoetelo.ru/raschet/energiya
+
+# 5. Миграции применились полностью
+docker compose exec -T db psql -U jivoetelo -d jivoetelo -Atc \
+  "SELECT count(*) FROM schema_migrations;"
+```
+
+Дальше вручную, за пять минут: зарегистрироваться, добавить приём пищи,
+привязать Telegram кодом из настроек, прислать боту фото, увидеть его в
+инбоксе и разобрать. Это проходит через все новые части сразу.
+
+### 11. Юридические реквизиты
 
 Заполнить `LEGAL_*` в `.env` после регистрации ИП или ООО и перезапустить
 `app`. До этого страницы `/legal/*` открываются и честно пишут, что реквизиты
