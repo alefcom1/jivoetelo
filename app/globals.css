@@ -195,3 +195,25 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
 .footer-disclaimer a{text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
 .footer-disclaimer a:hover,.auth-note a:hover{color:var(--coral)}
 .auth-note a{text-decoration:underline;text-underline-offset:2px}
+
+/* ===== Живой предпросмотр плана в онбординге =====
+   .onboarding — грид в две колонки: форма (авто-поток, колонка 1) и липкий
+   .onboarding-preview (колонка 2). У блока предпросмотра явно заданы
+   grid-column/grid-row, поэтому его порядок в разметке не важен для расчёта
+   сетки на широких экранах — остальные четыре элемента (заголовок, два
+   вводных абзаца и форма) сами заполняют колонку 1 построчно. */
+.onboarding{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:32px;align-items:start}
+.onboarding-preview{grid-column:2;grid-row:1/5;position:sticky;top:96px;background:var(--paper);border:1px solid var(--line);padding:24px}
+.onboarding-preview-caption{margin:0 0 16px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.onboarding-preview-placeholder{margin:0;color:var(--muted);font-size:13px;line-height:1.6}
+.onboarding-preview-range{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0}
+.onboarding-preview-range strong{font:500 40px var(--serif);letter-spacing:-.02em}
+/* Подпись «ккал в день» — иначе letter-spacing строки выше наследуется в
+   пикселях и буквы слипаются (см. комментарий у .energy small выше). */
+.onboarding-preview-range small{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:normal}
+.onboarding-preview-detail{margin:12px 0 0;color:var(--muted);font-size:12px}
+.onboarding-preview-note{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+@media(max-width:900px){
+  .onboarding{grid-template-columns:1fr}
+  .onboarding-preview{grid-column:1;grid-row:auto;position:static;top:auto}
+}
