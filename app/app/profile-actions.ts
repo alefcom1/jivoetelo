@@ -8,6 +8,7 @@ import { profiles, weightEntries } from "@/db/schema";
 import { getSuggestionProvider, type MealSuggestion, type SuggestionContext } from "@/lib/ai/suggest";
 import { getCurrentUser } from "@/lib/auth";
 import { isValidDay, localToday } from "@/lib/dates";
+import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import type { Activity, Goal, SexForFormula } from "@/lib/targets";
 
 const GOALS: Goal[] = ["lose", "maintain", "gain"];
@@ -123,9 +124,13 @@ export async function suggestNextMeal(context: SuggestionContext): Promise<Sugge
     showCalories: user.showCalories,
   };
 
+  const decision = await checkQuota(user.id, user.plan, "suggest");
+  if (!decision.allowed) return { ok: false, error: quotaMessage(decision) };
+
   try {
-    const suggestions = await getSuggestionProvider().suggest(safeContext);
-    return { ok: true, suggestions };
+    const result = await getSuggestionProvider().suggest(safeContext);
+    await recordUsage(user.id, "suggest", result.usage);
+    return { ok: true, suggestions: result.suggestions };
   } catch (error) {
     console.error("suggestNextMeal failed", error);
     return { ok: false, error: "Не получилось подобрать варианты. Попробуйте через минуту." };

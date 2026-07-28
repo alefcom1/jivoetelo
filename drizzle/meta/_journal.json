@@ -36,6 +36,20 @@
       "when": 1785214074887,
       "tag": "0004_m5-telegram",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785216024464,
+      "tag": "0005_m6-free-tier-quotas",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785216681397,
+      "tag": "0006_m7-payments",
+      "breakpoints": true
     }
   ]
 }

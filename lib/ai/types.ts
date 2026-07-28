@@ -42,8 +42,13 @@ export type MealInput =
   | { kind: "text"; text: string }
   | { kind: "photo"; data: Buffer; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; note?: string };
 
+/** Расход токенов на вызов — для учёта и дневных лимитов (см. lib/quota.ts). */
+export type TokenUsage = { inputTokens: number; outputTokens: number };
+
+export type MealAnalysisResult = { analysis: MealAnalysis; usage: TokenUsage };
+
 export interface MealVisionProvider {
-  analyseMeal(input: MealInput): Promise<MealAnalysis>;
+  analyseMeal(input: MealInput): Promise<MealAnalysisResult>;
 }
 
 export type MealAnalysisFailure = "refused" | "invalid_output" | "provider_error";

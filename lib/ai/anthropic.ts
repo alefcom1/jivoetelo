@@ -1,8 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient, DEFAULT_MODEL, readUsage, supportsFallbacks } from "./client.ts";
 import { MEAL_ANALYSIS_SCHEMA, validateMealAnalysis } from "./schema.ts";
-import { MealAnalysisError, type MealAnalysis, type MealInput, type MealVisionProvider } from "./types.ts";
-
-const DEFAULT_MODEL = "claude-opus-5";
+import { MealAnalysisError, type MealAnalysisResult, type MealInput, type MealVisionProvider } from "./types.ts";
 
 // Языковые правила из раздела 4.3 спецификации зашиты в системный промпт:
 // никаких оценочных формулировок про еду и пользователя.
@@ -21,14 +20,12 @@ export class AnthropicMealProvider implements MealVisionProvider {
   private client: Anthropic;
   private model: string;
 
-  constructor(apiKey: string, model?: string) {
-    // ANTHROPIC_BASE_URL позволяет ходить через свой прокси — нужно, если
-    // api.anthropic.com недоступен напрямую с сервера (см. docs/ai-proxy.md).
-    this.client = new Anthropic({ apiKey, baseURL: process.env.ANTHROPIC_BASE_URL || undefined });
+  constructor(model?: string) {
+    this.client = createAnthropicClient();
     this.model = model ?? DEFAULT_MODEL;
   }
 
-  async analyseMeal(input: MealInput): Promise<MealAnalysis> {
+  async analyseMeal(input: MealInput): Promise<MealAnalysisResult> {
     const content: Anthropic.Beta.Messages.BetaContentBlockParam[] = [];
     if (input.kind === "photo") {
       content.push({
@@ -47,14 +44,14 @@ export class AnthropicMealProvider implements MealVisionProvider {
 
     // Фолбэк на случай срабатывания классификаторов безопасности:
     // на opus-5/fable-5 запрос перезапускается на рекомендованной модели.
-    const supportsFallbacks = this.model.startsWith("claude-opus-5") || this.model.startsWith("claude-fable");
+    const withFallbacks = supportsFallbacks(this.model);
 
     let response: Anthropic.Beta.Messages.BetaMessage;
     try {
       response = await this.client.beta.messages.create({
         model: this.model,
         max_tokens: 16000,
-        ...(supportsFallbacks
+        ...(withFallbacks
           ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
           : {}),
         output_config: {
@@ -83,6 +80,6 @@ export class AnthropicMealProvider implements MealVisionProvider {
     } catch {
       throw new MealAnalysisError("Response is not valid JSON", "invalid_output");
     }
-    return validateMealAnalysis(parsed);
+    return { analysis: validateMealAnalysis(parsed), usage: readUsage(response) };
   }
 }

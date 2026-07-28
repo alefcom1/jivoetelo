@@ -1,83 +1,91 @@
-# Доступ к AI API с российского VPS
+# Доступ к Anthropic API
 
-`api.anthropic.com` может быть недоступен напрямую с сервера в РФ. Это риск №3
-из [плана](./implementation-plan.md), и он решается прокси — тем же приёмом,
-который уже используется в вашем репозитории `alefcom1/remarka-proxy`.
+`api.anthropic.com` недоступен напрямую с российского VPS, где будет жить
+`jivoetelo.ru`. Изобретать решение не нужно — у вас уже работает прокси-воркер
+`proxy.techperevod.com` (репозиторий `alefcom1/techperevod`, каталог
+`deploy/techperevod-worker`), развёрнутый на VPS в Hetzner. Оттуда Anthropic
+доступен напрямую.
 
-## Как это работает
+## Как приложение подключается
 
-Приложение читает переменную `ANTHROPIC_BASE_URL`. Если она задана, SDK
-отправляет запросы туда вместо `api.anthropic.com`:
+Anthropic SDK умеет ходить через прокси штатно — двумя переменными:
 
 ```
-ANTHROPIC_BASE_URL=https://your-proxy.vercel.app
-ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_BASE_URL=https://proxy.techperevod.com/api
+ANTHROPIC_AUTH_TOKEN=<PROXY_SECRET воркера>
 ```
 
-Если переменная пуста — работаем напрямую. Никаких изменений в коде не нужно.
+`ANTHROPIC_API_KEY` при этом **не нужен**: настоящий ключ живёт только на
+воркере, приложение знает лишь общий секрет. SDK отправляет токен в заголовке
+`Authorization: Bearer`, воркер подменяет его реальным ключом.
 
-## Вариант 1: серверless-прокси (как в remarka-proxy)
+Маршрут `/api/v1/*` воркера уже ведёт на `api.anthropic.com`, а SDK дописывает
+к базовому URL `/v1/messages` — то есть путь совпадает без правок воркера.
 
-Функция на Vercel в европейском регионе, пересылающая запросы к Anthropic.
-Ключ хранится на стороне прокси, а не передаётся из приложения.
+Если переменные не заданы, приложение работает на mock-провайдере: интерфейс и
+все сценарии проверяются без внешних вызовов и без расхода токенов.
 
-Отличия от `remarka-proxy`, которые стоит внести для нашего случая:
+## Важная деталь: ECONNRESET на keep-alive
 
-- **Проксировать путь целиком**, а не только `/v1/messages` — SDK ходит и в
-  другие эндпоинты, а нам ещё понадобится Files API для фото.
-- **Пробрасывать заголовки** `anthropic-beta` (мы используем фолбэки при
-  отказах и структурированный вывод) и `anthropic-version`.
-- **Стримить ответ**, а не буферизовать через `res.json()` — иначе длинные
-  ответы упрутся в лимит времени функции.
-- **`maxDuration`** поднять до максимума тарифа: разбор фото занимает секунды.
+Эту проблему вы уже ловили и чинили в `techperevod`, поэтому она учтена
+в `lib/ai/client.ts` с самого начала:
 
-Минимальный вариант:
-
-```js
-// api/[...path].js
-export const config = { runtime: "edge" };
-
-export default async function handler(request) {
-  const url = new URL(request.url);
-  if (request.headers.get("x-proxy-secret") !== process.env.PROXY_SECRET) {
-    return new Response("Forbidden", { status: 403 });
-  }
-  const upstream = new URL(url.pathname + url.search, "https://api.anthropic.com");
-  return fetch(upstream, {
-    method: request.method,
-    headers: {
-      "content-type": request.headers.get("content-type") ?? "application/json",
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
-      "anthropic-version": request.headers.get("anthropic-version") ?? "2023-06-01",
-      ...(request.headers.get("anthropic-beta")
-        ? { "anthropic-beta": request.headers.get("anthropic-beta") }
-        : {}),
-    },
-    body: request.method === "POST" ? request.body : undefined,
-    duplex: "half",
-  });
-}
+```ts
+const upstreamAgent = new UndiciAgent({ pipelining: 0, keepAliveTimeout: 1 });
+new Anthropic({ fetchOptions: { dispatcher: upstreamAgent } });
 ```
 
-> Прокси видит содержимое запросов — то есть описания и фото еды. Это данные
-> о здоровье пользователей: разворачивайте прокси на своём аккаунте, включите
-> HTTPS-only и не логируйте тела запросов. С точки зрения 152-ФЗ это
-> трансграничная передача — обсудите с юристом до публичного запуска.
+Долгоживущий пул соединений может держать сокет, который удалённая сторона уже
+закрыла, — следующий запрос падает с `ECONNRESET`. `pipelining: 0` отключает
+переиспользование соединений. `fetchOptions.dispatcher` — единственный
+официально поддерживаемый SDK способ подменить transport для Node.js fetch.
 
-## Вариант 2: выделенный сервер вне РФ
+## Почему не Vercel
 
-Тот же приём, но на своём VPS (nginx + `proxy_pass`). Дороже, зато данные не
-проходят через сторонний хостинг и проще контролировать логи.
+В `techperevod` это уже проверено на практике: VPS в России не мог достучаться
+до `*.vercel.app` на уровне TCP, хотя сам воркер до Anthropic доходил
+нормально. Поэтому воркер и переехал на собственный VPS. Для «Живого Тела»
+верно то же самое — используем `proxy.techperevod.com`.
 
-## Проверка
+## Что нужно сделать при деплое
 
-```bash
-# С сервера: доступен ли Anthropic напрямую
-curl -s -o /dev/null -w "%{http_code}\n" https://api.anthropic.com/v1/models \
-  -H "x-api-key: $ANTHROPIC_API_KEY" -H "anthropic-version: 2023-06-01"
-```
+1. Взять `PROXY_SECRET` из `.env.local` воркера на Hetzner.
+2. Прописать в `.env` «Живого Тела»:
+   ```
+   ANTHROPIC_BASE_URL=https://proxy.techperevod.com/api
+   ANTHROPIC_AUTH_TOKEN=<тот же PROXY_SECRET>
+   ```
+3. Проверить с VPS сайта:
+   ```bash
+   curl -sS -o /dev/null -w "%{http_code}\n" \
+     -X POST https://proxy.techperevod.com/api/v1/messages \
+     -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
+     -H "anthropic-version: 2023-06-01" \
+     -H "content-type: application/json" \
+     -d '{"model":"claude-opus-5","max_tokens":16,"messages":[{"role":"user","content":"ping"}]}'
+   ```
+   `200` — всё готово. `403` — не сходится секрет. Таймаут — воркер недоступен
+   с этого сервера.
+4. Перезапустить приложение: `docker compose up -d --build`.
 
-`200` — прокси не нужен. Таймаут или `403` — задайте `ANTHROPIC_BASE_URL`.
+### Если решите поднять отдельный воркер под «Живое Тело»
 
-До настройки ключа приложение работает на mock-провайдере: интерфейс и все
-сценарии проверяются без внешних вызовов.
+Разумно, когда не хочется делить лимиты и секрет между проектами. Инструкция —
+в `deploy/techperevod-worker/README.md` репозитория `techperevod`
+(раздел «Деплой на свой VPS»): Node 20+, `npm install`, секреты только в
+`.env.local`, запуск через pm2 за nginx с TLS. Отличий для нас нет: тот же
+маршрут `/api/v1/*` и тот же `PROXY_SECRET`.
+
+## Приватность
+
+Через прокси проходят описания и фото еды — это данные о здоровье
+пользователей. Воркер на вашем VPS, ключи и логи под вашим контролем, это
+лучше стороннего хостинга. Два практических требования: не логировать тела
+запросов и обсудить с юристом статус передачи данных за пределы РФ (Hetzner —
+Германия) до публичного запуска. Это тот же вопрос 152-ФЗ, что и в
+[плане](./implementation-plan.md).
+
+## Расход токенов
+
+Дневные лимиты и учёт расхода описаны в [free-tier.md](./free-tier.md).
+Пока приложение работает на mock-провайдере, расход нулевой.

@@ -1,5 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { MealAnalysisError } from "./types.ts";
+import type Anthropic from "@anthropic-ai/sdk";
+import { createAnthropicClient, DEFAULT_MODEL, hasAnthropicCredentials, readUsage, supportsFallbacks } from "./client.ts";
+import { MealAnalysisError, type TokenUsage } from "./types.ts";
 
 // «Что съесть дальше» (разделы 8.8 и 15.5 спецификации): детерминированный
 // слой считает остатки дня и ограничения (наш код), генеративный слой
@@ -21,8 +22,10 @@ export type MealSuggestion = {
   timeMinutes: number;
 };
 
+export type SuggestionResult = { suggestions: MealSuggestion[]; usage: TokenUsage };
+
 export interface SuggestionProvider {
-  suggest(context: SuggestionContext): Promise<MealSuggestion[]>;
+  suggest(context: SuggestionContext): Promise<SuggestionResult>;
 }
 
 const SUGGESTIONS_SCHEMA = {
@@ -102,25 +105,23 @@ function buildPrompt(context: SuggestionContext): string {
   return lines.join("\n");
 }
 
-const DEFAULT_MODEL = "claude-opus-5";
-
 export class AnthropicSuggestionProvider implements SuggestionProvider {
   private client: Anthropic;
   private model: string;
 
-  constructor(apiKey: string, model?: string) {
-    this.client = new Anthropic({ apiKey, baseURL: process.env.ANTHROPIC_BASE_URL || undefined });
+  constructor(model?: string) {
+    this.client = createAnthropicClient();
     this.model = model ?? DEFAULT_MODEL;
   }
 
-  async suggest(context: SuggestionContext): Promise<MealSuggestion[]> {
-    const supportsFallbacks = this.model.startsWith("claude-opus-5") || this.model.startsWith("claude-fable");
+  async suggest(context: SuggestionContext): Promise<SuggestionResult> {
+    const withFallbacks = supportsFallbacks(this.model);
     let response: Anthropic.Beta.Messages.BetaMessage;
     try {
       response = await this.client.beta.messages.create({
         model: this.model,
         max_tokens: 16000,
-        ...(supportsFallbacks
+        ...(withFallbacks
           ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
           : {}),
         output_config: {
@@ -142,7 +143,7 @@ export class AnthropicSuggestionProvider implements SuggestionProvider {
       throw new MealAnalysisError("No text block in response", "invalid_output");
     }
     try {
-      return validateSuggestions(JSON.parse(textBlock.text));
+      return { suggestions: validateSuggestions(JSON.parse(textBlock.text)), usage: readUsage(response) };
     } catch (error) {
       if (error instanceof MealAnalysisError) throw error;
       throw new MealAnalysisError("Response is not valid JSON", "invalid_output");
@@ -151,9 +152,9 @@ export class AnthropicSuggestionProvider implements SuggestionProvider {
 }
 
 export class MockSuggestionProvider implements SuggestionProvider {
-  async suggest(context: SuggestionContext): Promise<MealSuggestion[]> {
+  async suggest(context: SuggestionContext): Promise<SuggestionResult> {
     const light = context.remainingKcal < 500;
-    return [
+    const suggestions: MealSuggestion[] = [
       {
         title: light ? "Омлет с овощами" : "Гречка с курицей и овощами",
         why: "Помогает добрать белок и оставляет запас до конца дня.",
@@ -176,6 +177,7 @@ export class MockSuggestionProvider implements SuggestionProvider {
         timeMinutes: 10,
       },
     ];
+    return { suggestions, usage: { inputTokens: 540, outputTokens: 320 } };
   }
 }
 
@@ -183,11 +185,10 @@ let suggestionProvider: SuggestionProvider | null = null;
 
 export function getSuggestionProvider(): SuggestionProvider {
   if (suggestionProvider) return suggestionProvider;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (process.env.AI_PROVIDER === "mock" || !apiKey) {
+  if (process.env.AI_PROVIDER === "mock" || !hasAnthropicCredentials()) {
     suggestionProvider = new MockSuggestionProvider();
   } else {
-    suggestionProvider = new AnthropicSuggestionProvider(apiKey, process.env.ANTHROPIC_MODEL);
+    suggestionProvider = new AnthropicSuggestionProvider(process.env.ANTHROPIC_MODEL);
   }
   return suggestionProvider;
 }

@@ -5,6 +5,7 @@ import { users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { setShowCalories } from "../meal-actions";
 import { TelegramLink } from "./telegram-link";
+import { UsagePanel } from "./usage-panel";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
@@ -24,6 +25,11 @@ export default async function SettingsPage() {
     <section className="settings-block">
       <p className="settings-label">Аккаунт</p>
       <p>{user.email}</p>
+      <p className="field-note">Тариф: бесплатный — доступны все возможности сервиса.</p>
+    </section>
+    <section className="settings-block">
+      <p className="settings-label">Распознавание сегодня</p>
+      <UsagePanel userId={user.id} plan={user.plan} />
     </section>
     <section className="settings-block">
       <p className="settings-label">План</p>

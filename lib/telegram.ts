@@ -4,6 +4,7 @@ import { validate } from "@telegram-apps/init-data-node";
 import { getDb } from "@/db";
 import { telegramLinkCodes, users } from "@/db/schema";
 import type { CurrentUser } from "./auth.ts";
+import { normalizePlan } from "./quota-policy.ts";
 
 // Проверка initData Telegram (раздел 17 спеки: «не доверять данным клиента
 // без серверной проверки»). Используем официальную библиотеку @telegram-apps:
@@ -53,11 +54,12 @@ export function verifyInitData(initData: string): TelegramIdentity {
 /** Находит пользователя сервиса по привязанному Telegram-аккаунту. */
 export async function findUserByTelegram(telegramUserId: string): Promise<CurrentUser | null> {
   const rows = await getDb()
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories })
+    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan })
     .from(users)
     .where(eq(users.telegramUserId, telegramUserId))
     .limit(1);
-  return rows[0] ?? null;
+  const row = rows[0];
+  return row ? { ...row, plan: normalizePlan(row.plan) } : null;
 }
 
 /** Разбирает initData и возвращает пользователя; бросает not_linked, если привязки нет. */
@@ -113,9 +115,10 @@ export async function consumeLinkCode(code: string, telegramUserId: string): Pro
   await db.update(telegramLinkCodes).set({ usedAt: new Date() }).where(eq(telegramLinkCodes.code, normalized));
 
   const linked = await db
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories })
+    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan })
     .from(users)
     .where(eq(users.id, row.userId))
     .limit(1);
-  return linked[0] ?? null;
+  const linkedRow = linked[0];
+  return linkedRow ? { ...linkedRow, plan: normalizePlan(linkedRow.plan) } : null;
 }

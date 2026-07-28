@@ -194,6 +194,9 @@ try {
   await uiPage.screenshot({ path: "/home/user/jivoetelo/docs/screenshots/tg-today.png" });
 
   step("15. UI: вкладка «Добавить» — разбор и правка");
+  // Пауза под антифлуд: сценарий гоняет разборы быстрее, чем это физически
+  // возможно для человека (нужно набрать текст или сделать снимок).
+  await new Promise((r) => setTimeout(r, 3200));
   await uiPage.click('.tg-tabs button:has-text("Добавить")');
   await uiPage.waitForSelector("textarea");
   await uiPage.fill("textarea", "Гречка с курицей");

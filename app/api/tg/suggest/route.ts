@@ -1,6 +1,7 @@
 import { getSuggestionProvider } from "@/lib/ai/suggest";
 import { localToday } from "@/lib/dates";
 import { getDaySummary } from "@/lib/meals";
+import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import { authorize } from "../_auth";
 
 function nextMealLabel(): string {
@@ -36,9 +37,13 @@ export async function GET(request: Request) {
     showCalories: auth.user.showCalories,
   };
 
+  const decision = await checkQuota(auth.user.id, auth.user.plan, "suggest");
+  if (!decision.allowed) return Response.json({ error: quotaMessage(decision) }, { status: 429 });
+
   try {
-    const suggestions = await getSuggestionProvider().suggest(context);
-    return Response.json({ needsPlan: false, context, suggestions });
+    const result = await getSuggestionProvider().suggest(context);
+    await recordUsage(auth.user.id, "suggest", result.usage);
+    return Response.json({ needsPlan: false, context, suggestions: result.suggestions });
   } catch (error) {
     console.error("tg suggest failed", error);
     return Response.json({ error: "Не получилось подобрать варианты. Попробуйте через минуту." }, { status: 502 });

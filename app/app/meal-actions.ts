@@ -7,6 +7,7 @@ import { getDb } from "@/db";
 import { mealItems, meals, users } from "@/db/schema";
 import { getMealProvider, MealAnalysisError, type MealAnalysis } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
+import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import { ALLOWED_PHOTO_TYPES, deletePhoto, MAX_PHOTO_BYTES, photoBelongsTo, savePhoto } from "@/lib/storage";
 
 export type AnalyzeResult =
@@ -24,6 +25,11 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
   if (!user) redirect("/login");
 
   const mode = String(formData.get("mode") ?? "text");
+
+  // Все функции бесплатны; лимит защищает от неумеренного расхода токенов.
+  const operation = mode === "photo" ? "analyze_photo" : "analyze_text";
+  const decision = await checkQuota(user.id, user.plan, operation);
+  if (!decision.allowed) return { ok: false, error: quotaMessage(decision) };
   let photoKey: string | null = null;
   let sourceText: string | null = null;
 
@@ -44,17 +50,21 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
       photoKey = await savePhoto(user.id, data, file.type);
       const note = String(formData.get("note") ?? "").trim().slice(0, 300) || undefined;
       sourceText = note ?? null;
-      analysis = await getMealProvider().analyseMeal({
+      const result = await getMealProvider().analyseMeal({
         kind: "photo",
         data,
         mediaType: file.type as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
         note,
       });
+      analysis = result.analysis;
+      await recordUsage(user.id, operation, result.usage);
     } else {
       const text = String(formData.get("text") ?? "").trim();
       if (text.length < 3) return { ok: false, error: "Опишите еду хотя бы парой слов." };
       sourceText = text.slice(0, 1000);
-      analysis = await getMealProvider().analyseMeal({ kind: "text", text: sourceText });
+      const result = await getMealProvider().analyseMeal({ kind: "text", text: sourceText });
+      analysis = result.analysis;
+      await recordUsage(user.id, operation, result.usage);
     }
     return { ok: true, analysis, photoKey, sourceText };
   } catch (error) {

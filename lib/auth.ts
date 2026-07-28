@@ -3,6 +3,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { getDb } from "@/db";
 import { sessions, users } from "@/db/schema";
+import { normalizePlan, type Plan } from "./quota-policy.ts";
 
 const SESSION_COOKIE = "jt_session";
 const SESSION_DAYS = 30;
@@ -11,6 +12,8 @@ export type CurrentUser = {
   id: number;
   email: string;
   showCalories: boolean;
+  /** Тариф. Сейчас у всех "free" — все функции доступны бесплатно. */
+  plan: Plan;
 };
 
 function hashToken(token: string): string {
@@ -48,11 +51,12 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   if (!token) return null;
 
   const rows = await getDb()
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories })
+    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
     .where(and(eq(sessions.tokenHash, hashToken(token)), gt(sessions.expiresAt, new Date())))
     .limit(1);
 
-  return rows[0] ?? null;
+  const row = rows[0];
+  return row ? { ...row, plan: normalizePlan(row.plan) } : null;
 }

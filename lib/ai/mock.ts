@@ -1,4 +1,4 @@
-import type { MealAnalysis, MealInput, MealVisionProvider } from "./types.ts";
+import type { MealAnalysis, MealAnalysisResult, MealInput, MealVisionProvider } from "./types.ts";
 
 /**
  * Детерминированный провайдер для разработки и демо без API-ключа.
@@ -6,9 +6,9 @@ import type { MealAnalysis, MealInput, MealVisionProvider } from "./types.ts";
  * чтобы можно было пройти весь поток «разбор → правка → сохранение».
  */
 export class MockMealProvider implements MealVisionProvider {
-  async analyseMeal(input: MealInput): Promise<MealAnalysis> {
+  async analyseMeal(input: MealInput): Promise<MealAnalysisResult> {
     const isPhoto = input.kind === "photo";
-    return {
+    const analysis: MealAnalysis = {
       mealType: "breakfast",
       items: [
         {
@@ -42,5 +42,8 @@ export class MockMealProvider implements MealVisionProvider {
         },
       ],
     };
+    // Правдоподобный расход — чтобы поведение квот и учёта можно было
+    // проверить целиком, не обращаясь к внешнему API.
+    return { analysis, usage: { inputTokens: isPhoto ? 1800 : 620, outputTokens: 380 } };
   }
 }

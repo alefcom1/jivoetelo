@@ -1,4 +1,5 @@
 import { getMealProvider, MealAnalysisError } from "@/lib/ai";
+import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import { ALLOWED_PHOTO_TYPES, deletePhoto, MAX_PHOTO_BYTES, savePhoto } from "@/lib/storage";
 import { authorize } from "../_auth";
 
@@ -14,6 +15,12 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const mode = String(formData.get("mode") ?? "text");
+
+  // Все функции бесплатны; лимит защищает от неумеренного расхода токенов.
+  const operation = mode === "photo" ? "analyze_photo" : "analyze_text";
+  const decision = await checkQuota(auth.user.id, auth.user.plan, operation);
+  if (!decision.allowed) return Response.json({ error: quotaMessage(decision) }, { status: 429 });
+
   let photoKey: string | null = null;
 
   try {
@@ -31,20 +38,22 @@ export async function POST(request: Request) {
       const data = Buffer.from(await file.arrayBuffer());
       photoKey = await savePhoto(auth.user.id, data, file.type);
       const note = String(formData.get("note") ?? "").trim().slice(0, 300) || undefined;
-      const analysis = await getMealProvider().analyseMeal({
+      const result = await getMealProvider().analyseMeal({
         kind: "photo",
         data,
         mediaType: file.type as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
         note,
       });
-      return Response.json({ analysis, photoKey, sourceText: note ?? null });
+      await recordUsage(auth.user.id, operation, result.usage);
+      return Response.json({ analysis: result.analysis, photoKey, sourceText: note ?? null });
     }
 
     const text = String(formData.get("text") ?? "").trim();
     if (text.length < 3) return Response.json({ error: "Опишите еду хотя бы парой слов." }, { status: 400 });
     const sourceText = text.slice(0, 1000);
-    const analysis = await getMealProvider().analyseMeal({ kind: "text", text: sourceText });
-    return Response.json({ analysis, photoKey: null, sourceText });
+    const result = await getMealProvider().analyseMeal({ kind: "text", text: sourceText });
+    await recordUsage(auth.user.id, operation, result.usage);
+    return Response.json({ analysis: result.analysis, photoKey: null, sourceText });
   } catch (error) {
     if (photoKey) await deletePhoto(photoKey).catch(() => {});
     if (error instanceof MealAnalysisError) {

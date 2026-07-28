@@ -1,4 +1,4 @@
-import { boolean, date, doublePrecision, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, date, doublePrecision, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const waitlistSubscribers = pgTable("waitlist_subscribers", {
   id: serial("id").primaryKey(),
@@ -12,6 +12,9 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   // Привязка Telegram-аккаунта для Mini App (раздел 17 спеки).
   telegramUserId: text("telegram_user_id").unique(),
+  // Тариф. Сейчас все функции бесплатны и все пользователи на "free";
+  // поле — задел под будущие тарифы, чтобы не мигрировать данные потом.
+  plan: text("plan").notNull().default("free"),
   // Режим «скрыть калории» (раздел 4.2 спеки): пользователь видит белок и
   // клетчатку, но не цифры энергии.
   showCalories: boolean("show_calories").notNull().default(true),
@@ -89,6 +92,44 @@ export const weightEntries = pgTable(
   },
   (table) => [uniqueIndex("weight_entries_user_date").on(table.userId, table.onDate)],
 );
+
+/**
+ * Журнал обращений к AI: одна строка на вызов. Нужен для дневных лимитов,
+ * глобального предохранителя по стоимости и понимания реальной юнит-экономики
+ * до того, как включать тарифы.
+ */
+export const aiUsage = pgTable(
+  "ai_usage",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    onDate: date("on_date").notNull(),
+    kind: text("kind").notNull(), // analyze_photo | analyze_text | suggest
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("ai_usage_user_date").on(table.userId, table.onDate)],
+);
+
+/**
+ * Платежи Unitpay. Таблица заведена заранее: приём оплаты выключен, но когда
+ * включим — идемпотентность уже обеспечена уникальным unitpay_id (повторный
+ * CHECK/PAY не должен зачислять дважды).
+ */
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  provider: text("provider").notNull().default("unitpay"),
+  externalId: text("external_id").notNull().unique(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  sum: text("sum").notNull(),
+  status: text("status").notNull(), // checked | paid | failed
+  payload: jsonb("payload"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const mealItems = pgTable("meal_items", {
   id: serial("id").primaryKey(),
