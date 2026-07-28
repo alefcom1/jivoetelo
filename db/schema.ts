@@ -54,6 +54,9 @@ export const profiles = pgTable("profiles", {
   birthYear: integer("birth_year").notNull(),
   heightCm: doublePrecision("height_cm").notNull(),
   activity: text("activity").notNull(), // sedentary | light | moderate | high
+  // Накопленная адаптивная корректировка стартовой цели (раздел 14.2 спеки).
+  // Меняется только с явного подтверждения пользователя.
+  kcalAdjustment: integer("kcal_adjustment").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

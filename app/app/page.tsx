@@ -44,6 +44,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       heightCm: profile.heightCm,
       weightKg,
       activity: profile.activity as Activity,
+      adjustmentKcal: profile.kcalAdjustment,
     });
   }
 

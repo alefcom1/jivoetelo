@@ -12,6 +12,8 @@ export type TargetInput = {
   heightCm: number;
   weightKg: number;
   activity: Activity;
+  /** Подтверждённая пользователем адаптивная корректировка (раздел 14.2). */
+  adjustmentKcal?: number;
 };
 
 export type Targets = {
@@ -56,7 +58,8 @@ export function computeTargets(input: TargetInput, currentYear = new Date().getF
   const base =
     10 * input.weightKg + 6.25 * input.heightCm - 5 * age + (input.sexForFormula === "male" ? 5 : -161);
   const tdee = base * (ACTIVITY_MULTIPLIER[input.activity] ?? ACTIVITY_MULTIPLIER.light);
-  let target = tdee * GOAL_FACTOR[goal];
+  const adjustment = Math.min(450, Math.max(-450, input.adjustmentKcal ?? 0));
+  let target = tdee * GOAL_FACTOR[goal] + adjustment;
 
   // Жёсткая нижняя граница автоматических рекомендаций (раздел 4.2).
   const floor = input.sexForFormula === "male" ? 1500 : 1200;

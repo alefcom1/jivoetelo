@@ -47,6 +47,7 @@ export default async function NextMealPage() {
     heightCm: profile.heightCm,
     weightKg,
     activity: profile.activity as Activity,
+    adjustmentKcal: profile.kcalAdjustment,
   });
 
   const day = localToday();

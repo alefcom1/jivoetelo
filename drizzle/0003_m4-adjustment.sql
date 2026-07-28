@@ -1,0 +1,1 @@
+ALTER TABLE "profiles" ADD COLUMN "kcal_adjustment" integer DEFAULT 0 NOT NULL;
