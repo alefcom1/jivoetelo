@@ -13,6 +13,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    # Без лимита логи контейнера растут, пока не кончится диск на VPS.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
 
   app:
     build: .
@@ -34,8 +40,27 @@ services:
       UNITPAY_SECRET_KEY: ${UNITPAY_SECRET_KEY:-}
       PAYMENTS_ENABLED: ${PAYMENTS_ENABLED:-}
       APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Moscow}
+      # Реквизиты оператора ПДн для юридических страниц (docs/legal.md).
+      LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:-}
+      LEGAL_OPERATOR_INN: ${LEGAL_OPERATOR_INN:-}
+      LEGAL_OPERATOR_OGRN: ${LEGAL_OPERATOR_OGRN:-}
+      LEGAL_OPERATOR_ADDRESS: ${LEGAL_OPERATOR_ADDRESS:-}
+      LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:-}
     volumes:
       - uploads:/app/data
+    healthcheck:
+      # Проверяем не порт, а /api/health: он отвечает 200 только когда
+      # приложение действительно достучалось до базы.
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     # Наружу порт не открываем: TLS и домен обслуживает reverse proxy на VPS
     # (см. docs/deploy-vps.md).
     ports:

@@ -17,7 +17,9 @@ export default function LoginPage() {
       <Link className="logo" href="/"><span>Ж</span>Живое Тело</Link>
       <h1>С возвращением.</h1>
       <form action={action}>
-        <label>E-mail<input name="email" type="email" autoComplete="email" required autoFocus /></label>
+        {/* Адрес возвращается из состояния: React сбрасывает форму после
+            server action, а перенабирать почту из-за опечатки в пароле — злит. */}
+        <label>E-mail<input name="email" type="email" autoComplete="email" defaultValue={state.email ?? ""} required autoFocus /></label>
         <label>Пароль<input name="password" type="password" autoComplete="current-password" required /></label>
         {errors[state.status] && <p className="form-error">{errors[state.status]}</p>}
         <button className="black-button" type="submit" disabled={pending}>{pending ? "Входим…" : "Войти"}</button>

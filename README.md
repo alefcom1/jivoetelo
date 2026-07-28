@@ -6,6 +6,7 @@
 - Продуктовая спецификация: [docs/product-spec.md](docs/product-spec.md)
 - Рабочий план разработки: [docs/implementation-plan.md](docs/implementation-plan.md)
 - Деплой на VPS: [docs/deploy-vps.md](docs/deploy-vps.md)
+- Юридический блок и чеклист 152-ФЗ: [docs/legal.md](docs/legal.md)
 - Telegram Mini App: [docs/telegram-mini-app.md](docs/telegram-mini-app.md)
 - Доступ к AI API из РФ: [docs/ai-proxy.md](docs/ai-proxy.md)
 - Бесплатный доступ и лимиты: [docs/free-tier.md](docs/free-tier.md)
@@ -23,6 +24,12 @@
 Все функции бесплатны; дневные лимиты на AI защищают от неумеренного
 расхода токенов и не мешают обычному сценарию. Без учётных данных Anthropic
 AI-функции работают через mock-провайдер — удобно для локальной разработки.
+
+Юридический блок готов к запуску: документы на `/legal/*`, два отдельных
+согласия при регистрации с фиксацией редакции, выгрузка всех своих данных
+одним файлом и необратимое удаление аккаунта — всё из настроек. Что ещё
+нужно сделать вне кода (регистрация оператора ПДн, уведомление о
+трансграничной передаче, проверка юристом) — в [docs/legal.md](docs/legal.md).
 
 ## Стек
 
@@ -51,16 +58,19 @@ npm run dev                # http://localhost:3000
 - `npm run build` — продакшен-сборка
 - `npm test` — юнит-тесты
 - `npm run lint` — линтер
+- `npm run preflight` — проверка окружения перед деплоем
 - `npm run db:generate` — сгенерировать миграцию после правки `db/schema.ts`
 - `npm run db:migrate` — применить миграции к базе из `DATABASE_URL`
 
 ## Структура
 
 ```
-app/        страницы и server actions
+app/        страницы и server actions (включая /legal и /tg)
 db/         схема Drizzle и подключение к Postgres
+deploy/     Caddyfile, миграции, бэкап и восстановление на VPS
 drizzle/    SQL-миграции
-lib/        общая логика (валидация и т.п.)
-tests/      юнит-тесты (node:test)
-docs/       спецификация, план, деплой
+lib/        общая логика (валидация, AI, квоты, юридический слой)
+scripts/    служебные скрипты (preflight)
+tests/      юнит-тесты (node:test) и e2e (tests/e2e, Playwright)
+docs/       спецификация, план, деплой, юридический чеклист
 ```

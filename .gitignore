@@ -36,3 +36,6 @@ yarn-error.log*
 
 # typescript
 next-env.d.ts
+
+# typescript incremental build info
+*.tsbuildinfo

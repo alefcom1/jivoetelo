@@ -1,18 +1,37 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Manrope } from "next/font/google";
+import "./fonts.css";
 import "./globals.css";
 
-const display = Cormorant_Garamond({ variable: "--font-display", subsets: ["cyrillic", "latin"], weight: ["400", "500", "600", "700"] });
-const body = Manrope({ variable: "--font-body", subsets: ["cyrillic", "latin"], weight: ["400", "500", "600", "700"] });
+// Картинку для соцсетей отдаём в JPEG 1200×630 (~96 КБ): это формат, который
+// понимают все сборщики превью, включая Telegram и VK. Раньше здесь лежал
+// PNG на 2,2 МБ — часть сборщиков просто не дожидалась загрузки.
+const ogImage = { url: "/og.jpg", width: 1200, height: 630, alt: "Живое Тело — питание в вашем ритме" };
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://jivoetelo.ru"),
   title: "Живое Тело — питание в вашем ритме",
   description: "Умный навигатор питания, который помогает выбрать следующий шаг без давления и запретов.",
-  openGraph: { title: "Живое Тело", description: "Питание в ритме вашего тела.", images: ["/og.png"] },
-  twitter: { card: "summary_large_image", title: "Живое Тело", description: "Питание в ритме вашего тела.", images: ["/og.png"] },
+  icons: { icon: "/favicon.svg" },
+  openGraph: {
+    type: "website",
+    locale: "ru_RU",
+    siteName: "Живое Тело",
+    url: "https://jivoetelo.ru",
+    title: "Живое Тело",
+    description: "Питание в ритме вашего тела.",
+    images: [ogImage],
+  },
+  twitter: { card: "summary_large_image", title: "Живое Тело", description: "Питание в ритме вашего тела.", images: [ogImage] },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="ru"><body className={`${display.variable} ${body.variable}`}>{children}</body></html>;
+  return <html lang="ru">
+    <head>
+      {/* Кириллические подмножества нужны на любой странице — просим браузер
+          начать их загрузку сразу, не дожидаясь разбора CSS. */}
+      <link rel="preload" href="/fonts/cormorant-garamond-cyrillic.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+      <link rel="preload" href="/fonts/manrope-cyrillic.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+    </head>
+    <body>{children}</body>
+  </html>;
 }

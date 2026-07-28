@@ -1,5 +1,6 @@
 "use client";
 
+import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import type { TodayResponse } from "./api";
 import { IconToday } from "./icons";
 
@@ -102,5 +103,16 @@ export function TodayTab({
             </li>)}
           </ul>}
     </section>
+
+    {/* Дисклеймер и документы должны быть доступны и внутри Telegram, а не
+        только на сайте: для части людей Mini App — единственный вход. */}
+    <footer className="tg-legal">
+      <p>{NOT_MEDICAL_DISCLAIMER}</p>
+      <div>
+        <a href="/legal/terms" target="_blank" rel="noreferrer">Соглашение</a>
+        <a href="/legal/privacy" target="_blank" rel="noreferrer">Конфиденциальность</a>
+        <a href="/legal/consent" target="_blank" rel="noreferrer">Согласие</a>
+      </div>
+    </footer>
   </div>;
 }

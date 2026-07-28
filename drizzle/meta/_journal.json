@@ -50,6 +50,13 @@
       "when": 1785216681397,
       "tag": "0006_m7-payments",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785220133612,
+      "tag": "0007_m8-consents",
+      "breakpoints": true
     }
   ]
 }

@@ -154,3 +154,30 @@ a.header-cta{display:inline-flex;align-items:center}
 .usage-head b{font-variant-numeric:tabular-nums}
 .usage-track{height:6px;border-radius:999px;background:var(--paper);overflow:hidden}
 .usage-fill{height:100%;border-radius:999px;background:var(--black)}
+
+/* Согласия и юридические примечания в формах. Мелкий шрифт — но читаемый:
+   галочка, под которой нельзя разобрать текст, юридически бесполезна. */
+/* Селектор с label специально «тяжелее» правил .auth-card label и .notice
+   input — иначе галочка уезжает на отдельную строку от своего текста. */
+label.consent{display:flex;flex-direction:row;gap:9px;align-items:flex-start;margin:14px 0 4px;text-align:left;color:#5c5e57;font-size:11px;font-weight:400;line-height:1.5}
+label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;flex:0 0 auto;accent-color:var(--coral)}
+.consent a{text-decoration:underline;text-underline-offset:2px}
+.consent a:hover{color:var(--coral)}
+.footer-disclaimer{max-width:640px;margin:64px 0 0;color:#74766e;font-size:11px;line-height:1.65}
+.auth-note{max-width:360px;margin:22px auto 0;color:#8a8b84;font-size:10px;line-height:1.55}
+.legal-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:26px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:10px;font-weight:700}
+.legal-links a:hover{color:var(--coral)}
+.danger-zone{border-color:#e8c9c1}
+.danger-zone .settings-label{color:#a8503c}
+.danger-button{border:1px solid #d98a76;border-radius:3px;padding:12px 15px;background:transparent;color:#a8503c;font-size:11px;font-weight:800}
+.danger-button:hover{background:#a8503c;border-color:#a8503c;color:var(--white)}
+.danger-zone input[type=text]{width:100%;max-width:280px;margin:12px 0;padding:11px 12px;border:1px solid var(--line);background:var(--white)}
+.button-row{display:flex;align-items:center;gap:16px;margin-top:4px}
+.consent-list{list-style:none;margin:0 0 12px;padding:0}
+.consent-list li{padding:10px 0;border-bottom:1px solid var(--line)}
+.consent-list li:last-child{border:0}
+.consent-list b{display:block;font-size:12px;font-weight:700}
+.consent-list span{display:block;margin-top:3px;color:var(--muted);font-size:11px}
+.shell-footer{max-width:760px;margin:0 auto;padding:34px 24px 46px}
+.shell-footer p{margin:0;color:#8a8b84;font-size:11px;line-height:1.65}
+.shell-footer .legal-links{margin-top:14px}

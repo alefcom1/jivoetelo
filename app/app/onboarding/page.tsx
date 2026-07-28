@@ -19,6 +19,10 @@ export default function OnboardingPage() {
       Несколько вопросов — и мы посчитаем стартовый диапазон энергии и белка.
       Формула даёт только отправную точку: дальше план будет уточняться по вашей реальной динамике.
     </p>
+    <p className="field-note">
+      Эти ответы нужны только для расчёта вашего плана и никуда не передаются —
+      см. <a href="/legal/privacy" target="_blank">политику конфиденциальности</a>.
+    </p>
 
     <form action={action} className="onboarding-form">
       <fieldset>

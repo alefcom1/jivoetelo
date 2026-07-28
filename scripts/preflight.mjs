@@ -1,0 +1,162 @@
+#!/usr/bin/env node
+/**
+ * Проверка окружения перед деплоем: `npm run preflight`.
+ *
+ * Смысл — поймать всё, что молча ломается уже в бою: забытый токен прокси
+ * (AI тихо уходит в mock и пользователь получает выдуманные калории),
+ * включённый приём оплаты без ключей, пароль базы из примера.
+ *
+ * Читает .env рядом с собой, но переменные из окружения имеют приоритет —
+ * в docker compose они приходят именно оттуда.
+ */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const root = resolve(import.meta.dirname, "..");
+const env = { ...readEnvFile(resolve(root, ".env")), ...process.env };
+
+const problems = [];
+const warnings = [];
+const notes = [];
+
+function fail(message) {
+  problems.push(message);
+}
+function warn(message) {
+  warnings.push(message);
+}
+function ok(message) {
+  notes.push(message);
+}
+
+function value(name) {
+  const raw = env[name];
+  return raw && raw.trim() ? raw.trim() : "";
+}
+
+// --- База данных ------------------------------------------------------------
+
+const password = value("POSTGRES_PASSWORD");
+if (!password) {
+  fail("POSTGRES_PASSWORD не задан — контейнер базы не поднимется.");
+} else if (password.length < 16) {
+  fail("POSTGRES_PASSWORD короче 16 символов. Сгенерируйте: openssl rand -hex 24");
+} else if (/^(postgres|password|changeme|jivoetelo)$/i.test(password)) {
+  fail("POSTGRES_PASSWORD — словарный. Сгенерируйте: openssl rand -hex 24");
+} else {
+  ok("Пароль базы задан.");
+}
+
+const databaseUrl = value("DATABASE_URL");
+if (!databaseUrl) {
+  warn("DATABASE_URL не задан. В docker compose он собирается автоматически, но локальные команды (npm run dev, миграции) работать не будут.");
+} else if (password && databaseUrl.includes("<POSTGRES_PASSWORD>")) {
+  fail("В DATABASE_URL остался placeholder <POSTGRES_PASSWORD>.");
+} else {
+  ok("DATABASE_URL задан.");
+}
+
+// --- AI ---------------------------------------------------------------------
+
+const baseUrl = value("ANTHROPIC_BASE_URL");
+const authToken = value("ANTHROPIC_AUTH_TOKEN");
+const apiKey = value("ANTHROPIC_API_KEY");
+const provider = value("AI_PROVIDER");
+
+if (provider === "mock") {
+  warn("AI_PROVIDER=mock — разбор еды будет выдуманным. Для продакшена уберите эту переменную.");
+} else if (baseUrl && authToken) {
+  ok(`AI через прокси: ${baseUrl}`);
+} else if (apiKey) {
+  warn("Задан прямой ANTHROPIC_API_KEY без прокси. С российского VPS api.anthropic.com обычно недоступен — см. docs/ai-proxy.md.");
+} else if (baseUrl && !authToken) {
+  fail("ANTHROPIC_BASE_URL задан, а ANTHROPIC_AUTH_TOKEN — нет: прокси ответит 401.");
+} else {
+  fail("Нет ни ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN, ни ANTHROPIC_API_KEY — AI молча уйдёт в mock и покажет пользователям выдуманные цифры.");
+}
+
+const budget = value("AI_DAILY_BUDGET_USD");
+if (budget && !(Number(budget) > 0)) {
+  fail(`AI_DAILY_BUDGET_USD="${budget}" — не положительное число.`);
+} else {
+  ok(`Дневной потолок расходов на AI: $${budget || "25 (по умолчанию)"}.`);
+}
+
+// --- Telegram ---------------------------------------------------------------
+
+const botToken = value("TELEGRAM_BOT_TOKEN");
+if (!botToken) {
+  warn("TELEGRAM_BOT_TOKEN не задан — Mini App на /tg вернёт 503. Для веб-версии это нормально.");
+} else if (!/^\d+:[A-Za-z0-9_-]{30,}$/.test(botToken)) {
+  fail("TELEGRAM_BOT_TOKEN не похож на токен от @BotFather (формат 123456789:AA...).");
+} else {
+  ok("Токен Telegram-бота задан.");
+}
+
+// --- Оплата -----------------------------------------------------------------
+
+const paymentsEnabled = value("PAYMENTS_ENABLED") === "true";
+const unitpayPublic = value("UNITPAY_PUBLIC_KEY");
+const unitpaySecret = value("UNITPAY_SECRET_KEY");
+
+if (paymentsEnabled && (!unitpayPublic || !unitpaySecret)) {
+  fail("PAYMENTS_ENABLED=true, но ключи Unitpay не заданы.");
+} else if (paymentsEnabled) {
+  warn("PAYMENTS_ENABLED=true — приём оплаты включён. Убедитесь, что оферта опубликована и юрлицо готово (docs/legal.md).");
+} else {
+  ok("Приём оплаты выключен — всё бесплатно, как и задумано.");
+}
+
+// --- Прочее -----------------------------------------------------------------
+
+const timezone = value("APP_TIMEZONE") || "Europe/Moscow";
+try {
+  new Intl.DateTimeFormat("ru-RU", { timeZone: timezone });
+  ok(`Таймзона продукта: ${timezone}.`);
+} catch {
+  fail(`APP_TIMEZONE="${timezone}" — неизвестная таймзона.`);
+}
+
+const operator = value("LEGAL_OPERATOR_NAME");
+if (!operator) {
+  warn("LEGAL_OPERATOR_NAME не задан — в юридических документах останется пометка «реквизиты не заполнены» (docs/legal.md).");
+} else {
+  ok(`Оператор персональных данных: ${operator}.`);
+}
+
+// --- Вывод ------------------------------------------------------------------
+
+for (const note of notes) console.log(`  ok   ${note}`);
+for (const message of warnings) console.log(`  warn ${message}`);
+for (const message of problems) console.log(`  FAIL ${message}`);
+
+console.log("");
+if (problems.length > 0) {
+  console.log(`Проблем: ${problems.length}. Деплоить рано.`);
+  process.exit(1);
+}
+console.log(warnings.length > 0 ? `Предупреждений: ${warnings.length}. Можно деплоить, если они осознанные.` : "Окружение готово.");
+
+/** Минимальный парсер .env: KEY=value, без подстановок и многострочных значений. */
+function readEnvFile(path) {
+  let content;
+  try {
+    content = readFileSync(path, "utf8");
+  } catch {
+    return {};
+  }
+  const result = {};
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const index = trimmed.indexOf("=");
+    if (index === -1) continue;
+    const key = trimmed.slice(0, index).trim();
+    let raw = trimmed.slice(index + 1).trim();
+    if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+      raw = raw.slice(1, -1);
+    }
+    result[key] = raw;
+  }
+  return result;
+}

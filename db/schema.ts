@@ -3,8 +3,32 @@ import { boolean, date, doublePrecision, index, integer, jsonb, pgTable, serial,
 export const waitlistSubscribers = pgTable("waitlist_subscribers", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
+  // Версия документов, на которую человек согласился, оставляя адрес.
+  // Оператор обязан уметь показать, под чем именно стоит галочка.
+  consentVersion: text("consent_version"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Журнал согласий (152-ФЗ). Одна строка — одно согласие конкретной редакции
+ * документа. Строки не перезаписываются: отозванное согласие получает
+ * withdrawnAt, а не исчезает, иначе нечего будет предъявить при проверке.
+ */
+export const userConsents = pgTable(
+  "user_consents",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(), // terms | ai_processing
+    version: text("version").notNull(),
+    source: text("source").notNull().default("web"), // web | telegram
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull().defaultNow(),
+    withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
+  },
+  (table) => [index("user_consents_user_kind").on(table.userId, table.kind)],
+);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),

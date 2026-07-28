@@ -59,6 +59,8 @@ try {
   await page.goto(`${BASE}/register`);
   await page.fill('input[name="email"]', email);
   await page.fill('input[name="password"]', password);
+  await page.check('input[name="consent_terms"]');
+  await page.check('input[name="consent_ai"]');
   await page.click('button[type="submit"]');
   await page.waitForURL("**/app", { timeout: 15000 });
   await page.goto(`${BASE}/app/settings`);

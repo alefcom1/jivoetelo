@@ -1,0 +1,62 @@
+# Reverse proxy для jivoetelo.ru. Скопировать в /etc/caddy/Caddyfile,
+# затем: caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+#
+# Сертификаты Caddy получает и продлевает сам — от нас нужны только A-записи
+# на IP VPS и открытые порты 80/443.
+
+{
+	# Адрес для писем Let's Encrypt об истечении сертификатов.
+	email admin@jivoetelo.ru
+}
+
+jivoetelo.ru {
+	encode zstd gzip
+
+	# Фото еды уходят через server action; лимит согласован с
+	# bodySizeLimit в next.config.ts (9 МБ) с запасом на служебные поля.
+	request_body {
+		max_size 12MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Камера нужна для съёмки еды с телефона, остальное запрещаем.
+		Permissions-Policy "camera=(self), microphone=(), geolocation=(), interest-cohort=()"
+		-Server
+	}
+
+	# Mini App открывается внутри iframe Telegram — ему встраивание разрешено,
+	# всему остальному сайту нет. Матчеры взаимоисключающие, поэтому каждый
+	# запрос получает ровно один заголовок.
+	@telegram path /tg /tg/*
+	header @telegram Content-Security-Policy "frame-ancestors https://web.telegram.org https://telegram.org"
+	@site not path /tg /tg/*
+	header @site Content-Security-Policy "frame-ancestors 'none'"
+
+	# Шрифты и картинка для соцсетей неизменны и лежат в репозитории —
+	# отдаём с длинным кэшем (Next для файлов из public/ этого не делает).
+	@immutable path /fonts/* /og.jpg /favicon.svg
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	reverse_proxy 127.0.0.1:3000
+
+	log {
+		output file /var/log/caddy/jivoetelo.log {
+			roll_size 20MiB
+			roll_keep 10
+		}
+	}
+}
+
+www.jivoetelo.ru {
+	redir https://jivoetelo.ru{uri} permanent
+}
+
+# Транслитерация через «zh» — частая опечатка в адресной строке.
+# Раскомментировать после покупки домена и настройки A-записи: пока записи
+# нет, Caddy будет бесконечно пытаться выпустить сертификат.
+# zhivoetelo.ru, www.zhivoetelo.ru {
+# 	redir https://jivoetelo.ru{uri} permanent
+# }
