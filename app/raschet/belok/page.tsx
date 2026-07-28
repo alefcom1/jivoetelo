@@ -183,6 +183,16 @@ export default function ProteinCalculatorPage() {
       </p>
     </section>
 
+    <section className="raschet-section">
+      <h2>Если коротко</h2>
+      <ul>
+        <li>Ориентир — около 1,6 грамма на килограмм текущего веса.</li>
+        <li>Попадание в коридор важнее точности до грамма: считать до десятых незачем.</li>
+        <li>Норму проще набрать, если белок есть в каждом приёме пищи, а не только в ужине.</li>
+        <li>Добавки не обязательны — обычная еда закрывает норму.</li>
+      </ul>
+    </section>
+
     <section className="raschet-faq">
       <h2>Частые вопросы</h2>
       {FAQ_ITEMS.map((item) =>
