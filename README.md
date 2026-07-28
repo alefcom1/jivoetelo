@@ -6,6 +6,7 @@
 - Продуктовая спецификация: [docs/product-spec.md](docs/product-spec.md)
 - Рабочий план разработки: [docs/implementation-plan.md](docs/implementation-plan.md)
 - Деплой на VPS: [docs/deploy-vps.md](docs/deploy-vps.md)
+- Автодеплой через GitHub Actions: [docs/deploy-github-actions.md](docs/deploy-github-actions.md)
 - Общая инфраструктура с techperevod: [docs/shared-infra.md](docs/shared-infra.md)
 - Исследование рынка и конкурентов: [docs/market-research.md](docs/market-research.md)
 - План публичного контента сайта: [docs/site-content-plan.md](docs/site-content-plan.md)

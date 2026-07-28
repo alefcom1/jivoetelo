@@ -1,0 +1,61 @@
+name: Деплой на VPS
+
+# Запускается вручную (кнопкой) и автоматически при пуше в main.
+# Пока работа идёт в рабочей ветке, пользуйтесь кнопкой: выберите ветку в
+# выпадающем списке и нажмите «Run workflow».
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+# Две выкатки одновременно на один сервер — это гонка за docker compose и
+# миграции. Ждём предыдущую, а не отменяем: прерванная на середине выкатка
+# оставила бы сервер в неопределённом состоянии.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Забрать код
+        uses: actions/checkout@v4
+
+      - name: Проверки перед выкаткой
+        run: |
+          npm ci
+          npm run lint
+          npx tsc --noEmit
+          npm test
+
+      - name: Настроить SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          # Ключ и отпечаток сервера приходят из секретов репозитория и в
+          # логах не появляются: GitHub маскирует значения секретов.
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Отпечаток задан заранее, а не берётся через ssh-keyscan при каждой
+          # выкатке: иначе подмена сервера прошла бы незамеченной.
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Выкатить
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/root/jivoetelo' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' bash -s -- '${{ github.sha }}'" \
+            < deploy/remote-deploy.sh
+
+      - name: Убрать ключ
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
