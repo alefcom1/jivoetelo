@@ -55,11 +55,19 @@ new Anthropic({ fetchOptions: { dispatcher: upstreamAgent } });
    ANTHROPIC_BASE_URL=https://proxy.techperevod.com/api
    ANTHROPIC_AUTH_TOKEN=<тот же PROXY_SECRET>
    ```
-3. Проверить с VPS сайта:
+3. Проверить с VPS сайта. Токен читаем из `.env` по одному ключу, а не через
+   `source`: тот сломается, когда в файле появится `EMAIL_FROM` с угловыми
+   скобками. И проверяем, что переменная не пустая — иначе прокси ответит
+   403 просто потому, что заголовок пустой, и это будет выглядеть как
+   «не сошёлся секрет».
    ```bash
+   cd /root/jivoetelo
+   TOKEN="$(grep -m1 '^ANTHROPIC_AUTH_TOKEN=' .env | cut -d= -f2-)"
+   [ -n "$TOKEN" ] || echo "ANTHROPIC_AUTH_TOKEN пуст — проверять нечего"
+
    curl -sS -o /dev/null -w "%{http_code}\n" \
      -X POST https://proxy.techperevod.com/api/v1/messages \
-     -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" \
+     -H "Authorization: Bearer $TOKEN" \
      -H "anthropic-version: 2023-06-01" \
      -H "content-type: application/json" \
      -d '{"model":"claude-opus-5","max_tokens":16,"messages":[{"role":"user","content":"ping"}]}'

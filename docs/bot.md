@@ -36,12 +36,21 @@ polling потребовал бы второй контейнер и посто�
    SITE_URL=https://jivoetelo.ru
    ```
 
-4. Перезапустите приложение и зарегистрируйте вебхук:
+4. Перезапустите приложение и зарегистрируйте вебхук. Значения берём из
+   `.env` по одному, а не через `source`: последний сломается, как только в
+   файле появится `EMAIL_FROM` с угловыми скобками — для shell `<` это
+   перенаправление ввода.
 
    ```bash
-   curl -sS "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+   cd /root/jivoetelo
+   envval() { grep -m1 "^$1=" .env | cut -d= -f2-; }
+   BOT="$(envval TELEGRAM_BOT_TOKEN)"
+   SECRET="$(envval TELEGRAM_WEBHOOK_SECRET)"
+   [ -n "$BOT" ] && [ -n "$SECRET" ] || echo "ПУСТО: проверьте .env"
+
+   curl -sS "https://api.telegram.org/bot$BOT/setWebhook" \
      -d "url=https://jivoetelo.ru/api/tg/webhook" \
-     -d "secret_token=$TELEGRAM_WEBHOOK_SECRET" \
+     -d "secret_token=$SECRET" \
      -d "allowed_updates=[\"message\",\"callback_query\"]" \
      -d "drop_pending_updates=true"
    ```
@@ -52,7 +61,7 @@ polling потребовал бы второй контейнер и посто�
 5. Проверьте:
 
    ```bash
-   curl -sS "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getWebhookInfo"
+   curl -sS "https://api.telegram.org/bot$BOT/getWebhookInfo"
    ```
 
    В ответе должны быть ваш `url`, `has_custom_certificate: false` и пустой
@@ -63,7 +72,7 @@ polling потребовал бы второй контейнер и посто�
 Заодно стоит задать команды бота, чтобы они появились в меню:
 
 ```bash
-curl -sS "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setMyCommands" \
+curl -sS "https://api.telegram.org/bot$BOT/setMyCommands" \
   -H 'content-type: application/json' \
   -d '{"commands":[
         {"command":"start","description":"Как всё устроено"},
