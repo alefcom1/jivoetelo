@@ -50,6 +50,7 @@ services:
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
       TELEGRAM_MINIAPP_URL: ${TELEGRAM_MINIAPP_URL:-}
       TELEGRAM_API_BASE: ${TELEGRAM_API_BASE:-}
+      TELEGRAM_API_AUTH: ${TELEGRAM_API_AUTH:-}
       SITE_URL: ${SITE_URL:-https://jivoetelo.ru}
       # Почтовая серия (docs/email-series.md). Без SMTP_* письма печатаются
       # в лог и никуда не уходят — так задумано для первого запуска.

@@ -23,6 +23,16 @@ function apiRoot(): string {
   return (process.env.TELEGRAM_API_BASE?.trim() || "https://api.telegram.org").replace(/\/+$/, "");
 }
 
+/**
+ * Заголовок авторизации перед прокси. Самому Bot API он не нужен — токен там
+ * лежит в пути, — но прокси-воркер пускает только по общему секрету и этот
+ * заголовок до Telegram не доводит, отбрасывая его при пересылке.
+ */
+function proxyHeaders(): Record<string, string> {
+  const token = process.env.TELEGRAM_API_AUTH?.trim();
+  return token ? { authorization: `Bearer ${token}` } : {};
+}
+
 export class TelegramApiError extends Error {
   readonly method: string;
   readonly errorCode: number | null;
@@ -103,7 +113,7 @@ export function createTelegramClient(token: string, fetchImpl: FetchLike = fetch
     try {
       response = await fetchImpl(`${apiRoot()}/bot${token}/${method}`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...proxyHeaders() },
         body: JSON.stringify(payload),
       });
     } catch (error) {
@@ -151,7 +161,9 @@ export function createTelegramClient(token: string, fetchImpl: FetchLike = fetch
         throw new TelegramApiError("getFile", `file too large: ${file.file_size}`, null);
       }
 
-      const response = await fetchImpl(`${apiRoot()}/file/bot${token}/${file.file_path}`);
+      const response = await fetchImpl(`${apiRoot()}/file/bot${token}/${file.file_path}`, {
+        headers: proxyHeaders(),
+      });
       if (!response.ok) {
         throw new TelegramApiError("downloadFile", `HTTP ${response.status}`, response.status);
       }

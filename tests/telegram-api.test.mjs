@@ -150,6 +150,35 @@ test("адрес Bot API берётся из TELEGRAM_API_BASE, если он з
   assert.equal(seen[1], "https://proxy.example.com/telegram/file/bottoken/p.jpg");
 });
 
+test("секрет прокси уходит заголовком и в вызовах, и в скачивании", async () => {
+  const seen = [];
+  const client = createTelegramClient("token", async (url, init) => {
+    seen.push({ url, auth: init?.headers?.authorization });
+    if (url.includes("/getFile")) return jsonResponse({ ok: true, result: { file_path: "p.jpg" } });
+    return new Response(Buffer.alloc(4));
+  });
+
+  process.env.TELEGRAM_API_AUTH = "секрет-воркера";
+  try {
+    await client.downloadFile("id", 1000);
+  } finally {
+    delete process.env.TELEGRAM_API_AUTH;
+  }
+  assert.equal(seen[0].auth, "Bearer секрет-воркера");
+  assert.equal(seen[1].auth, "Bearer секрет-воркера");
+});
+
+test("без переменной заголовок авторизации не отправляется", async () => {
+  // Сам Bot API его не ждёт: токен лежит в пути.
+  let auth = "не вызывали";
+  const client = createTelegramClient("token", async (_url, init) => {
+    auth = init?.headers?.authorization;
+    return jsonResponse({ ok: true, result: {} });
+  });
+  await client.sendMessage(1, "текст");
+  assert.equal(auth, undefined);
+});
+
 test("без переменной адрес остаётся официальным", async () => {
   let seen = null;
   const client = createTelegramClient("token", async (url) => {
