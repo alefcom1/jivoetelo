@@ -13,11 +13,29 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
-const env = { ...readEnvFile(resolve(root, ".env")), ...process.env };
+const file = readEnvFile(resolve(root, ".env"));
+
+/**
+ * Значения из окружения перекрывают файл — так задумано, в docker compose они
+ * приходят именно оттуда. Но пустое значение перекрывать не должно: экспорт
+ * вида `ANTHROPIC_AUTH_TOKEN=` в шелле иначе молча прячет заполненный .env, и
+ * проверка врёт ровно про то, ради чего её и запускают.
+ */
+const env = { ...file.values };
+for (const [key, raw] of Object.entries(process.env)) {
+  if (raw && raw.trim()) env[key] = raw;
+}
 
 const problems = [];
 const warnings = [];
 const notes = [];
+
+// Дубликаты ключей — самая тихая из ошибок в .env: побеждает последняя
+// строка, а смотрят обычно на первую. Чаще всего внизу остаётся пустая
+// строка из .env.example, которая обнуляет заполненное значение.
+for (const [key, lines] of file.duplicates) {
+  fail(`${key} встречается в .env несколько раз (строки ${lines.join(", ")}) — считается последняя. Оставьте одну.`);
+}
 
 function fail(message) {
   problems.push(message);
@@ -176,26 +194,35 @@ if (problems.length > 0) {
 }
 console.log(warnings.length > 0 ? `Предупреждений: ${warnings.length}. Можно деплоить, если они осознанные.` : "Окружение готово.");
 
-/** Минимальный парсер .env: KEY=value, без подстановок и многострочных значений. */
+/**
+ * Минимальный парсер .env: KEY=value, без подстановок и многострочных
+ * значений. Помимо значений возвращает ключи, встреченные больше одного раза,
+ * с номерами строк — о них обязательно надо сказать вслух.
+ */
 function readEnvFile(path) {
   let content;
   try {
     content = readFileSync(path, "utf8");
   } catch {
-    return {};
+    return { values: {}, duplicates: new Map() };
   }
-  const result = {};
-  for (const line of content.split("\n")) {
+
+  const values = {};
+  const seen = new Map();
+  content.split("\n").forEach((line, index) => {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const index = trimmed.indexOf("=");
-    if (index === -1) continue;
-    const key = trimmed.slice(0, index).trim();
-    let raw = trimmed.slice(index + 1).trim();
+    if (!trimmed || trimmed.startsWith("#")) return;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) return;
+    const key = trimmed.slice(0, eq).trim();
+    let raw = trimmed.slice(eq + 1).trim();
     if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
       raw = raw.slice(1, -1);
     }
-    result[key] = raw;
-  }
-  return result;
+    values[key] = raw;
+    seen.set(key, [...(seen.get(key) ?? []), index + 1]);
+  });
+
+  const duplicates = new Map([...seen].filter(([, lines]) => lines.length > 1));
+  return { values, duplicates };
 }
