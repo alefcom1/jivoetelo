@@ -13,7 +13,8 @@
     "lint": "eslint . --ignore-pattern .next",
     "preflight": "node scripts/preflight.mjs",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "webhook": "node scripts/webhook.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

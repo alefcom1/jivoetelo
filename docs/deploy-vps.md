@@ -277,8 +277,16 @@ crontab -e
 это защита от запуска без проверки подписи, а не ошибка.
 
 Бот с фото-инбоксом и напоминаниями требует ещё двух шагов: секрета
-`TELEGRAM_WEBHOOK_SECRET` в `.env` и регистрации вебхука через `setWebhook`.
-Пошагово — в [bot.md](./bot.md).
+`TELEGRAM_WEBHOOK_SECRET` в `.env` (`openssl rand -hex 32`) и регистрации
+вебхука:
+
+```bash
+node scripts/webhook.mjs set
+```
+
+Скрипт ходит в Bot API через тот же прокси, что и приложение, — напрямую
+`api.telegram.org` с российского VPS не отвечает. Пошагово — в
+[bot.md](./bot.md).
 
 ### 9. Почтовая серия
 
@@ -423,7 +431,7 @@ docker compose exec db psql -U jivoetelo -d jivoetelo -c \
 | Разбор еды выдаёт одинаковые «Гречка с курицей» | Работает mock-провайдер: нет `ANTHROPIC_AUTH_TOKEN` или задан `AI_PROVIDER=mock`. Проверьте `npm run preflight` |
 | Mini App показывает «Откройте приложение из Telegram» | Не задан `TELEGRAM_BOT_TOKEN` или Mini App открыт не из Telegram |
 | Mini App не открывается в веб-версии Telegram | Проверьте `frame-ancestors` в Caddyfile: `/tg` должен быть разрешён к встраиванию |
-| Бот не отвечает на фото | `getWebhookInfo` покажет причину. 503 — не задан `TELEGRAM_WEBHOOK_SECRET`, 403 — секрет не совпадает с переданным в `setWebhook` ([bot.md](./bot.md)) |
+| Бот не отвечает на фото | `node scripts/webhook.mjs info` покажет причину. 503 — не задан `TELEGRAM_WEBHOOK_SECRET`, 403 — секрет не совпадает с зарегистрированным ([bot.md](./bot.md)) |
 | Письма не приходят, в логах `[mail:noop]` | SMTP не настроен или задан `EMAIL_ENABLED=false` ([email-series.md](./email-series.md)) |
 | Напоминания и письма не отправляются вовсе | В логе при старте нет строки `[scheduler] запущен` — проверьте `SCHEDULER_ENABLED` и `DATABASE_URL` |
 | `no space left on device` | Логи или старые образы: `docker system prune -a`, проверьте `/root/backups` |

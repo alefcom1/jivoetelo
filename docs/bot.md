@@ -9,9 +9,9 @@
 ## Почему вебхук, а не отдельный процесс
 
 Апдейты приходят на `POST /api/tg/webhook` внутри того же приложения. Long
-polling потребовал бы второй контейнер и постоянно живущее соединение, а Caddy
-перед приложением уже терминирует TLS — Telegram может стучаться прямо в
-приложение. На VPS с 1 ГБ это экономит целый сервис.
+polling потребовал бы второй контейнер и постоянно живущее соединение, а
+nginx перед приложением уже терминирует TLS — Telegram может стучаться прямо
+в приложение. На VPS с 1 ГБ это экономит целый сервис.
 
 Адрес вебхука знает только Telegram, но полагаться на это нельзя. Настоящий
 апдейт от постороннего запроса отличает единственная вещь — секрет в заголовке
@@ -36,48 +36,52 @@ polling потребовал бы второй контейнер и посто�
    SITE_URL=https://jivoetelo.ru
    ```
 
-4. Перезапустите приложение и зарегистрируйте вебхук. Значения берём из
-   `.env` по одному, а не через `source`: последний сломается, как только в
-   файле появится `EMAIL_FROM` с угловыми скобками — для shell `<` это
-   перенаправление ввода.
+   Правьте существующие строки, а не дописывайте новые: при задвоенном ключе
+   победит последняя, и разбираться в этом придётся по 403 от Telegram.
+   `node scripts/preflight.mjs` называет такие ключи с номерами строк.
+
+4. Перезапустите приложение и зарегистрируйте вебхук:
 
    ```bash
    cd /root/jivoetelo
-   envval() { grep -m1 "^$1=" .env | cut -d= -f2-; }
-   BOT="$(envval TELEGRAM_BOT_TOKEN)"
-   SECRET="$(envval TELEGRAM_WEBHOOK_SECRET)"
-   [ -n "$BOT" ] && [ -n "$SECRET" ] || echo "ПУСТО: проверьте .env"
-
-   curl -sS "https://api.telegram.org/bot$BOT/setWebhook" \
-     -d "url=https://jivoetelo.ru/api/tg/webhook" \
-     -d "secret_token=$SECRET" \
-     -d "allowed_updates=[\"message\",\"callback_query\"]" \
-     -d "drop_pending_updates=true"
+   docker compose up -d --build
+   node scripts/webhook.mjs set
    ```
 
-   `allowed_updates` сужает поток до того, что бот действительно
-   обрабатывает: остальные типы апдейтов Telegram даже не пришлёт.
+   Скрипт сам читает `.env`, ходит в Bot API через `TELEGRAM_API_BASE`
+   с заголовком авторизации прокси, регистрирует вебхук и команды бота,
+   а затем показывает `getWebhookInfo`.
 
-5. Проверьте:
+   `allowed_updates` он сужает до `message` и `callback_query` — остальные
+   типы апдейтов Telegram даже не пришлёт.
+
+5. Проверить состояние в любой момент (ничего не меняет):
 
    ```bash
-   curl -sS "https://api.telegram.org/bot$BOT/getWebhookInfo"
+   node scripts/webhook.mjs info
    ```
 
-   В ответе должны быть ваш `url`, `has_custom_certificate: false` и пустой
-   `last_error_message`. Если там `Wrong response from the webhook: 503` —
-   на сервере не задан секрет; если `403` — секрет задан, но не тот, что в
-   `setWebhook`.
+   Должны быть ваш `url`, ноль ожидающих апдейтов и ни одной ошибки
+   доставки. Если ошибка есть, скрипт переводит её в действие: `503` —
+   на сервере не задан секрет, `403` — секрет вебхука и секрет приложения
+   разные, `404` — за `SITE_URL` стоит не наше приложение.
 
-Заодно стоит задать команды бота, чтобы они появились в меню:
+   Снять вебхук — `node scripts/webhook.mjs delete`.
 
-```bash
-curl -sS "https://api.telegram.org/bot$BOT/setMyCommands" \
-  -H 'content-type: application/json' \
-  -d '{"commands":[
-        {"command":"start","description":"Как всё устроено"},
-        {"command":"stop","description":"Выключить напоминания"}]}'
-```
+### Почему скрипт, а не curl
+
+Две ошибки здесь стоили вечера, и обе не видны в ответе Telegram.
+
+Первая: с российского VPS `api.telegram.org` не отвечает вовсе — запрос
+висит до таймаута. Адрес Bot API берётся из `TELEGRAM_API_BASE`, к нему
+нужен заголовок `Authorization` с `TELEGRAM_API_AUTH` (см. `ai-proxy.md`);
+руками это забывается, скрипт делает то же, что и `lib/telegram-api.ts`.
+
+Вторая: значения из `.env` нельзя читать ни через `source` (он ломается на
+`EMAIL_FROM=Живое Тело <hello@…>` — для shell `<` это перенаправление
+ввода), ни через `grep -m1` (это первое вхождение, а docker compose берёт
+последнее). При задвоенном ключе вебхук регистрируется с одним секретом,
+приложение проверяет другой, и Telegram молча отвечает 403.
 
 ## Если api.telegram.org недоступен с сервера
 
