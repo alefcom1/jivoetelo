@@ -10,6 +10,7 @@
  * в docker compose они приходят именно оттуда.
  */
 import { readFileSync } from "node:fs";
+import { createConnection } from "node:net";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -179,6 +180,40 @@ if (!operator) {
   warn("LEGAL_OPERATOR_NAME не задан — в юридических документах останется пометка «реквизиты не заполнены» (docs/legal.md).");
 } else {
   ok(`Оператор персональных данных: ${operator}.`);
+}
+
+// --- Порт приложения --------------------------------------------------------
+
+/**
+ * Проверяем, не занят ли порт кем-то ещё. Дорого стоит узнать это позже:
+ * контейнер молча не поднимется, reverse proxy будет проксировать на чужое
+ * приложение, а сайт — отвечать 200 чужой главной страницей. Ровно так и
+ * вышло на сервере, где рядом жил другой Next.js.
+ */
+const appPort = Number(value("APP_HOST_PORT") || 3000);
+if (!Number.isInteger(appPort) || appPort < 1 || appPort > 65535) {
+  fail(`APP_HOST_PORT="${value("APP_HOST_PORT")}" — это не номер порта.`);
+} else if (await portAnswers(appPort)) {
+  warn(
+    `На 127.0.0.1:${appPort} уже кто-то отвечает. Если это не наше приложение — ` +
+      `контейнер не поднимется, а reverse proxy будет отдавать чужой сайт. ` +
+      `Свободный порт задаётся в APP_HOST_PORT (и в deploy/nginx/jivoetelo-proxy.conf).`,
+  );
+} else {
+  ok(`Порт приложения ${appPort} свободен.`);
+}
+
+function portAnswers(port) {
+  return new Promise((resolveCheck) => {
+    const socket = createConnection({ host: "127.0.0.1", port, timeout: 700 });
+    const finish = (answered) => {
+      socket.destroy();
+      resolveCheck(answered);
+    };
+    socket.on("connect", () => finish(true));
+    socket.on("error", () => finish(false));
+    socket.on("timeout", () => finish(false));
+  });
 }
 
 // --- Вывод ------------------------------------------------------------------
