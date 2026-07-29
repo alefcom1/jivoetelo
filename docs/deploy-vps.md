@@ -140,18 +140,67 @@ docker compose ps                             # app должен быть health
 
 ### 6. Reverse proxy и TLS
 
+Два варианта — по тому, что уже стоит на сервере. Проверьте сначала:
+
 ```bash
+ss -tlnp | grep -E ':80 |:443 '
+```
+
+#### Вариант А: порты свободны — Caddy
+
+```bash
+mkdir -p /var/log/caddy && chown caddy:caddy /var/log/caddy
 cp deploy/Caddyfile /etc/caddy/Caddyfile
 nano /etc/caddy/Caddyfile          # поправить email для Let's Encrypt
 caddy validate --config /etc/caddy/Caddyfile
 systemctl reload caddy
 ```
 
-Конфиг уже включает: сжатие, HSTS и остальные заголовки безопасности, лимит
-размера тела запроса под загрузку фото, длинный кэш для шрифтов и og-картинки,
-редирект с `www`. Отдельно обратите внимание на `frame-ancestors`: сайт
-запрещено встраивать в iframe везде, кроме `/tg` — иначе Mini App не откроется
-в веб-версии Telegram.
+Каталог для логов создаём заранее: без него Caddy падает на старте с
+`permission denied`, и выглядит это как проблема с конфигом, а не с правами.
+
+Сертификаты Caddy получает и продлевает сам.
+
+#### Вариант Б: 80-й порт уже занят nginx
+
+Так на нашем сервере: там же живёт `techperevod.com` с сертификатами от
+certbot. Выключать работающий сайт ради второго нельзя, поэтому фронтом
+остаётся nginx, а Caddy не используется вовсе. Конфиги — в `deploy/nginx/`.
+
+Сначала временный блок, чтобы Let's Encrypt смог проверить домен (полный
+конфиг положить нельзя: nginx не стартует, пока файлов сертификата нет):
+
+```bash
+cp deploy/nginx/jivoetelo-acme.conf /etc/nginx/sites-available/jivoetelo.ru
+ln -sf /etc/nginx/sites-available/jivoetelo.ru /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+certbot certonly --webroot -w /var/www/html -d jivoetelo.ru -d www.jivoetelo.ru
+```
+
+Затем боевой конфиг:
+
+```bash
+cp deploy/nginx/jivoetelo-headers.conf deploy/nginx/jivoetelo-proxy.conf /etc/nginx/snippets/
+cp deploy/nginx/jivoetelo.conf /etc/nginx/sites-available/jivoetelo.ru
+nginx -t && systemctl reload nginx
+curl -sI https://jivoetelo.ru | head -3
+```
+
+Если `nginx -t` ругается `Address family not supported by protocol` — на
+сервере нет IPv6, закомментируйте строки `listen [::]:...`.
+
+Конфиг повторяет всё, что делал Caddyfile: редирект с `www` и с http, лимит
+тела под загрузку фото, сжатие, заголовки безопасности, длинный кэш для
+шрифтов и og-картинки. Две вещи в нём сделаны иначе, чем подсказывает
+интуиция, и обе проверены на живом nginx:
+
+- **Заголовки повторяются в каждом `location`** через `include`. Одна
+  директива `add_header` внутри `location` отменяет все унаследованные —
+  без повтора половина сайта осталась бы без CSP и HSTS.
+- **Перед `Cache-Control` стоит `proxy_hide_header`.** `add_header`
+  добавляет, а не заменяет: без этого шрифты получали два заголовка
+  `Cache-Control` — наш длинный и присланный Next `max-age=0`. Браузер берёт
+  первый, и кэш не работал бы вовсе.
 
 ### 7. Бэкапы
 
@@ -285,3 +334,6 @@ docker compose exec db psql -U jivoetelo -d jivoetelo -c \
 | Письма не приходят, в логах `[mail:noop]` | SMTP не настроен или задан `EMAIL_ENABLED=false` ([email-series.md](./email-series.md)) |
 | Напоминания и письма не отправляются вовсе | В логе при старте нет строки `[scheduler] запущен` — проверьте `SCHEDULER_ENABLED` и `DATABASE_URL` |
 | `no space left on device` | Логи или старые образы: `docker system prune -a`, проверьте `/root/backups` |
+| Caddy падает с `bind: address already in use` | 80-й порт занят. На нашем сервере это nginx с `techperevod.com` — не выключайте его, идите по варианту Б в шаге 6 |
+| Caddy падает с `permission denied` на файле лога | Нет каталога `/var/log/caddy` или он не принадлежит пользователю `caddy` |
+| Сайт отдаёт 502 | Сертификат ни при чём: не поднялся контейнер `app`. `docker compose ps` и `docker compose logs app` |
