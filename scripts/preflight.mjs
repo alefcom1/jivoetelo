@@ -84,6 +84,12 @@ const provider = value("AI_PROVIDER");
 
 if (provider === "mock") {
   warn("AI_PROVIDER=mock — разбор еды будет выдуманным. Для продакшена уберите эту переменную.");
+  // Mock глушил проверку учётных данных — и однажды спрятал пустой токен
+  // прокси: обнаружилось это только тогда, когда через тот же прокси
+  // понадобился Telegram. Теперь говорим и в режиме заглушки.
+  if (baseUrl && !authToken) {
+    warn("ANTHROPIC_AUTH_TOKEN пуст. Сейчас это незаметно из-за mock, но снятие AI_PROVIDER ничего не включит: прокси ответит 403.");
+  }
 } else if (baseUrl && authToken) {
   ok(`AI через прокси: ${baseUrl}`);
 } else if (apiKey) {
@@ -110,6 +116,16 @@ if (!botToken) {
   fail("TELEGRAM_BOT_TOKEN не похож на токен от @BotFather (формат 123456789:AA...).");
 } else {
   ok("Токен Telegram-бота задан.");
+}
+
+const telegramApiBase = value("TELEGRAM_API_BASE");
+const telegramApiAuth = value("TELEGRAM_API_AUTH");
+if (telegramApiBase && !telegramApiAuth) {
+  fail("TELEGRAM_API_BASE задан, а TELEGRAM_API_AUTH — нет: прокси ответит 403, и бот не сможет отвечать.");
+} else if (telegramApiBase && authToken && telegramApiAuth !== authToken) {
+  warn("TELEGRAM_API_AUTH и ANTHROPIC_AUTH_TOKEN различаются, хотя у воркера секрет один. Проверьте, не опечатка ли.");
+} else if (telegramApiBase) {
+  ok(`Telegram через прокси: ${telegramApiBase}`);
 }
 
 const webhookSecret = value("TELEGRAM_WEBHOOK_SECRET");
