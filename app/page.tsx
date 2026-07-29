@@ -21,10 +21,31 @@ export default function Home() {
   const [waitlist, waitlistAction, waitlistPending] = useActionState(joinWaitlist, initialWaitlistState);
 
   return <main>
-    <header className="site-header">
+    {/* Меню закрывается, когда курсор уходит со всей шапки: сама выпадающая
+        панель лежит внутри неё, поэтому переход с пункта на панель разрывом
+        не считается. Escape — для тех, кто пришёл с клавиатуры. */}
+    <header
+      className="site-header"
+      onMouseLeave={() => setMenu(false)}
+      onKeyDown={(event) => { if (event.key === "Escape") setMenu(false); }}
+    >
       <a className="logo" href="#top"><span><Logo /></span>Живое Тело</a>
       <nav className="main-nav" aria-label="Навигация">
-        {navItems.map((item, index) => <button key={item} onClick={() => index < 2 ? setMenu(!menu) : document.getElementById(index === 2 ? "journal" : "about")?.scrollIntoView({ behavior: "smooth" })}>{item}{index < 2 && <small>⌄</small>}</button>)}
+        {navItems.map((item, index) => index < 2
+          ? <button
+              key={item}
+              aria-expanded={menu}
+              // Наведение — основной способ, но не единственный: на телефоне
+              // его нет вовсе, а с клавиатуры до меню добираются табом.
+              onMouseEnter={() => setMenu(true)}
+              onFocus={() => setMenu(true)}
+              onClick={() => setMenu(!menu)}
+            >{item}<small>⌄</small></button>
+          : <button
+              key={item}
+              onMouseEnter={() => setMenu(false)}
+              onClick={() => document.getElementById(index === 2 ? "journal" : "about")?.scrollIntoView({ behavior: "smooth" })}
+            >{item}</button>)}
       </nav>
       <div className="header-actions"><a className="login" href="/login">Войти</a><a className="header-cta" href="/register">Начать <b>↗</b></a></div>
       {menu && <div className="mega-menu"><div><p>Продукт</p><a href="#experience">Дневник питания <b>→</b></a><a href="#experience">Персональный план <b>→</b></a><a href="#experience">Прогресс и привычки <b>→</b></a></div><div><p>Решения</p><a href="#specialists">Для себя <b>→</b></a><a href="#specialists">Для специалистов <b>→</b></a><a href="#specialists">Для команд <b>→</b></a></div><aside>Не «идеальный» рацион.<br /><em>Ваш устойчивый ритм.</em></aside></div>}
@@ -42,7 +63,7 @@ export default function Home() {
 
     <section className="journal" id="journal"><div className="section-top"><p className="kicker">Журнал <i /></p><div><h2>О теле —<br /><em>с уважением.</em></h2><p>Понятные материалы о еде, энергии и привычках, написанные без давления.</p></div></div><div className="articles"><article><span>ЗНАНИЯ · 6 МИН</span><h3>Почему регулярность важнее «идеального» рациона</h3><a href="#journal">Читать статью →</a></article><article><span>ПРАКТИКА · 4 МИН</span><h3>Как вернуть себе чувство голода и насыщения</h3><a href="#journal">Читать статью →</a></article><article><span>ВЗГЛЯД · 8 МИН</span><h3>Тело не обязано быть проектом по улучшению</h3><a href="#journal">Читать статью →</a></article></div></section>
 
-    <footer id="about"><div className="footer-top"><a className="logo" href="#top"><span><Logo /></span>Живое Тело</a><h2>Начните слышать<br /><em>себя.</em></h2><button className="coral-button" onClick={() => setNotice(true)}>Создать свой план <b>↗</b></button></div><p className="footer-disclaimer">{NOT_MEDICAL_DISCLAIMER} <a href="/legal/health">Подробнее о границах сервиса →</a></p><div className="footer-bottom"><span>© Живое Тело, 2026</span><a href="/raschet">Расчёты</a><a href="/legal/terms">Соглашение</a><a href="/legal/privacy">Конфиденциальность</a><a href="/legal/health">Границы сервиса</a><a href="/legal">Все документы</a></div></footer>
+    <footer id="about"><div className="footer-top"><a className="logo" href="#top"><span><Logo /></span>Живое Тело</a><h2>Начните слышать<br /><em>себя.</em></h2><button className="coral-button" onClick={() => setNotice(true)}>Создать свой план <b>↗</b></button></div><div className="footer-links"><div><p>Сервис</p><a href="#experience">Дневник питания</a><a href="#experience">Персональный план</a><a href="#specialists">Для специалистов</a><a href="/register">Начать бесплатно</a><a href="/login">Войти</a></div><div><p>Расчёты</p><a href="/raschet">Все расчёты</a><a href="/raschet/energiya">Сколько энергии нужно</a><a href="/raschet/belok">Сколько белка нужно</a><a href="/raschet/kviz">Что вам сейчас подходит</a></div><div><p>Документы</p><a href="/legal/terms">Пользовательское соглашение</a><a href="/legal/privacy">Политика конфиденциальности</a><a href="/legal/consent">Согласие на обработку данных</a><a href="/legal/health">Границы сервиса</a><a href="/legal/cookies">Файлы cookie</a></div><div><p>Связаться</p><a href="mailto:privacy@jivoetelo.ru">privacy@jivoetelo.ru</a><a href="/legal">Все документы</a></div></div><p className="footer-disclaimer">{NOT_MEDICAL_DISCLAIMER} <a href="/legal/health">Подробнее о границах сервиса →</a></p><div className="footer-bottom"><span>© Живое Тело, 2026</span></div></footer>
     {notice && <div className="notice" role="dialog" aria-modal="true"><div><button aria-label="Закрыть" onClick={()=>setNotice(false)}>×</button><span>Ж</span>
       {waitlist.status === "success"
         ? <><h2>Вы в списке.<br /><em>Спасибо.</em></h2><p>Мы напишем, как только откроем ранний доступ к Живому Телу.</p><button className="black-button" onClick={()=>setNotice(false)}>Готово <b>↗</b></button></>
