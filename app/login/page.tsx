@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { login, type AuthState } from "../auth-actions";
+import { Logo } from "../logo";
 
 const errors: Partial<Record<AuthState["status"], string>> = {
   wrong_credentials: "Не подошли почта или пароль. Проверьте и попробуйте ещё раз.",
@@ -14,7 +15,7 @@ export default function LoginPage() {
 
   return <main className="auth-page">
     <div className="auth-card">
-      <Link className="logo" href="/"><span>Ж</span>Живое Тело</Link>
+      <Link className="logo" href="/"><span><Logo /></span>Живое Тело</Link>
       <h1>С возвращением.</h1>
       <form action={action}>
         {/* Адрес возвращается из состояния: React сбрасывает форму после

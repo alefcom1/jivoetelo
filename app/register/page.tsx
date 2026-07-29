@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import { register, type AuthState } from "../auth-actions";
+import { Logo } from "../logo";
 
 const errors: Partial<Record<AuthState["status"], string>> = {
   invalid_email: "Похоже, в адресе опечатка — проверьте и попробуйте ещё раз.",
@@ -18,7 +19,7 @@ export default function RegisterPage() {
 
   return <main className="auth-page">
     <div className="auth-card">
-      <Link className="logo" href="/"><span>Ж</span>Живое Тело</Link>
+      <Link className="logo" href="/"><span><Logo /></span>Живое Тело</Link>
       <h1>Начнём.</h1>
       <p className="auth-lead">Дневник питания, который помогает выбрать следующий шаг — без давления и запретов.</p>
       <form action={action}>

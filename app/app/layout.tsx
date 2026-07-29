@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
+import { Logo } from "../logo";
 import { logout } from "../auth-actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -10,7 +11,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return <div className="shell">
     <header className="shell-header">
-      <Link className="logo" href="/app"><span>Ж</span>Живое Тело</Link>
+      <Link className="logo" href="/app"><span><Logo /></span>Живое Тело</Link>
       <nav className="shell-nav">
         <Link href="/app">Сегодня</Link>
         <Link href="/app/add">Добавить</Link>

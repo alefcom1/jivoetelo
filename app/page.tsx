@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
+import { Logo } from "./logo";
 import { joinWaitlist, type WaitlistState } from "./waitlist-action";
 
 const initialWaitlistState: WaitlistState = { status: "idle" };
@@ -21,7 +22,7 @@ export default function Home() {
 
   return <main>
     <header className="site-header">
-      <a className="logo" href="#top"><span>Ж</span>Живое Тело</a>
+      <a className="logo" href="#top"><span><Logo /></span>Живое Тело</a>
       <nav className="main-nav" aria-label="Навигация">
         {navItems.map((item, index) => <button key={item} onClick={() => index < 2 ? setMenu(!menu) : document.getElementById(index === 2 ? "journal" : "about")?.scrollIntoView({ behavior: "smooth" })}>{item}{index < 2 && <small>⌄</small>}</button>)}
       </nav>
@@ -41,7 +42,7 @@ export default function Home() {
 
     <section className="journal" id="journal"><div className="section-top"><p className="kicker">Журнал <i /></p><div><h2>О теле —<br /><em>с уважением.</em></h2><p>Понятные материалы о еде, энергии и привычках, написанные без давления.</p></div></div><div className="articles"><article><span>ЗНАНИЯ · 6 МИН</span><h3>Почему регулярность важнее «идеального» рациона</h3><a href="#journal">Читать статью →</a></article><article><span>ПРАКТИКА · 4 МИН</span><h3>Как вернуть себе чувство голода и насыщения</h3><a href="#journal">Читать статью →</a></article><article><span>ВЗГЛЯД · 8 МИН</span><h3>Тело не обязано быть проектом по улучшению</h3><a href="#journal">Читать статью →</a></article></div></section>
 
-    <footer id="about"><div className="footer-top"><a className="logo" href="#top"><span>Ж</span>Живое Тело</a><h2>Начните слышать<br /><em>себя.</em></h2><button className="coral-button" onClick={() => setNotice(true)}>Создать свой план <b>↗</b></button></div><p className="footer-disclaimer">{NOT_MEDICAL_DISCLAIMER} <a href="/legal/health">Подробнее о границах сервиса →</a></p><div className="footer-bottom"><span>© Живое Тело, 2026</span><a href="/raschet">Расчёты</a><a href="/legal/terms">Соглашение</a><a href="/legal/privacy">Конфиденциальность</a><a href="/legal/health">Границы сервиса</a><a href="/legal">Все документы</a></div></footer>
+    <footer id="about"><div className="footer-top"><a className="logo" href="#top"><span><Logo /></span>Живое Тело</a><h2>Начните слышать<br /><em>себя.</em></h2><button className="coral-button" onClick={() => setNotice(true)}>Создать свой план <b>↗</b></button></div><p className="footer-disclaimer">{NOT_MEDICAL_DISCLAIMER} <a href="/legal/health">Подробнее о границах сервиса →</a></p><div className="footer-bottom"><span>© Живое Тело, 2026</span><a href="/raschet">Расчёты</a><a href="/legal/terms">Соглашение</a><a href="/legal/privacy">Конфиденциальность</a><a href="/legal/health">Границы сервиса</a><a href="/legal">Все документы</a></div></footer>
     {notice && <div className="notice" role="dialog" aria-modal="true"><div><button aria-label="Закрыть" onClick={()=>setNotice(false)}>×</button><span>Ж</span>
       {waitlist.status === "success"
         ? <><h2>Вы в списке.<br /><em>Спасибо.</em></h2><p>Мы напишем, как только откроем ранний доступ к Живому Телу.</p><button className="black-button" onClick={()=>setNotice(false)}>Готово <b>↗</b></button></>
