@@ -10,7 +10,18 @@
  * не должно ронять цикл планировщика для остальных пользователей.
  */
 
-const API_ROOT = "https://api.telegram.org";
+/**
+ * Адрес Bot API. Обычно это api.telegram.org, но с российского VPS он может
+ * быть недоступен — ровно та же история, что с api.anthropic.com
+ * (docs/ai-proxy.md). Тогда сюда подставляется прокси, а код не меняется.
+ *
+ * Входящие апдейты от этого не зависят: их Telegram присылает нам сам,
+ * вебхуком. Через прокси идут только исходящие вызовы — ответы бота,
+ * getFile и скачивание фото.
+ */
+function apiRoot(): string {
+  return (process.env.TELEGRAM_API_BASE?.trim() || "https://api.telegram.org").replace(/\/+$/, "");
+}
 
 export class TelegramApiError extends Error {
   readonly method: string;
@@ -90,7 +101,7 @@ export function createTelegramClient(token: string, fetchImpl: FetchLike = fetch
   async function call<T>(method: string, payload: Record<string, unknown>): Promise<T> {
     let response: Response;
     try {
-      response = await fetchImpl(`${API_ROOT}/bot${token}/${method}`, {
+      response = await fetchImpl(`${apiRoot()}/bot${token}/${method}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
@@ -140,7 +151,7 @@ export function createTelegramClient(token: string, fetchImpl: FetchLike = fetch
         throw new TelegramApiError("getFile", `file too large: ${file.file_size}`, null);
       }
 
-      const response = await fetchImpl(`${API_ROOT}/file/bot${token}/${file.file_path}`);
+      const response = await fetchImpl(`${apiRoot()}/file/bot${token}/${file.file_path}`);
       if (!response.ok) {
         throw new TelegramApiError("downloadFile", `HTTP ${response.status}`, response.status);
       }

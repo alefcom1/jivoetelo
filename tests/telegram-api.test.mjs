@@ -129,6 +129,37 @@ test("файл, оказавшийся больше заявленного, то
   await assert.rejects(() => client.downloadFile("id", 100), /too large/);
 });
 
+test("адрес Bot API берётся из TELEGRAM_API_BASE, если он задан", async () => {
+  const seen = [];
+  const client = createTelegramClient("token", async (url) => {
+    seen.push(url);
+    if (url.includes("/getFile")) return jsonResponse({ ok: true, result: { file_path: "p.jpg" } });
+    return new Response(Buffer.alloc(4));
+  });
+
+  process.env.TELEGRAM_API_BASE = "https://proxy.example.com/telegram/";
+  try {
+    await client.downloadFile("id", 1000);
+  } finally {
+    delete process.env.TELEGRAM_API_BASE;
+  }
+
+  // И вызов метода, и скачивание файла должны идти через прокси, а хвостовой
+  // слэш в переменной — не порождать двойной.
+  assert.equal(seen[0], "https://proxy.example.com/telegram/bottoken/getFile");
+  assert.equal(seen[1], "https://proxy.example.com/telegram/file/bottoken/p.jpg");
+});
+
+test("без переменной адрес остаётся официальным", async () => {
+  let seen = null;
+  const client = createTelegramClient("token", async (url) => {
+    seen = url;
+    return jsonResponse({ ok: true, result: {} });
+  });
+  await client.sendMessage(1, "текст");
+  assert.match(seen, /^https:\/\/api\.telegram\.org\//);
+});
+
 test("нечитаемый ответ не выдаётся за успешный", async () => {
   const client = createTelegramClient("token", async () => new Response("<html>502</html>", { status: 502 }));
   await assert.rejects(() => client.sendMessage(1, "текст"), /unparsable/);
