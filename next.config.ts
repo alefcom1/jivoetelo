@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  images: {
+    // next/image в проекте не используется: фото еды отдаёт собственный
+    // обработчик с проверкой владельца, а иллюстраций у нас нет. Выключаем
+    // оптимизатор целиком — вместе с ним из приложения уходит обработчик
+    // /_next/image, который иначе принимал бы запросы и звал sharp.
+    unoptimized: true,
+  },
   experimental: {
     serverActions: {
       // Фото еды загружаются через server action; лимит согласован
