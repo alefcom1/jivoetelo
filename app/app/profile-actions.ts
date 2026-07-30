@@ -9,12 +9,8 @@ import { MealAnalysisError, SUGGEST_ERRORS } from "@/lib/ai";
 import { getSuggestionProvider, type MealSuggestion, type SuggestionContext } from "@/lib/ai/suggest";
 import { getCurrentUser } from "@/lib/auth";
 import { isValidDay, localToday } from "@/lib/dates";
+import { parseProfileForm } from "@/lib/onboarding";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
-import type { Activity, Goal, SexForFormula } from "@/lib/targets";
-
-const GOALS: Goal[] = ["lose", "maintain", "gain"];
-const ACTIVITIES: Activity[] = ["sedentary", "light", "moderate", "high"];
-const SEXES: SexForFormula[] = ["female", "male"];
 
 export type ProfileState = { status: "idle" | "invalid" | "error" };
 
@@ -22,31 +18,34 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const goal = String(formData.get("goal"));
-  const sexForFormula = String(formData.get("sexForFormula"));
-  const activity = String(formData.get("activity"));
-  const birthYear = Number(formData.get("birthYear"));
-  const heightCm = Number(formData.get("heightCm"));
-  const weightKg = Number(formData.get("weightKg"));
-
-  const currentYear = new Date().getFullYear();
-  const valid =
-    GOALS.includes(goal as Goal) &&
-    SEXES.includes(sexForFormula as SexForFormula) &&
-    ACTIVITIES.includes(activity as Activity) &&
-    Number.isInteger(birthYear) && birthYear >= currentYear - 100 && birthYear <= currentYear - 14 &&
-    Number.isFinite(heightCm) && heightCm >= 120 && heightCm <= 230 &&
-    Number.isFinite(weightKg) && weightKg >= 30 && weightKg <= 300;
-  if (!valid) return { status: "invalid" };
+  // Разбор и валидация — в lib/onboarding.ts (parseProfileForm), общие для
+  // первого прохода онбординга и повторного («Изменить план» в настройках).
+  // Здесь остаётся только обвязка вокруг БД.
+  const parsed = parseProfileForm({
+    goal: String(formData.get("goal")),
+    sexForFormula: String(formData.get("sexForFormula")),
+    activity: String(formData.get("activity")),
+    birthYear: String(formData.get("birthYear")),
+    heightCm: String(formData.get("heightCm")),
+    weightKg: String(formData.get("weightKg")),
+    pace: String(formData.get("pace") ?? ""),
+  });
+  if (!parsed) return { status: "invalid" };
+  const { weightKg, ...profileFields } = parsed;
 
   try {
     const db = getDb();
+    // kcalAdjustment сюда намеренно не входит: это накопленная адаптивная
+    // поправка (раздел 14.2), её меняет только applyProposedAdjustment ниже.
+    // profileFields — тип без этого поля (см. ProfileFormValues), поэтому
+    // повторный проход онбординга («Изменить план») физически не может его
+    // задеть, даже случайно при будущей правке этого файла.
     await db
       .insert(profiles)
-      .values({ userId: user.id, goal, sexForFormula, birthYear, heightCm, activity, updatedAt: new Date() })
+      .values({ userId: user.id, ...profileFields, updatedAt: new Date() })
       .onConflictDoUpdate({
         target: profiles.userId,
-        set: { goal, sexForFormula, birthYear, heightCm, activity, updatedAt: new Date() },
+        set: { ...profileFields, updatedAt: new Date() },
       });
     await db
       .insert(weightEntries)

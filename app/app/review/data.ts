@@ -4,6 +4,7 @@ import { mealItems, meals, profiles, weightEntries } from "@/db/schema";
 import { localToday, shiftDay } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
 import { proposeAdjustment, type AdjustmentProposal } from "@/lib/adaptive";
+import type { PaceKey } from "@/lib/pace";
 import { buildWeekReview, type DayStat, type WeekReview } from "@/lib/review";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
 import { weeklyTrendChange, weightTrend } from "@/lib/trend";
@@ -66,6 +67,7 @@ export async function getReviewData(userId: number, showCalories: boolean): Prom
       weightKg: latestWeightKg,
       activity: profile.activity as Activity,
       adjustmentKcal: profile.kcalAdjustment,
+      pace: profile.pace as PaceKey | null,
     });
     proposal = proposeAdjustment({
       goal: profile.goal as Goal,

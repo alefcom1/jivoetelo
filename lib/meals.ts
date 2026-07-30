@@ -5,6 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { mealItems, meals, profiles } from "@/db/schema";
 import { sumTotals, type NutritionTotals } from "./nutrition.ts";
+import type { PaceKey } from "./pace.ts";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
 import { getLatestWeightKg } from "./weight.ts";
 
@@ -74,6 +75,7 @@ export async function getTargetsForUser(userId: number): Promise<Targets | null>
     weightKg,
     activity: profile.activity as Activity,
     adjustmentKcal: profile.kcalAdjustment,
+    pace: profile.pace as PaceKey | null,
   });
 }
 

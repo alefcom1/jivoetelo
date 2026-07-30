@@ -6,6 +6,7 @@ import { mealItems, meals, profiles } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { localToday } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
+import type { PaceKey } from "@/lib/pace";
 import { computeTargets, type Activity, type Goal, type SexForFormula } from "@/lib/targets";
 import { getLatestWeightKg } from "@/lib/weight";
 import { NextMealSuggestions } from "./next-meal-suggestions";
@@ -48,6 +49,7 @@ export default async function NextMealPage() {
     weightKg,
     activity: profile.activity as Activity,
     adjustmentKcal: profile.kcalAdjustment,
+    pace: profile.pace as PaceKey | null,
   });
 
   const day = localToday();

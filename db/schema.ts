@@ -97,8 +97,16 @@ export const profiles = pgTable("profiles", {
   birthYear: integer("birth_year").notNull(),
   heightCm: doublePrecision("height_cm").notNull(),
   activity: text("activity").notNull(), // sedentary | light | moderate | high
+  // Выбранный на онбординге темп снижения веса (lib/pace.ts, PaceKey) —
+  // осознанная цель по дефициту, заданная пользователем на старте. Nullable
+  // не потому что забыли заполнить: для целей «поддержание»/«набор массы» и
+  // для профилей, заведённых до онбординга v2, темпа нет и не будет — это
+  // законное состояние, а не пропуск. Не путать с kcalAdjustment ниже: это
+  // разные сущности с разной судьбой (раздел 14.2 не про это поле).
+  pace: text("pace"),
   // Накопленная адаптивная корректировка стартовой цели (раздел 14.2 спеки).
-  // Меняется только с явного подтверждения пользователя.
+  // Меняется только с явного подтверждения пользователя через
+  // applyProposedAdjustment — онбординг это поле не трогает.
   kcalAdjustment: integer("kcal_adjustment").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

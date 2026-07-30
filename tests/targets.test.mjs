@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { computeTargets } from "../lib/targets.ts";
+import { computeTargets, computeTdee } from "../lib/targets.ts";
+import { computePace } from "../lib/pace.ts";
 
 const base = {
   goal: "maintain",
@@ -67,4 +68,59 @@ test("точечная оценка всегда лежит внутри диа�
       }
     }
   }
+});
+
+// ===== Темп (lib/pace.ts) как источник дефицита — онбординг v2 =====
+
+test("регрессия: без темпа результат в точности такой же, как до появления поля pace", () => {
+  // Три способа «не задать темп» должны давать один и тот же результат — это
+  // и есть защита для существующих профилей (profiles.pace у них null).
+  const withoutField = computeTargets({ ...base, goal: "lose" }, 2026);
+  const withUndefined = computeTargets({ ...base, goal: "lose", pace: undefined }, 2026);
+  const withNull = computeTargets({ ...base, goal: "lose", pace: null }, 2026);
+  assert.deepEqual(withUndefined, withoutField);
+  assert.deepEqual(withNull, withoutField);
+});
+
+test("при заданном темпе дефицит берётся из lib/pace.ts, а не из плоских 15%", () => {
+  const flat = computeTargets({ ...base, goal: "lose" }, 2026);
+  const paced = computeTargets({ ...base, goal: "lose", pace: "brisk" }, 2026);
+  // «Быстрый» темп даёт больший дефицит, чем дефолтные 15%, — цифра должна отличаться и быть меньше.
+  assert.notEqual(paced.kcalTarget, flat.kcalTarget);
+  assert.ok(paced.kcalTarget < flat.kcalTarget, `${paced.kcalTarget} должно быть меньше ${flat.kcalTarget}`);
+});
+
+test("темп в computeTargets даёт тот же дефицит, что computePace напрямую при том же расходе", () => {
+  for (const pace of ["very_gentle", "gentle", "moderate", "brisk"]) {
+    const tdeeKcal = computeTdee(base, 2026);
+    const direct = computePace({ weightKg: base.weightKg, tdeeKcal, pace });
+    const t = computeTargets({ ...base, goal: "lose", pace }, 2026);
+    assert.equal(t.kcalTarget, direct.kcalTarget, `${pace}: ${t.kcalTarget} vs ${direct.kcalTarget}`);
+  }
+});
+
+test("темп игнорируется, если цель не «снижение веса»", () => {
+  const withPace = computeTargets({ ...base, goal: "maintain", pace: "brisk" }, 2026);
+  const withoutPace = computeTargets({ ...base, goal: "maintain" }, 2026);
+  assert.deepEqual(withPace, withoutPace);
+});
+
+test("темп игнорируется для несовершеннолетних — цель уже смягчена до поддержания", () => {
+  const minorWithPace = computeTargets({ ...base, birthYear: 2010, goal: "lose", pace: "brisk" }, 2026);
+  const minorMaintain = computeTargets({ ...base, birthYear: 2010, goal: "maintain" }, 2026);
+  // adjusted у minorWithPace будет true (сработала именно возрастная поправка,
+  // см. «безопасность: несовершеннолетним не выдаётся дефицит» выше) — это
+  // ожидаемо и проверено отдельно; здесь важно, что сами цифры плана совпадают.
+  assert.equal(minorWithPace.kcalTarget, minorMaintain.kcalTarget);
+  assert.equal(minorWithPace.kcalMin, minorMaintain.kcalMin);
+  assert.equal(minorWithPace.kcalMax, minorMaintain.kcalMax);
+});
+
+test("нижняя граница калорий действует и при заданном темпе", () => {
+  const t = computeTargets(
+    { goal: "lose", sexForFormula: "female", birthYear: 1950, heightCm: 150, weightKg: 42, activity: "sedentary", pace: "brisk" },
+    2026,
+  );
+  assert.ok(t.kcalMin >= 1200 * 0.93, `нижняя граница слишком низкая: ${t.kcalMin}`);
+  assert.equal(t.adjusted, true);
 });

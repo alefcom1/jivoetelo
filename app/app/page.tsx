@@ -6,6 +6,7 @@ import { mealItems, meals, profiles } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDayRu, isValidDay, localToday, MEAL_TYPE_LABELS, shiftDay } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
+import type { PaceKey } from "@/lib/pace";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
 import { getLatestWeightKg } from "@/lib/weight";
 
@@ -45,6 +46,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       weightKg,
       activity: profile.activity as Activity,
       adjustmentKcal: profile.kcalAdjustment,
+      pace: profile.pace as PaceKey | null,
     });
   }
 
