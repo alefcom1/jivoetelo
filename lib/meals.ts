@@ -4,8 +4,10 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { mealItems, meals, profiles } from "@/db/schema";
+import type { DiaryItemRow, DiaryMealRow } from "./diary.ts";
 import { sumTotals, type NutritionTotals } from "./nutrition.ts";
 import type { PaceKey } from "./pace.ts";
+import { deletePhoto } from "./storage.ts";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
 import { getLatestWeightKg } from "./weight.ts";
 
@@ -14,6 +16,8 @@ export type DayMeal = {
   eatenTime: string;
   mealType: string;
   itemNames: string[];
+  /** Снимок приёма пищи, если он делался — миниатюра в списке «Сегодня». */
+  photoKey: string | null;
   totals: NutritionTotals;
 };
 
@@ -52,6 +56,7 @@ export async function getDaySummary(userId: number, day: string): Promise<DaySum
         eatenTime: meal.eatenTime,
         mealType: meal.mealType,
         itemNames: mealItemList.map((i) => i.name),
+        photoKey: meal.photoKey,
         totals: sumTotals(mealItemList),
       };
     }),
@@ -148,4 +153,134 @@ export async function saveMeal(input: SaveMealInput): Promise<number> {
   const mealId = inserted[0].id;
   await db.insert(mealItems).values(input.items.map((item) => ({ ...item, mealId })));
   return mealId;
+}
+
+/**
+ * Сырые строки одного дня для экрана «Дневник»: группировка по приёму пищи
+ * и подсчёт итогов — в lib/diary.ts (чистая логика, покрыта тестами), здесь
+ * только чтение из базы. Разделение то же, что у getDaySummary выше, но
+ * с дополнительными полями (photoKey у приёма, per-100г у позиций), которые
+ * «Сегодня» не показывает, а «Дневник» — показывает.
+ */
+export async function getDiaryDayRows(userId: number, day: string): Promise<{ meals: DiaryMealRow[]; items: DiaryItemRow[] }> {
+  const db = getDb();
+  const dayMeals = await db
+    .select({ id: meals.id, eatenTime: meals.eatenTime, mealType: meals.mealType, photoKey: meals.photoKey })
+    .from(meals)
+    .where(and(eq(meals.userId, userId), eq(meals.eatenOn, day)))
+    .orderBy(meals.eatenTime);
+
+  const ids = dayMeals.map((m) => m.id);
+  const items = ids.length > 0
+    ? await db
+        .select({
+          mealId: mealItems.mealId,
+          name: mealItems.name,
+          grams: mealItems.grams,
+          kcalPer100: mealItems.kcalPer100,
+          proteinPer100: mealItems.proteinPer100,
+          fatPer100: mealItems.fatPer100,
+          carbsPer100: mealItems.carbsPer100,
+          fiberPer100: mealItems.fiberPer100,
+        })
+        .from(mealItems)
+        .where(inArray(mealItems.mealId, ids))
+    : [];
+
+  return { meals: dayMeals, items };
+}
+
+export type MealDetail = {
+  id: number;
+  eatenOn: string;
+  eatenTime: string;
+  mealType: string;
+  sourceText: string | null;
+  photoKey: string | null;
+  items: Array<{
+    id: number;
+    name: string;
+    grams: number;
+    kcalPer100: number;
+    proteinPer100: number;
+    fatPer100: number;
+    carbsPer100: number;
+    fiberPer100: number;
+    confidence: string;
+  }>;
+};
+
+/** Приём пищи целиком, с проверкой владельца прямо в запросе — для экрана правки в «Дневнике». */
+export async function getMealDetailForUser(userId: number, mealId: number): Promise<MealDetail | null> {
+  const db = getDb();
+  const rows = await db.select().from(meals).where(and(eq(meals.id, mealId), eq(meals.userId, userId))).limit(1);
+  const meal = rows[0];
+  if (!meal) return null;
+
+  const items = await db.select().from(mealItems).where(eq(mealItems.mealId, meal.id));
+  return {
+    id: meal.id,
+    eatenOn: meal.eatenOn,
+    eatenTime: meal.eatenTime,
+    mealType: meal.mealType,
+    sourceText: meal.sourceText,
+    photoKey: meal.photoKey,
+    items: items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      grams: item.grams,
+      kcalPer100: item.kcalPer100,
+      proteinPer100: item.proteinPer100,
+      fatPer100: item.fatPer100,
+      carbsPer100: item.carbsPer100,
+      fiberPer100: item.fiberPer100,
+      confidence: item.confidence,
+    })),
+  };
+}
+
+/**
+ * Правка порции и состава (экран «Дневник»): старые позиции удаляются, новые
+ * вставляются заново — тот же приём, что и при первом сохранении, только на
+ * месте уже существующей записи `meals`. Без транзакции — как и остальной
+ * код этого файла (saveMeal выше тоже пишет двумя запросами подряд без неё):
+ * для пары delete/insert в одном обработчике риск рассинхронизации ничтожен,
+ * а транзакция потребовала бы отдельно прокидывать соединение через getDb().
+ * Возвращает false, если записи не было или она принадлежит другому пользователю.
+ */
+export async function replaceMealItemsForUser(
+  userId: number,
+  mealId: number,
+  mealType: string,
+  items: SaveMealItem[],
+): Promise<boolean> {
+  const db = getDb();
+  const owned = await db.select({ id: meals.id }).from(meals).where(and(eq(meals.id, mealId), eq(meals.userId, userId))).limit(1);
+  if (!owned[0]) return false;
+
+  await db.delete(mealItems).where(eq(mealItems.mealId, mealId));
+  await db.insert(mealItems).values(items.map((item) => ({ ...item, mealId })));
+  await db.update(meals).set({ mealType: MEAL_TYPES.includes(mealType) ? mealType : "other" }).where(eq(meals.id, mealId));
+  return true;
+}
+
+/**
+ * Удаляет приём пищи целиком вместе с фото, если оно было (тот же порядок,
+ * что в app/app/meal-actions.ts на вебе: сначала строка из базы, потом файл —
+ * лучше осиротевший файл на диске, чем запись в БД без данных под ней).
+ * Возвращает false, если записи не было или она принадлежит другому пользователю.
+ */
+export async function deleteMealForUser(userId: number, mealId: number): Promise<boolean> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: meals.id, photoKey: meals.photoKey })
+    .from(meals)
+    .where(and(eq(meals.id, mealId), eq(meals.userId, userId)))
+    .limit(1);
+  const meal = rows[0];
+  if (!meal) return false;
+
+  await db.delete(meals).where(eq(meals.id, meal.id));
+  if (meal.photoKey) await deletePhoto(meal.photoKey).catch(() => {});
+  return true;
 }

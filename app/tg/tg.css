@@ -17,6 +17,23 @@
   --brand-serif: var(--font-display), Georgia, serif;
   --radius: 16px;
 
+  /* Цвет данных. Тон и насыщенность задаются в двух местах — у категорий еды
+     в lib/food-category.ts, у макронутриентов ниже, — а светлота живёт здесь
+     и переключается вместе с темой. Так на тёмном фоне не приходится держать
+     вторую таблицу цветов: меняются три числа, а не тридцать. */
+  --food-l: 38%;
+  --food-chip-l: 91%;
+  --macro-l: 46%;
+  --macro-track-l: 91%;
+
+  /* Макронутриенты: свой тон каждому. Это не украшение — на «Сегодня» четыре
+     полосы подряд, и одинаково чёрные они читались как одна таблица. */
+  --hue-energy: 12;   --sat-energy: 72%;
+  --hue-protein: 214; --sat-protein: 68%;
+  --hue-fat: 38;      --sat-fat: 82%;
+  --hue-carbs: 280;   --sat-carbs: 52%;
+  --hue-fiber: 148;   --sat-fiber: 52%;
+
   min-height: 100dvh;
   background: var(--tg-bg);
   color: var(--tg-text);
@@ -24,7 +41,20 @@
   -webkit-font-smoothing: antialiased;
 }
 
-:root[data-tg-scheme="dark"] .tg-root { --brand-lime: #3d4a1f; }
+:root[data-tg-scheme="dark"] .tg-root {
+  --brand-lime: #3d4a1f;
+  --food-l: 74%;
+  --food-chip-l: 19%;
+  --macro-l: 66%;
+  --macro-track-l: 22%;
+}
+
+/* app/globals.css красит любой <footer> подвалом лендинга: отступ в 76px и
+   заливка «бумагой». Внутри Mini App это чужой стиль — на тёмной теме он
+   ещё и высветляет блок, — поэтому гасим его один раз здесь, а не боремся с
+   ним в каждом экране по отдельности. Свои отступы подвалы задают сами
+   (.tg-legal, .tg-suggestion footer). */
+.tg-root footer { padding: 0; background: none; }
 
 .tg-app { display: flex; flex-direction: column; min-height: 100dvh; }
 .tg-screen { flex: 1; padding-bottom: 84px; }
@@ -48,17 +78,29 @@
 .tg-hint { margin: 0; color: var(--tg-hint); font-size: 13px; line-height: 1.6; }
 .tg-error { margin: 0; color: #b95353; font-size: 13px; line-height: 1.5; }
 
-/* Кольцо энергии */
-.tg-ring { position: relative; display: grid; place-items: center; padding: 4px 0 8px; }
-.tg-ring svg { width: 168px; height: 168px; transform: rotate(-90deg); }
-.tg-ring-track { fill: none; stroke: color-mix(in srgb, var(--tg-hint) 22%, transparent); stroke-width: 10; }
+/* Кольцо энергии — главный объект экрана «Сегодня», поэтому единственное
+   место, где мы позволяем себе градиент и свечение. */
+.tg-ring { position: relative; display: grid; place-items: center; padding: 10px 0 12px; }
+.tg-ring::before {
+  /* Тёплое пятно за кольцом: даёт глубину, которой не даёт плоская заливка фона. */
+  content: ""; position: absolute; width: 196px; height: 196px; border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--brand-coral) 16%, transparent), transparent);
+}
+.tg-ring svg { position: relative; width: 178px; height: 178px; transform: rotate(-90deg); }
+.tg-ring-track { fill: none; stroke: color-mix(in srgb, var(--tg-hint) 20%, transparent); stroke-width: 11; }
 .tg-ring-value {
-  fill: none; stroke: var(--brand-coral); stroke-width: 10; stroke-linecap: round;
+  fill: none; stroke: url(#tg-ring-gradient); stroke-width: 11; stroke-linecap: round;
   transition: stroke-dashoffset 700ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .tg-ring-center { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.tg-ring-center strong { font: 500 40px/1 var(--brand-serif); letter-spacing: -0.03em; }
+.tg-ring-center strong { font: 500 42px/1 var(--brand-serif); letter-spacing: -0.03em; }
 .tg-ring-center span { font-size: 11px; color: var(--tg-hint); font-weight: 600; }
+/* Доля от цели — мелко, под числом: сам процент не цель, а ориентир. */
+.tg-ring-center em {
+  font-style: normal; margin-top: 5px; font-size: 11px; font-weight: 700;
+  border-radius: 999px; padding: 3px 10px;
+  background: color-mix(in srgb, var(--brand-coral) 15%, transparent); color: var(--brand-coral);
+}
 
 @media (prefers-reduced-motion: reduce) {
   .tg-ring-value, .tg-bar-fill { transition: none; }
@@ -70,13 +112,53 @@
 .tg-hint-card { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; background: var(--brand-lime); }
 .tg-hint-card p { margin: 0; font-size: 14px; line-height: 1.55; }
 
-.tg-bar { display: flex; flex-direction: column; gap: 7px; }
-.tg-bar-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
-.tg-bar-head span { color: var(--tg-hint); font-weight: 600; }
-.tg-bar-head b { font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Полосы макронутриентов. Тон приходит от модификатора (.tg-bar--protein и
+   далее), светлота — из темы, поэтому одна и та же полоса читается и на
+   светлом, и на тёмном. */
+.tg-bar { display: flex; flex-direction: column; gap: 7px; --hue: 0; --sat: 0%; }
+.tg-bar--energy { --hue: var(--hue-energy); --sat: var(--sat-energy); }
+.tg-bar--protein { --hue: var(--hue-protein); --sat: var(--sat-protein); }
+.tg-bar--fat { --hue: var(--hue-fat); --sat: var(--sat-fat); }
+.tg-bar--carbs { --hue: var(--hue-carbs); --sat: var(--sat-carbs); }
+.tg-bar--fiber { --hue: var(--hue-fiber); --sat: var(--sat-fiber); }
+
+.tg-bar-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; }
+.tg-bar-head span { color: var(--tg-hint); font-weight: 600; display: inline-flex; align-items: center; gap: 7px; }
+/* Точка тона — чтобы подпись и полоса читались как одно, даже когда полоса
+   почти пустая и цвета в ней ещё не видно. */
+.tg-bar-head span::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: hsl(var(--hue) var(--sat) var(--macro-l));
+}
+.tg-bar-head b { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tg-bar-head i { font-style: normal; color: var(--tg-hint); font-weight: 500; }
-.tg-bar-track { height: 6px; border-radius: 999px; background: color-mix(in srgb, var(--tg-hint) 18%, transparent); overflow: hidden; }
-.tg-bar-fill { height: 100%; border-radius: 999px; background: var(--tg-text); transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1); }
+.tg-bar-track { height: 7px; border-radius: 999px; background: hsl(var(--hue) var(--sat) var(--macro-track-l)); overflow: hidden; }
+.tg-bar-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg,
+    hsl(var(--hue) var(--sat) calc(var(--macro-l) + 10%)),
+    hsl(var(--hue) var(--sat) var(--macro-l)));
+  transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Тренд веса — мини-график SVG на «Сегодня» */
+.tg-weight { display: flex; flex-direction: column; gap: 10px; }
+.tg-weight-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.tg-weight-head strong { display: block; font: 500 26px var(--brand-serif); letter-spacing: -0.02em; }
+.tg-weight-head strong small { font-size: 13px; font-weight: 600; color: var(--tg-hint); }
+.tg-weight-change { font-size: 12px; font-weight: 700; color: var(--tg-hint); white-space: nowrap; }
+.tg-weight-svg { display: block; width: 100%; height: 64px; }
+.tg-weight-svg polyline { fill: none; stroke: var(--brand-coral); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Строка-ссылка на инбокс: единственное упоминание фото-инбокса на «Сегодня» — не вкладка */
+.tg-inbox-banner {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: 0; border-radius: var(--radius); padding: 14px 16px;
+  background: var(--brand-lime); color: var(--tg-text); cursor: pointer; text-align: left;
+}
+.tg-inbox-banner svg { flex-shrink: 0; }
+.tg-inbox-banner span { flex: 1; font-size: 13px; font-weight: 600; line-height: 1.4; }
+.tg-inbox-banner b { font-weight: 700; }
 
 /* Список приёмов пищи */
 .tg-section { display: flex; flex-direction: column; gap: 10px; }
@@ -162,14 +244,22 @@
 }
 .tg-remove { margin-left: auto; width: 36px; height: 36px; border: 0; background: transparent; color: var(--tg-hint); font-size: 20px; cursor: pointer; }
 
-.tg-draft-total { display: flex; gap: 12px; }
-.tg-draft-total div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.tg-draft-total strong { font: 500 24px var(--brand-serif); }
-.tg-draft-total span { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
+.tg-draft-total-row { display: flex; gap: 12px; }
+.tg-draft-total-row div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.tg-draft-total-row strong { font: 500 24px var(--brand-serif); }
+.tg-draft-total-row span { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
+/* Диапазон и уточняющий вопрос под итогом — только когда уверенность не «высокая». */
+.tg-draft-total-note { margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: var(--tg-hint); }
 
-/* Рекомендации */
+/* Рекомендации: карточка «что съесть сейчас» на «Сегодня» (не отдельная вкладка) */
+.tg-suggest-card { display: flex; flex-direction: column; gap: 12px; }
+.tg-suggest-card-head { display: flex; align-items: center; gap: 8px; color: var(--brand-coral); }
+.tg-suggest-card-head h2 { margin: 0; font: 500 17px var(--brand-serif); color: var(--tg-text); }
+.tg-suggest-card > .tg-button { align-self: flex-start; min-height: 40px; padding: 10px 18px; }
+
 .tg-suggestions { display: flex; flex-direction: column; gap: 10px; }
-.tg-suggestion h3 { margin: 0 0 6px; font: 500 19px var(--brand-serif); }
+.tg-suggestion { background: var(--tg-bg); border-radius: 12px; padding: 14px; }
+.tg-suggestion h3 { margin: 0 0 6px; font: 500 17px var(--brand-serif); }
 .tg-suggestion p { margin: 0 0 10px; font-size: 13px; line-height: 1.6; }
 .tg-suggestion footer { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; font-weight: 700; color: var(--tg-hint); }
 
@@ -246,3 +336,257 @@
 }
 .tg-link-button:disabled { opacity: 0.5; cursor: not-allowed; }
 .tg-link-button:active:not(:disabled) { opacity: 0.75; }
+
+/* ---------------------------------------------------------------------- */
+/* Ниже — стили экранов «План» и «Профиль» (Mini App v2). Дописано в конец
+   файла намеренно: так слияние с параллельной веткой (оболочка, «Сегодня»,
+   «Камера») сводится к простому append и не задевает то, что правит другой
+   агент. */
+
+/* Карточка адаптивной цели на экране «План» */
+.tg-plan-target-value { margin: 2px 0 0; display: flex; align-items: baseline; gap: 6px; }
+.tg-plan-target-value strong { font: 500 40px var(--brand-serif); letter-spacing: -0.02em; }
+.tg-plan-target-value span { font-size: 13px; color: var(--tg-hint); font-weight: 600; }
+
+/* Раскрывающееся объяснение «Почему столько?» — нативный <details>, без лишнего JS */
+.tg-explain { margin-top: 6px; border-top: 1px solid color-mix(in srgb, var(--tg-hint) 16%, transparent); padding-top: 10px; }
+.tg-explain summary {
+  cursor: pointer; list-style: none; color: var(--tg-link); font: 600 14px var(--font-body), sans-serif;
+}
+.tg-explain summary::-webkit-details-marker { display: none; }
+.tg-explain summary::marker { content: ""; }
+.tg-explain-body { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.tg-explain-body p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--tg-text); }
+.tg-explain-body b { font-variant-numeric: tabular-nums; }
+
+/* График тренда веса — SVG вручную, без библиотек (технические рамки спеки) */
+.tg-chart { width: 100%; height: 120px; display: block; }
+.tg-chart-line { fill: none; stroke: var(--brand-coral); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.tg-chart-dot { fill: var(--brand-coral); }
+.tg-chart-target { stroke: var(--tg-hint); stroke-width: 1; stroke-dasharray: 4 4; }
+
+.tg-plan-weight { display: flex; flex-direction: column; gap: 12px; }
+/* Тот же класс переиспользует «Профиль» для строки метрик темпа снижения. */
+.tg-plan-weight-stats { display: flex; gap: 12px; margin-top: 4px; }
+.tg-plan-weight-stats div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.tg-plan-weight-stats strong { font: 500 20px var(--brand-serif); font-variant-numeric: tabular-nums; }
+.tg-plan-weight-stats span { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--tg-hint); }
+
+/* Столбики приверженности по дням недели — факт, не оценка: один цвет, без «плохо/хорошо» */
+.tg-weekbars { display: flex; justify-content: space-between; gap: 6px; margin-top: 14px; }
+.tg-weekbar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tg-weekbar-count { font-size: 11px; font-weight: 700; color: var(--tg-hint); font-variant-numeric: tabular-nums; }
+.tg-weekbar-slot {
+  position: relative; width: 100%; max-width: 22px; height: 64px; border-radius: 6px;
+  overflow: hidden; background: transparent;
+}
+.tg-weekbar-track, .tg-weekbar-fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 6px; }
+.tg-weekbar-track { background: color-mix(in srgb, var(--tg-hint) 18%, transparent); }
+.tg-weekbar-fill { background: var(--tg-text); }
+.tg-weekbar-label { font-size: 11px; font-weight: 600; color: var(--tg-hint); }
+
+/* Поля форм «Профиля»: подпись сверху, инпут снизу — компактнее, чем в вебе,
+   потому что экран Mini App узкий */
+.tg-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--tg-hint); margin-top: 12px; }
+.tg-field-label { margin: 12px 0 6px; font-size: 13px; font-weight: 600; color: var(--tg-hint); }
+.tg-check { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.tg-check input { width: 20px; height: 20px; accent-color: var(--brand-coral); }
+
+.tg-profile-goals { display: flex; flex-direction: column; }
+.tg-profile-goals .tg-button { margin-top: 14px; }
+
+.tg-profile-add-weight { display: flex; gap: 8px; margin-top: 10px; }
+.tg-profile-add-weight .tg-input { flex: 1; }
+.tg-profile-weights { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tg-profile-weights li { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-top: 1px solid color-mix(in srgb, var(--tg-hint) 12%, transparent); }
+.tg-profile-weights li:first-child { border-top: 0; }
+.tg-profile-weights span { color: var(--tg-hint); }
+
+.tg-profile-reminder-actions { display: flex; align-items: center; gap: 4px; margin-top: 12px; flex-wrap: wrap; }
+.tg-profile-reminder-actions .tg-button { flex: 1; min-width: fit-content; }
+
+/* ---------------------------------------------------------------------- */
+/* Ниже — стили экрана «Дневник» (Mini App v2). Дописано в конец файла по
+   тому же принципу, что и блок «План»/«Профиль» выше. */
+
+/* Переключение дней в шапке «Дневника»: стрелки по бокам от даты */
+.tg-diary-nav { display: flex; align-items: center; gap: 10px; }
+.tg-diary-nav h1 { flex: 1; text-align: center; font-size: 20px; letter-spacing: -0.01em; }
+.tg-diary-nav-btn {
+  flex-shrink: 0; width: 36px; height: 36px; border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--tg-surface); color: var(--tg-text); font-size: 18px; line-height: 1;
+  display: grid; place-items: center;
+}
+.tg-diary-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.tg-hero > .tg-link { align-self: center; }
+
+/* Компактный итог дня — те же числа, что на «Сегодня», но без колец и полос
+   прогресса: на «Дневнике» это контекст над списком приёмов, а не главная тема. */
+.tg-diary-summary { display: flex; flex-wrap: wrap; gap: 14px 20px; }
+.tg-diary-summary div { display: flex; flex-direction: column; gap: 2px; min-width: 56px; }
+.tg-diary-summary strong { font: 500 20px var(--brand-serif); font-variant-numeric: tabular-nums; }
+.tg-diary-summary span { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--tg-hint); }
+
+/* Список приёмов пищи с миниатюрой фото */
+.tg-diary-meals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tg-diary-meal {
+  appearance: none; border: 0; width: 100%; text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: 12px; font: inherit; color: inherit;
+  background: var(--tg-surface); border-radius: var(--radius); padding: 10px 14px;
+}
+.tg-diary-meal-thumb {
+  flex-shrink: 0; width: 44px; height: 44px; border-radius: 10px; overflow: hidden;
+  display: grid; place-items: center; background: color-mix(in srgb, var(--tg-hint) 12%, transparent);
+  color: color-mix(in srgb, var(--tg-hint) 55%, transparent);
+}
+.tg-diary-meal-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tg-diary-meal time { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--tg-hint); font-variant-numeric: tabular-nums; }
+.tg-diary-meal-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tg-diary-meal-body b { font-size: 14px; }
+.tg-diary-meal-body span { font-size: 12px; color: var(--tg-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-diary-meal-macros { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap; }
+.tg-diary-meal-macros b { font: 500 15px var(--brand-serif); }
+.tg-diary-meal-macros b i { font-style: normal; font-size: 10px; font-weight: 600; color: var(--tg-hint); margin-left: 2px; }
+.tg-diary-meal-macros > span { font: 500 10.5px var(--font-body), sans-serif; color: var(--tg-hint); }
+
+/* Снимки еды в Mini App: см. app/tg/photo.tsx — грузятся fetch-ем и
+   показываются через objectURL, потому что WebView не хранит cookie
+   веб-сессии, а подпись Telegram нельзя класть в адрес картинки. */
+.tg-photo-box {
+  display: block; overflow: hidden; border-radius: inherit;
+  background: color-mix(in srgb, var(--tg-hint) 12%, transparent);
+}
+.tg-photo-box img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tg-photo-box-placeholder {
+  display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
+  padding: 8px; text-align: center; font-size: 11px; line-height: 1.4; color: var(--tg-hint);
+}
+/* Пока грузится, плейсхолдеру нечего показывать текстом — только тихая заливка. */
+.tg-photo-box[data-status="loading"] .tg-photo-box-placeholder { color: transparent; }
+
+/* Квадратная миниатюра — заполняет фиксированный контейнер (88×88 в инбоксе). */
+.tg-photo-box--square { width: 100%; height: 100%; }
+
+/* Широкое превью — фиксированная высота своя, не зависит от контейнера
+   (.tg-photo-drop) и не «плавает» вместе с интринсик-размером фото. */
+.tg-photo-box--wide { width: 100%; height: 220px; border-radius: 12px; }
+
+
+/* ---------------------------------------------------------------------- */
+/* Изображения и цвет: значки категорий еды, иллюстрации пустых экранов,
+   миниатюры приёмов пищи. Откуда что берётся — в шапке app/tg/food-icon.tsx
+   и app/tg/illustrations.tsx. */
+
+/* Значок категории: круглая подложка своего тона и глиф насыщеннее её.
+   --food-hue/--food-sat приходят инлайном из lib/food-category.ts. */
+.tg-food-icon {
+  display: grid; place-items: center; flex-shrink: 0; border-radius: 50%;
+  background: hsl(var(--food-hue) var(--food-sat) var(--food-chip-l));
+  color: hsl(var(--food-hue) var(--food-sat) var(--food-l));
+}
+.tg-food-icon svg { display: block; width: 62%; height: 62%; }
+.tg-food-icon--sm { width: 30px; height: 30px; }
+.tg-food-icon--md { width: 44px; height: 44px; }
+.tg-food-icon--lg { width: 56px; height: 56px; border-radius: 18px; }
+/* Без подложки — когда значок уже стоит в чужом контейнере со своим фоном
+   (например, в квадрате миниатюры приёма пищи). */
+.tg-food-icon--bare { background: none; width: auto; height: auto; }
+.tg-food-icon--bare svg { width: 24px; height: 24px; }
+
+/* Иллюстрации пустых экранов */
+.tg-illustration { display: block; width: 132px; height: 132px; }
+.tg-empty .tg-illustration { margin-bottom: 2px; }
+
+/* Миниатюра приёма пищи: настоящий снимок, если он есть, иначе значок
+   категории на подложке её же тона. Размер один и тот же — список не
+   «прыгает» от того, сфотографировал человек еду или ввёл текстом. */
+.tg-meal-thumb {
+  flex-shrink: 0; width: 48px; height: 48px; border-radius: 14px; overflow: hidden;
+  display: grid; place-items: center;
+  background: hsl(var(--food-hue, 30) var(--food-sat, 12%) var(--food-chip-l));
+}
+.tg-meal-thumb .tg-food-icon { background: none; width: 100%; height: 100%; }
+.tg-meal-thumb .tg-photo-box { width: 100%; height: 100%; }
+
+/* Заливка под линией графика — тот же тон, что и линия, но почти прозрачный.
+   Даёт объём там, где раньше была одинокая линия на пустом поле. */
+.tg-chart-area, .tg-weight-area { fill: url(#tg-area-gradient); stroke: none; }
+
+/* Строка приёма пищи на «Сегодня». Время переехало внутрь заголовка, к
+   названию приёма: миниатюра слева теперь несёт больше смысла, чем колонка
+   из четырёх цифр, и отдавать ей отдельную колонку незачем. */
+.tg-meals li { padding: 10px 14px; }
+.tg-meals b { display: flex; align-items: baseline; gap: 8px; }
+.tg-meals b time { width: auto; font-size: 11px; }
+
+/* Столбики приверженности — в тон энергии, а не чёрные: экран «План» иначе
+   остаётся единственным полностью монохромным. Оценки в цвете по-прежнему
+   нет: все столбики одного тона, «хорошего» и «плохого» цвета не заведено. */
+.tg-weekbar-fill { background: hsl(var(--hue-energy) var(--sat-energy) var(--macro-l)); }
+
+/* Шапка «Профиля»: монограмма вместо аватара. Аватар Telegram лежит на его
+   CDN — это внешний хост в интерфейсе, который обязан работать без сети к
+   нему; буква и тон из идентификатора дают то же узнавание бесплатно. */
+.tg-profile-head { display: flex; align-items: center; gap: 14px; }
+.tg-profile-avatar {
+  flex-shrink: 0; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center;
+  background: hsl(var(--food-hue) 52% var(--food-chip-l));
+  color: hsl(var(--food-hue) 52% var(--food-l));
+  font: 500 26px var(--brand-serif);
+}
+.tg-profile-head-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tg-profile-head-body h1 { margin: 0; font: 500 26px/1.05 var(--brand-serif); letter-spacing: -0.03em; }
+.tg-profile-head-body p { margin: 0; font-size: 13px; color: var(--tg-hint); overflow-wrap: anywhere; }
+
+/* Плашка тарифа — маленькая, но цветная: единственное место, где статус
+   аккаунта виден с одного взгляда. */
+.tg-badge {
+  align-self: flex-start; border-radius: 999px; padding: 4px 11px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.02em;
+  background: color-mix(in srgb, var(--brand-coral) 15%, transparent); color: var(--brand-coral);
+}
+
+/* Карточка подсказки «что съесть сейчас»: значок категории у каждого варианта */
+.tg-suggestion { display: flex; gap: 12px; align-items: flex-start; }
+.tg-suggestion-body { flex: 1; min-width: 0; }
+
+/* Итог дня в «Дневнике»: цифра красится тоном своего макронутриента —
+   те же --hue-*, что у полос на «Сегодня». */
+.tg-diary-summary div[class^="tg-bar--"] strong,
+.tg-diary-summary div[class*=" tg-bar--"] strong {
+  color: hsl(var(--hue) var(--sat) var(--macro-l));
+}
+
+/* Карточка-пустышка с иллюстрацией: та же роль, что у .tg-hint-card, но
+   картинка над текстом и по центру. Отдельный класс, а не модификатор
+   .tg-hint-card, — у той лаймовая заливка, а под иллюстрацией она лишняя. */
+.tg-empty-card {
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+}
+.tg-empty-card p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--tg-hint); }
+
+/* Пустая зона выбора фото на «Камере» */
+.tg-photo-drop-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 8px 4px; line-height: 1.5;
+}
+
+/* Значок категории в строке черновика разбора */
+.tg-draft-row .tg-food-icon { margin-right: 2px; }
+
+/* Цель по энергии на «Плане» — числом в тон энергии, как и везде */
+.tg-plan-target-value.tg-bar--energy strong { color: hsl(var(--hue) var(--sat) var(--macro-l)); }
+
+/* Миниатюра в «Дневнике» — те же правила, что у .tg-meal-thumb на «Сегодня»:
+   тон категории на подложке, значок во всю плашку. Старая серая заливка
+   осталась бы поверх тона, потому что объявлена выше по файлу. */
+.tg-diary-meal-thumb {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: hsl(var(--food-hue, 30) var(--food-sat, 12%) var(--food-chip-l));
+  color: inherit;
+}
+.tg-diary-meal-thumb .tg-food-icon { background: none; width: 100%; height: 100%; }
+
+/* Переносимый сегмент (например, четыре темпа снижения в «Профиле»): без
+   базиса последняя кнопка на второй строке растягивалась во всю ширину. */
+.tg-segment-wrap button { flex: 1 1 calc(50% - 4px); }

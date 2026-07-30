@@ -1,5 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { createAnthropicClient, DEFAULT_MODEL, readUsage, supportsFallbacks } from "./client.ts";
+import { createAnthropicClient, readUsage, resolveModel, supportsFallbacks } from "./client.ts";
+import { compressPhotoForAi } from "./image.ts";
 import { MEAL_ANALYSIS_SCHEMA, validateMealAnalysis } from "./schema.ts";
 import { MealAnalysisError, type MealAnalysisResult, type MealInput, type MealVisionProvider } from "./types.ts";
 
@@ -20,19 +21,21 @@ const SYSTEM_PROMPT = `Ты — ассистент нутрициолога в �
 
 export class AnthropicMealProvider implements MealVisionProvider {
   private client: Anthropic;
-  private model: string;
 
-  constructor(model?: string) {
+  constructor() {
     this.client = createAnthropicClient();
-    this.model = model ?? DEFAULT_MODEL;
   }
 
   async analyseMeal(input: MealInput): Promise<MealAnalysisResult> {
     const content: Anthropic.Beta.Messages.BetaContentBlockParam[] = [];
     if (input.kind === "photo") {
+      // Сжимаем перед отправкой в AI (lib/ai/image.ts) — в хранилище и
+      // пользователю уходит оригинал, `input.data` здесь не трогаем.
+      const compressed = await compressPhotoForAi(input.data);
+      const photo = compressed ?? { data: input.data, mediaType: input.mediaType };
       content.push({
         type: "image",
-        source: { type: "base64", media_type: input.mediaType, data: input.data.toString("base64") },
+        source: { type: "base64", media_type: photo.mediaType, data: photo.data.toString("base64") },
       });
       content.push({
         type: "text",
@@ -44,14 +47,16 @@ export class AnthropicMealProvider implements MealVisionProvider {
       content.push({ type: "text", text: `Разбери описание приёма пищи: ${input.text}` });
     }
 
+    const model = resolveModel(input.kind === "photo" ? "analyze_photo" : "analyze_text");
+
     // Фолбэк на случай срабатывания классификаторов безопасности:
     // на opus-5/fable-5 запрос перезапускается на рекомендованной модели.
-    const withFallbacks = supportsFallbacks(this.model);
+    const withFallbacks = supportsFallbacks(model);
 
     let response: Anthropic.Beta.Messages.BetaMessage;
     try {
       response = await this.client.beta.messages.create({
-        model: this.model,
+        model,
         max_tokens: 16000,
         ...(withFallbacks
           ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }

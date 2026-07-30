@@ -24,7 +24,7 @@ export function IconToday({ active }: IconProps) {
   </svg>;
 }
 
-/** Плюс в круге — добавление приёма пищи. */
+/** Плюс в круге — вкладка «Камера», мгновенный разбор еды. */
 export function IconAdd({ active }: IconProps) {
   return <svg {...base}>
     <circle cx="12" cy="12" r="8.5" fill={active ? "currentColor" : "none"} />
@@ -32,7 +32,12 @@ export function IconAdd({ active }: IconProps) {
   </svg>;
 }
 
-/** Лоток входящих — снимки, которые ждут разбора. */
+/**
+ * Лоток входящих. В v2 не иконка отдельной вкладки (инбокс стал строкой на
+ * «Сегодня», раздел «Три отличия от макета» спецификации), а иконка
+ * вкладки «Дневник» — список сохранённых приёмов пищи по дням — и самой
+ * строки-ссылки на инбокс.
+ */
 export function IconInbox({ active }: IconProps) {
   return <svg {...base}>
     <path d="M4 13.5 6 5.5h12l2 8" />
@@ -43,7 +48,7 @@ export function IconInbox({ active }: IconProps) {
   </svg>;
 }
 
-/** Искра — подсказка, что съесть дальше. */
+/** Искра — подсказка, что съесть дальше. Используется на карточке «Сегодня», не в нижней панели. */
 export function IconSuggest({ active }: IconProps) {
   return <svg {...base}>
     <path
@@ -51,5 +56,21 @@ export function IconSuggest({ active }: IconProps) {
       fill={active ? "currentColor" : "none"}
     />
     <path d="M18.5 16.5c.25 1.3.95 2 2.25 2.25-1.3.25-2 .95-2.25 2.25-.25-1.3-.95-2-2.25-2.25 1.3-.25 2-.95 2.25-2.25Z" />
+  </svg>;
+}
+
+/** Флажок на шесте — цель плана, к которой идёт прогресс. */
+export function IconPlan({ active }: IconProps) {
+  return <svg {...base}>
+    <path d="M6 20.5V4" />
+    <path d="M6 5h11l-3 3.5L17 12H6Z" fill={active ? "currentColor" : "none"} />
+  </svg>;
+}
+
+/** Силуэт человека — профиль и настройки. */
+export function IconProfile({ active }: IconProps) {
+  return <svg {...base}>
+    <circle cx="12" cy="8.5" r="3.5" fill={active ? "currentColor" : "none"} />
+    <path d="M5 19.5c1.1-3.7 3.9-5.6 7-5.6s5.9 1.9 7 5.6" fill={active ? "currentColor" : "none"} />
   </svg>;
 }

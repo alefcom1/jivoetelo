@@ -2,22 +2,27 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, fetchToday, type InboxItemDto, type TodayResponse } from "./api";
-import { AddTab } from "./add-tab";
-import { IconAdd, IconInbox, IconSuggest, IconToday } from "./icons";
+import { CameraTab } from "./camera-tab";
+import { DiaryTab } from "./diary-tab";
+import { IconAdd, IconInbox, IconPlan, IconProfile, IconToday } from "./icons";
 import { InboxTab } from "./inbox-tab";
 import { LinkScreen } from "./link-screen";
-import { SuggestTab } from "./suggest-tab";
+import { PlanTab } from "./plan-tab";
+import { ProfileTab } from "./profile-tab";
 import { TodayTab } from "./today-tab";
 import { applyTheme, getWebApp, haptic } from "./telegram";
 
-type Tab = "today" | "add" | "inbox" | "suggest";
+// Пять вкладок раздела «Пять вкладок» спецификации Mini App v2 (docs/miniapp-v2.md).
+// «Камера» — эволюция прежней «Добавить»: тот же экран, разбор теперь мгновенный.
+type Tab = "today" | "diary" | "camera" | "plan" | "profile";
 type Status = "loading" | "ready" | "needs_link" | "no_telegram" | "error";
 
 const TABS: Array<{ key: Tab; label: string; Icon: (props: { active?: boolean }) => React.ReactElement }> = [
   { key: "today", label: "Сегодня", Icon: IconToday },
-  { key: "add", label: "Добавить", Icon: IconAdd },
-  { key: "inbox", label: "Инбокс", Icon: IconInbox },
-  { key: "suggest", label: "Совет", Icon: IconSuggest },
+  { key: "diary", label: "Дневник", Icon: IconInbox },
+  { key: "camera", label: "Камера", Icon: IconAdd },
+  { key: "plan", label: "План", Icon: IconPlan },
+  { key: "profile", label: "Профиль", Icon: IconProfile },
 ];
 
 export default function MiniApp() {
@@ -25,8 +30,12 @@ export default function MiniApp() {
   const [tab, setTab] = useState<Tab>("today");
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [firstName, setFirstName] = useState<string | null>(null);
-  // Снимок, выбранный в инбоксе: разбор идёт тем же экраном, что и обычное
-  // добавление, поэтому второго редактора черновика не появляется.
+  // Инбокс в v2 — не вкладка, а экран, на который можно перейти строкой с
+  // «Сегодня» (раздел «Три отличия от макета» спецификации). Он не входит в
+  // `tab`, чтобы нижняя панель по-прежнему подсвечивала одну из пяти вкладок.
+  const [inboxOpen, setInboxOpen] = useState(false);
+  // Снимок, выбранный в инбоксе: разбор идёт тем же экраном «Камера», что и
+  // обычное добавление, поэтому второго редактора черновика не появляется.
   const [inboxItem, setInboxItem] = useState<InboxItemDto | null>(null);
 
   const load = useCallback(async () => {
@@ -65,11 +74,25 @@ export default function MiniApp() {
     return () => webApp.offEvent("themeChanged", onThemeChanged);
   }, [load]);
 
+  /** Переключение нижней панели всегда закрывает инбокс поверх неё. */
   function switchTab(next: Tab) {
     haptic("tap");
-    // Уход с разбора снимка отменяет его: вернуться можно из инбокса.
-    if (next !== "add") setInboxItem(null);
+    setInboxItem(null);
+    setInboxOpen(false);
     setTab(next);
+  }
+
+  function handleCameraSaved() {
+    haptic("success");
+    // Разбор из инбокса возвращает в список инбокса — там могут быть ещё
+    // неподтверждённые снимки; обычное добавление возвращает на «Сегодня».
+    if (inboxItem) {
+      setInboxItem(null);
+      setInboxOpen(true);
+    } else {
+      setTab("today");
+    }
+    void load();
   }
 
   if (status === "loading") {
@@ -99,35 +122,44 @@ export default function MiniApp() {
 
   return <div className="tg-app">
     <div className="tg-screen">
-      {tab === "today" && <TodayTab data={today} firstName={firstName} onAdd={() => switchTab("add")} />}
-      {tab === "add" && <AddTab
-        key={inboxItem?.id ?? "manual"}
-        showCalories={today.showCalories}
-        inbox={inboxItem}
-        onCancelInbox={() => { setInboxItem(null); setTab("inbox"); }}
-        onSaved={() => {
-          haptic("success");
-          const returnTo = inboxItem ? "inbox" : "today";
-          setInboxItem(null);
-          setTab(returnTo);
-          void load();
-        }}
-      />}
-      {tab === "inbox" && <InboxTab onPick={(item) => { setInboxItem(item); setTab("add"); }} />}
-      {tab === "suggest" && <SuggestTab showCalories={today.showCalories} />}
+      {inboxItem
+        ? <CameraTab
+            key={inboxItem.id}
+            showCalories={today.showCalories}
+            inbox={inboxItem}
+            onCancelInbox={() => { setInboxItem(null); setInboxOpen(true); }}
+            onSaved={handleCameraSaved}
+          />
+        : inboxOpen
+        ? <InboxTab onPick={(item) => { haptic("tap"); setInboxItem(item); }} onBack={() => setInboxOpen(false)} />
+        : <>
+            {tab === "today" && <TodayTab
+              data={today}
+              firstName={firstName}
+              onOpenCamera={() => switchTab("camera")}
+              onOpenInbox={() => { haptic("tap"); setInboxOpen(true); }}
+            />}
+            {tab === "diary" && <DiaryTab onOpenCamera={() => switchTab("camera")} />}
+            {tab === "camera" && <CameraTab key="manual" showCalories={today.showCalories} onSaved={handleCameraSaved} />}
+            {tab === "plan" && <PlanTab />}
+            {tab === "profile" && <ProfileTab />}
+          </>}
     </div>
 
     <nav className="tg-tabs" role="tablist">
-      {TABS.map(({ key, label, Icon }) => <button
-        key={key}
-        role="tab"
-        aria-selected={tab === key}
-        className={tab === key ? "active" : ""}
-        onClick={() => switchTab(key)}
-      >
-        <Icon active={tab === key} />
-        <span>{label}</span>
-      </button>)}
+      {TABS.map(({ key, label, Icon }) => {
+        const active = tab === key && !inboxOpen && !inboxItem;
+        return <button
+          key={key}
+          role="tab"
+          aria-selected={active}
+          className={active ? "active" : ""}
+          onClick={() => switchTab(key)}
+        >
+          <Icon active={active} />
+          <span>{label}</span>
+        </button>;
+      })}
     </nav>
   </div>;
 }

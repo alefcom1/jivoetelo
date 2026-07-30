@@ -49,6 +49,20 @@ export async function readPhoto(key: string): Promise<Buffer | null> {
   }
 }
 
+/**
+ * Отдаёт снимок только его владельцу — общая проверка для всех раздатчиков
+ * фото (веб-сессия в app/api/photos, initData Telegram в app/api/tg/photo).
+ * Чужой ключ и отсутствующий файл возвращают одно и то же null: снаружи оба
+ * случая должны выглядеть как обычный 404, не подсказывающий, чем именно
+ * запрос не подошёл.
+ */
+export async function readOwnedPhoto(userId: number, key: string): Promise<{ data: Buffer; mime: string } | null> {
+  if (!photoBelongsTo(key, userId)) return null;
+  const data = await readPhoto(key);
+  if (!data) return null;
+  return { data, mime: photoMimeType(key) };
+}
+
 export async function deletePhoto(key: string): Promise<void> {
   await rm(path.join(uploadsDir(), key), { force: true });
 }

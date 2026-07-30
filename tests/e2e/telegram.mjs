@@ -189,17 +189,17 @@ try {
   await uiPage.goto(`${BASE}/tg`);
   await uiPage.waitForSelector(".tg-app", { timeout: 20000 });
   const tgText = await uiPage.textContent(".tg-app");
-  for (const expected of ["Марина", "Завтрак", "Белок", "Клетчатка"]) {
+  for (const expected of ["Марина", "Завтрак", "Белок", "Жиры", "Углеводы", "Клетчатка"]) {
     if (!tgText.includes(expected)) throw new Error(`В Mini App нет «${expected}»`);
   }
   if (!tgText.includes("456")) throw new Error("Кольцо энергии не показывает итог дня");
   await uiPage.screenshot({ path: "/home/user/jivoetelo/docs/screenshots/tg-today.png" });
 
-  step("15. UI: вкладка «Добавить» — разбор и правка");
+  step("15. UI: вкладка «Камера» — мгновенный разбор и правка");
   // Пауза под антифлуд: сценарий гоняет разборы быстрее, чем это физически
   // возможно для человека (нужно набрать текст или сделать снимок).
   await new Promise((r) => setTimeout(r, 3200));
-  await uiPage.click('.tg-tabs button:has-text("Добавить")');
+  await uiPage.click('.tg-tabs button:has-text("Камера")');
   await uiPage.waitForSelector("textarea");
   await uiPage.fill("textarea", "Гречка с курицей");
   await uiPage.screenshot({ path: "/home/user/jivoetelo/docs/screenshots/tg-add.png" });
@@ -217,10 +217,10 @@ try {
   await uiPage.click('.tg-button:has-text("Сохранить")');
   await uiPage.waitForSelector(".tg-meals li:nth-child(2)", { timeout: 20000 });
 
-  step("17. UI: вкладка «Совет»");
-  await uiPage.click('.tg-tabs button:has-text("Совет")');
-  await uiPage.waitForSelector('.tg-button:has-text("Подобрать варианты")');
-  await uiPage.click('.tg-button:has-text("Подобрать варианты")');
+  step("17. UI: карточка «что съесть сейчас» на «Сегодня» — не отдельная вкладка");
+  await uiPage.click('.tg-tabs button:has-text("Сегодня")');
+  await uiPage.waitForSelector('.tg-suggest-card .tg-button:has-text("Подобрать")');
+  await uiPage.click('.tg-suggest-card .tg-button:has-text("Подобрать")');
   await uiPage.waitForSelector(".tg-suggestion", { timeout: 25000 });
   const suggestions = await uiPage.$$(".tg-suggestion");
   if (suggestions.length !== 3) throw new Error(`В UI ${suggestions.length} вариантов`);

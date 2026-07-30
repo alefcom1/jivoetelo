@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Рабочие копии фоновых агентов: там свой node_modules и своя сборка,
+    // и линтер уходил в них на десятки тысяч замечаний о чужом коде.
+    ".claude/worktrees/**",
   ]),
 ]);
 

@@ -3,8 +3,31 @@
 import { getWebApp } from "./telegram.ts";
 
 export type TgTotals = { kcal: number; protein: number; fat: number; carbs: number; fiber: number };
-export type TgTargets = { kcalTarget: number; kcalMin: number; kcalMax: number; proteinTarget: number; fiberTarget: number };
-export type TgMeal = { id: number; time: string; title: string; items: string[]; kcal: number; protein: number };
+export type TgTargets = {
+  kcalTarget: number;
+  kcalMin: number;
+  kcalMax: number;
+  proteinTarget: number;
+  fiberTarget: number;
+  // Выводятся из kcalTarget/proteinTarget на сервере (lib/macro-split.ts) —
+  // отдельной целью в БД не хранятся.
+  fatTarget: number;
+  carbsTarget: number;
+};
+export type TgMeal = {
+  id: number;
+  time: string;
+  title: string;
+  items: string[];
+  /** Снимок приёма пищи или null, если еду вводили текстом. */
+  photoKey: string | null;
+  kcal: number;
+  protein: number;
+};
+
+/** Точка тренда веса — тот же формат, что и в вебе (lib/trend.ts). */
+export type TgWeightPoint = { onDate: string; weightKg: number; trendKg: number };
+export type TgWeight = { entries: TgWeightPoint[]; weeklyChangeKg: number | null };
 
 export type TodayResponse = {
   showCalories: boolean;
@@ -12,6 +35,9 @@ export type TodayResponse = {
   totals: TgTotals;
   targets: TgTargets | null;
   meals: TgMeal[];
+  /** Снимки, присланные боту и ещё не подтверждённые — строка на «Сегодня». */
+  inboxPending: number;
+  weight: TgWeight | null;
 };
 
 export type ApiFailure = { reason: "not_linked" | "invalid_signature" | "not_configured" | "error"; message?: string };
@@ -116,4 +142,18 @@ export type SuggestResponse = {
 
 export async function fetchSuggestions(): Promise<SuggestResponse> {
   return handle<SuggestResponse>(await fetch("/api/tg/suggest", { headers: initDataHeader(), cache: "no-store" }));
+}
+
+/**
+ * Скачивает снимок еды как Blob тем же initData-заголовком, что и остальные
+ * запросы Mini App. Обычный <img src="/api/photos/..."> здесь не работает —
+ * WebView не хранит cookie веб-сессии, а подпись Telegram нельзя класть в
+ * query строки картинки: она осела бы в логах сервера, в Referer и в истории
+ * браузера. Поэтому фото качает fetch, а <img> получает уже objectURL —
+ * см. app/tg/photo.tsx.
+ */
+export async function fetchPhoto(key: string): Promise<Blob> {
+  const response = await fetch(`/api/tg/photo/${key}`, { headers: initDataHeader(), cache: "no-store" });
+  if (!response.ok) throw new ApiError({ reason: "error" });
+  return response.blob();
 }

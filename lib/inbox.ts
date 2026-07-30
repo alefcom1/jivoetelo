@@ -29,6 +29,20 @@ export async function countInboxToday(userId: number, day: string): Promise<numb
   return rows[0]?.value ?? 0;
 }
 
+/**
+ * Сколько снимков вообще (за все дни) ждут разбора — для строки на «Сегодня»
+ * в Mini App («N снимков не успели подтвердить»). В отличие от
+ * `countPendingOnDay`, без привязки к конкретному дню: снимок мог прийти
+ * вчера и всё ещё ждать.
+ */
+export async function countPending(userId: number): Promise<number> {
+  const rows = await getDb()
+    .select({ value: count() })
+    .from(photoInbox)
+    .where(and(eq(photoInbox.userId, userId), isNull(photoInbox.processedAt), isNull(photoInbox.dismissedAt)));
+  return rows[0]?.value ?? 0;
+}
+
 /** Неразобранные снимки за конкретный день — основание для вечернего дайджеста. */
 export async function countPendingOnDay(userId: number, day: string): Promise<number> {
   const rows = await getDb()
