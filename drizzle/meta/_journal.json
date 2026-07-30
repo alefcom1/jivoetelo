@@ -71,6 +71,13 @@
       "when": 1785389974334,
       "tag": "0009_profile-pace",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785391353712,
+      "tag": "0010_profile-target-weight",
+      "breakpoints": true
     }
   ]
 }

@@ -108,6 +108,11 @@ export const profiles = pgTable("profiles", {
   // Меняется только с явного подтверждения пользователя через
   // applyProposedAdjustment — онбординг это поле не трогает.
   kcalAdjustment: integer("kcal_adjustment").notNull().default(0),
+  // Целевой вес (экран «Профиль», Mini App v2). В отличие от kcalAdjustment
+  // это желаемое пользователем, а не измеренный факт, поэтому поле
+  // необязательное: план по калориям считается и без него. Темп лежит
+  // выше, в `pace` — он приходит из онбординга, а профиль его лишь правит.
+  targetWeightKg: doublePrecision("target_weight_kg"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

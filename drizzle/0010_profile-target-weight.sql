@@ -1,0 +1,1 @@
+ALTER TABLE "profiles" ADD COLUMN "target_weight_kg" double precision;
