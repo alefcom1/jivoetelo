@@ -199,3 +199,34 @@ test("номера писем проверяются", () => {
   assert.ok(!isLetterNumber(0));
   assert.ok(!isLetterNumber(4));
 });
+
+/**
+ * Серия — это три письма подряд, и второе может ссылаться на то, что было в
+ * первом. Когда абзац с числом выпадает из-за неполного контекста, ссылка на
+ * него из следующего письма превращается в разговор о том, чего человек не
+ * читал. Проверяем не текст, а само правило: абзац живёт только если в
+ * контексте есть все числа, которые он упоминает.
+ */
+test("письмо не упоминает чисел, которых у подписчика не было", () => {
+  const options = { unsubscribeUrl: "https://example.test/u", siteUrl: "https://example.test" };
+  const contexts = [
+    {},
+    { proteinTarget: 104 },
+    { kcalTarget: 1830 },
+    { kcalTarget: 1850, kcalMin: 1720, kcalMax: 1980, proteinTarget: 104 },
+  ];
+
+  for (const context of contexts) {
+    const known = new Set(Object.keys(context));
+    for (const number of [1, 2, 3]) {
+      const letter = renderLetter(number, context, options);
+      const body = `${letter.subject}\n${letter.preheader ?? ""}\n${letter.text}`;
+      assert.doesNotMatch(body, /\{\{|\}\}|undefined|NaN/, `письмо ${number}, контекст ${JSON.stringify(context)}`);
+      // Границы упоминаются только тогда, когда они пришли в контексте.
+      if (!known.has("kcalMin") || !known.has("kcalMax")) {
+        assert.doesNotMatch(body, /границы вокруг/i, `письмо ${number} зовёт границы, которых не было`);
+      }
+      assert.ok(letter.text.trim().length > 400, `письмо ${number} схлопнулось: ${letter.text.trim().length} символов`);
+    }
+  }
+});
