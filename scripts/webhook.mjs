@@ -59,6 +59,28 @@ if (command === "set") {
     ],
   });
   console.log("  ok   команды бота заданы.");
+
+  // Синяя кнопка «Открыть приложение» рядом со строкой ввода. Без неё Mini
+  // App попросту неоткуда запустить: бот отвечает на сообщения, но входа в
+  // приложение в интерфейсе нет, и выглядит это как «бот пустой».
+  //
+  // Telegram отклоняет web_app с незарегистрированным доменом — сначала в
+  // @BotFather нужен /setdomain (или /newapp) на этот же адрес. Поэтому
+  // ошибку здесь не проглатываем, а называем причину: это самый частый
+  // пропущенный шаг настройки.
+  const miniAppUrl = (value("TELEGRAM_MINIAPP_URL") || `${siteUrl}/tg`).replace(/\/+$/, "");
+  const menu = await call(
+    "setChatMenuButton",
+    { menu_button: { type: "web_app", text: "Дневник", web_app: { url: miniAppUrl } } },
+    true,
+  );
+  if (menu.ok) {
+    console.log(`  ok   кнопка «Дневник» открывает ${miniAppUrl}`);
+  } else {
+    console.log(`  ВНИМАНИЕ  кнопку Mini App поставить не удалось — ${menu.description}`);
+    console.log("           Обычно это значит, что домен не привязан к боту.");
+    console.log(`           В @BotFather: /setdomain → выбрать бота → ${new URL(miniAppUrl).origin}`);
+  }
 } else if (command === "delete") {
   await call("deleteWebhook", { drop_pending_updates: false });
   console.log("  ok   вебхук снят. Бот больше не получает апдейты.");
@@ -96,7 +118,14 @@ function explain(message) {
   return "Разберите текст ошибки выше — Telegram пишет причину прямым текстом.";
 }
 
-async function call(method, payload) {
+/**
+ * @param soft Не убивать процесс при отказе Telegram, а вернуть
+ * `{ ok, description }`. Нужно для необязательных шагов вроде кнопки Mini
+ * App: её отказ не повод бросать уже настроенный вебхук. В мягком режиме
+ * возвращается конверт с полем `ok` и при успехе — иначе `true` из
+ * `setChatMenuButton` не отличить от отказа.
+ */
+async function call(method, payload, soft = false) {
   const headers = { "content-type": "application/json" };
   if (apiAuth) headers.authorization = `Bearer ${apiAuth}`;
 
@@ -137,9 +166,10 @@ async function call(method, payload) {
   if (!body?.ok) {
     const code = body?.error_code ?? response.status;
     const description = body?.description ?? body?.error ?? "без описания";
+    if (soft) return { ok: false, description: `${code}: ${description}` };
     die(`${method} → ${code}: ${description}${code === 401 ? "\n       401 от самого Telegram означает неверный TELEGRAM_BOT_TOKEN." : ""}`);
   }
-  return body.result;
+  return soft ? { ok: true, result: body.result } : body.result;
 }
 
 function value(name) {
