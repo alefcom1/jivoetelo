@@ -24,8 +24,13 @@ db_tmp="$BACKUP_DIR/.db-$stamp.sql.gz.part"
 docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" | gzip -9 > "$db_tmp"
 mv "$db_tmp" "$BACKUP_DIR/db-$stamp.sql.gz"
 
+# Каталог со снимками приложение создаёт лениво — при первом загруженном
+# фото. Пока его нет, tar завершается ошибкой, а с ним из-за set -e падает и
+# весь бэкап: дамп базы уже снят, но старые копии не подчищены, а .part
+# остался лежать. Поэтому каталог создаём сами: пустой архив ничем не хуже
+# отсутствующего, зато пара файлов за одну дату всегда полная.
 uploads_tmp="$BACKUP_DIR/.uploads-$stamp.tar.gz.part"
-docker compose exec -T app tar -czf - -C /app/data uploads > "$uploads_tmp"
+docker compose exec -T app sh -c 'mkdir -p /app/data/uploads && tar -czf - -C /app/data uploads' > "$uploads_tmp"
 mv "$uploads_tmp" "$BACKUP_DIR/uploads-$stamp.tar.gz"
 
 # Старые копии подчищаем, недоделанные (.part) — тоже.
