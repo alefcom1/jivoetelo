@@ -8,8 +8,12 @@ import { haptic } from "./telegram";
  * Снимки, присланные боту и ещё не разобранные. Экран нужен именно здесь, а
  * не только в вебе: человек фотографирует еду в Telegram и разбирать её
  * логично там же, не выходя в браузер, где сессии может и не быть.
+ *
+ * В Mini App v2 это не отдельная вкладка (раздел «Три отличия от макета»
+ * спецификации): экран открывается строкой-ссылкой с «Сегодня», поэтому
+ * ему нужен путь назад — `onBack`.
  */
-export function InboxTab({ onPick }: { onPick: (item: InboxItemDto) => void }) {
+export function InboxTab({ onPick, onBack }: { onPick: (item: InboxItemDto) => void; onBack?: () => void }) {
   const [items, setItems] = useState<InboxItemDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -47,8 +51,12 @@ export function InboxTab({ onPick }: { onPick: (item: InboxItemDto) => void }) {
     }
   }
 
+  const backLink = onBack &&
+    <button className="tg-link-button" onClick={() => { haptic("tap"); onBack(); }}>← На «Сегодня»</button>;
+
   if (!items) {
     return <div className="tg-page">
+      {backLink}
       <header className="tg-hero"><h1>Инбокс</h1></header>
       {error ? <p className="tg-error">{error}</p> : <div className="tg-spinner" aria-label="Загрузка" />}
     </div>;
@@ -56,6 +64,7 @@ export function InboxTab({ onPick }: { onPick: (item: InboxItemDto) => void }) {
 
   if (items.length === 0) {
     return <div className="tg-page">
+      {backLink}
       <header className="tg-hero"><h1>Инбокс пуст</h1></header>
       <section className="tg-card tg-hint-card">
         <p>
@@ -67,6 +76,7 @@ export function InboxTab({ onPick }: { onPick: (item: InboxItemDto) => void }) {
   }
 
   return <div className="tg-page">
+    {backLink}
     <header className="tg-hero">
       <p className="tg-kicker">Ждут разбора</p>
       <h1>Инбокс</h1>

@@ -1,8 +1,11 @@
 "use client";
 
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
+import { withPluralRu } from "@/lib/plural";
 import type { TodayResponse } from "./api";
-import { IconToday } from "./icons";
+import { IconInbox, IconToday } from "./icons";
+import { SuggestCard } from "./suggest-card";
+import { WeightTrend } from "./weight-trend";
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -49,11 +52,13 @@ function Bar({ label, value, target, unit }: { label: string; value: number; tar
 export function TodayTab({
   data,
   firstName,
-  onAdd,
+  onOpenCamera,
+  onOpenInbox,
 }: {
   data: TodayResponse;
   firstName: string | null;
-  onAdd: () => void;
+  onOpenCamera: () => void;
+  onOpenInbox: () => void;
 }) {
   const { totals, targets, showCalories } = data;
   const kcalMid = targets?.kcalTarget ?? null;
@@ -66,6 +71,8 @@ export function TodayTab({
         : "Ваш день идёт."}</h1>
     </header>
 
+    {/* Калории и макросы — крупно и сразу, без раскрытия (раздел «Три отличия
+        от макета» спецификации Mini App v2, пункт 1). */}
     {showCalories && kcalMid
       ? <ProgressRing value={totals.kcal} max={kcalMid} label="Энергия" unit="ккал" />
       : null}
@@ -73,6 +80,8 @@ export function TodayTab({
     <section className="tg-card tg-macros">
       {showCalories && !kcalMid && <Bar label="Энергия" value={totals.kcal} target={null} unit="ккал" />}
       <Bar label="Белок" value={totals.protein} target={targets?.proteinTarget ?? null} unit="г" />
+      <Bar label="Жиры" value={totals.fat} target={targets?.fatTarget ?? null} unit="г" />
+      <Bar label="Углеводы" value={totals.carbs} target={targets?.carbsTarget ?? null} unit="г" />
       <Bar label="Клетчатка" value={totals.fiber} target={targets?.fiberTarget ?? null} unit="г" />
     </section>
 
@@ -81,13 +90,27 @@ export function TodayTab({
       <a className="tg-link" href="/app/onboarding" target="_blank" rel="noreferrer">Настроить план →</a>
     </section>}
 
+    <WeightTrend weight={data.weight} />
+
+    {/* Строка инбокса — только если снимки правда ждут; пустой инбокс на
+        «Сегодня» не упоминается вовсе (раздел «Три отличия от макета»,
+        пункт 2). Формулировка про «не успели подтвердить», а не «разберём
+        позже»: на практике люди пропускают не разбор, а подтверждение. */}
+    {data.inboxPending > 0 && <button className="tg-inbox-banner" onClick={onOpenInbox}>
+      <IconInbox />
+      <span>Не успели подтвердить: {withPluralRu(data.inboxPending, ["снимок", "снимка", "снимков"])}</span>
+      <b>→</b>
+    </button>}
+
+    <SuggestCard showCalories={showCalories} />
+
     <section className="tg-section">
       <h2>Приёмы пищи</h2>
       {data.meals.length === 0
         ? <div className="tg-empty">
             <IconToday />
             <p>Пока пусто. Запишите первый приём — это займёт меньше минуты.</p>
-            <button className="tg-button" onClick={onAdd}>Добавить еду</button>
+            <button className="tg-button" onClick={onOpenCamera}>Снять еду</button>
           </div>
         : <ul className="tg-meals">
             {data.meals.map((meal) => <li key={meal.id}>
