@@ -341,3 +341,47 @@
 
 .tg-profile-reminder-actions { display: flex; align-items: center; gap: 4px; margin-top: 12px; flex-wrap: wrap; }
 .tg-profile-reminder-actions .tg-button { flex: 1; min-width: fit-content; }
+
+/* ---------------------------------------------------------------------- */
+/* Ниже — стили экрана «Дневник» (Mini App v2). Дописано в конец файла по
+   тому же принципу, что и блок «План»/«Профиль» выше. */
+
+/* Переключение дней в шапке «Дневника»: стрелки по бокам от даты */
+.tg-diary-nav { display: flex; align-items: center; gap: 10px; }
+.tg-diary-nav h1 { flex: 1; text-align: center; font-size: 20px; letter-spacing: -0.01em; }
+.tg-diary-nav-btn {
+  flex-shrink: 0; width: 36px; height: 36px; border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--tg-surface); color: var(--tg-text); font-size: 18px; line-height: 1;
+  display: grid; place-items: center;
+}
+.tg-diary-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.tg-hero > .tg-link { align-self: center; }
+
+/* Компактный итог дня — те же числа, что на «Сегодня», но без колец и полос
+   прогресса: на «Дневнике» это контекст над списком приёмов, а не главная тема. */
+.tg-diary-summary { display: flex; flex-wrap: wrap; gap: 14px 20px; }
+.tg-diary-summary div { display: flex; flex-direction: column; gap: 2px; min-width: 56px; }
+.tg-diary-summary strong { font: 500 20px var(--brand-serif); font-variant-numeric: tabular-nums; }
+.tg-diary-summary span { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--tg-hint); }
+
+/* Список приёмов пищи с миниатюрой фото */
+.tg-diary-meals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tg-diary-meal {
+  appearance: none; border: 0; width: 100%; text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: 12px; font: inherit; color: inherit;
+  background: var(--tg-surface); border-radius: var(--radius); padding: 10px 14px;
+}
+.tg-diary-meal-thumb {
+  flex-shrink: 0; width: 44px; height: 44px; border-radius: 10px; overflow: hidden;
+  display: grid; place-items: center; background: color-mix(in srgb, var(--tg-hint) 12%, transparent);
+  color: color-mix(in srgb, var(--tg-hint) 55%, transparent);
+}
+.tg-diary-meal-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tg-diary-meal time { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--tg-hint); font-variant-numeric: tabular-nums; }
+.tg-diary-meal-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tg-diary-meal-body b { font-size: 14px; }
+.tg-diary-meal-body span { font-size: 12px; color: var(--tg-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-diary-meal-macros { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; white-space: nowrap; }
+.tg-diary-meal-macros b { font: 500 15px var(--brand-serif); }
+.tg-diary-meal-macros b i { font-style: normal; font-size: 10px; font-weight: 600; color: var(--tg-hint); margin-left: 2px; }
+.tg-diary-meal-macros > span { font: 500 10.5px var(--font-body), sans-serif; color: var(--tg-hint); }
