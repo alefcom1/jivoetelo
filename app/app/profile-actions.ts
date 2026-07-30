@@ -28,6 +28,14 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   const birthYear = Number(formData.get("birthYear"));
   const heightCm = Number(formData.get("heightCm"));
   const weightKg = Number(formData.get("weightKg"));
+  // Поправка темпа из шага «темп» онбординга v2 (lib/onboarding.ts, deriveLivePlan).
+  // Поле необязательное: старые вызовы (и любой сценарий, где темп не выбирали)
+  // его не пришлют, и это ничем не отличается от поведения v1 — поправка 0.
+  const kcalAdjustmentRaw = formData.get("kcalAdjustment");
+  const kcalAdjustment =
+    kcalAdjustmentRaw !== null && Number.isFinite(Number(kcalAdjustmentRaw))
+      ? Math.min(450, Math.max(-450, Math.round(Number(kcalAdjustmentRaw))))
+      : 0;
 
   const currentYear = new Date().getFullYear();
   const valid =
@@ -43,10 +51,10 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     const db = getDb();
     await db
       .insert(profiles)
-      .values({ userId: user.id, goal, sexForFormula, birthYear, heightCm, activity, updatedAt: new Date() })
+      .values({ userId: user.id, goal, sexForFormula, birthYear, heightCm, activity, kcalAdjustment, updatedAt: new Date() })
       .onConflictDoUpdate({
         target: profiles.userId,
-        set: { goal, sexForFormula, birthYear, heightCm, activity, updatedAt: new Date() },
+        set: { goal, sexForFormula, birthYear, heightCm, activity, kcalAdjustment, updatedAt: new Date() },
       });
     await db
       .insert(weightEntries)
