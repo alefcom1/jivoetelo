@@ -1,6 +1,6 @@
 "use client";
 
-import { pointsToPolyline, sparklinePoints } from "@/lib/sparkline";
+import { pointsToArea, pointsToPolyline, sparklinePoints } from "@/lib/sparkline";
 import type { TgWeight } from "./api";
 
 const WIDTH = 280;
@@ -41,6 +41,16 @@ export function WeightTrend({ weight }: { weight: TgWeight | null }) {
       role="img"
       aria-label={`Тренд веса: ${last.trendKg} кг`}
     >
+      <defs>
+        {/* Заливка под линией: одинокая линия на пустом поле выглядела
+            черновиком. Градиент вниз до прозрачного — чтобы низ карточки не
+            превращался в цветную плашку. */}
+        <linearGradient id="tg-area-gradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--brand-coral)" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="var(--brand-coral)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path className="tg-weight-area" d={pointsToArea(points, HEIGHT)} />
       <polyline points={pointsToPolyline(points)} />
     </svg>}
   </section>;

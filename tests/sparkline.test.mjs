@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { pointsToPolyline, sparklinePoints } from "../lib/sparkline.ts";
+import { pointsToArea, pointsToPolyline, sparklinePoints } from "../lib/sparkline.ts";
 
 test("пустой ряд — пустой список точек, без ошибок", () => {
   assert.deepEqual(sparklinePoints([], 100, 40), []);
@@ -37,4 +37,22 @@ test("все точки укладываются в границы height", () =
 test("pointsToPolyline даёт строку вида «x,y x,y» с одним знаком после запятой", () => {
   const str = pointsToPolyline([{ x: 1, y: 2 }, { x: 3.456, y: 7.891 }]);
   assert.equal(str, "1.0,2.0 3.5,7.9");
+});
+
+test("pointsToArea замыкает линию вниз до базовой отметки", () => {
+  const area = pointsToArea([{ x: 0, y: 10 }, { x: 10, y: 4 }, { x: 20, y: 8 }], 40);
+  assert.equal(area, "M0.0,10.0 L10.0,4.0 L20.0,8.0 L20.0,40.0 L0.0,40.0 Z");
+});
+
+test("pointsToArea на падающем тренде не уводит заливку выше линии", () => {
+  // Ради этого и заведена отдельная фигура: у <polyline fill> контур
+  // замкнулся бы по прямой из последней точки в первую, и на снижении веса
+  // закрашенной оказалась бы область над графиком, а не под ним.
+  const area = pointsToArea([{ x: 0, y: 4 }, { x: 20, y: 16 }], 30);
+  assert.ok(area.endsWith("L20.0,30.0 L0.0,30.0 Z"), area);
+});
+
+test("одна точка или пусто — фигуры нет", () => {
+  assert.equal(pointsToArea([{ x: 1, y: 2 }], 10), "");
+  assert.equal(pointsToArea([], 10), "");
 });

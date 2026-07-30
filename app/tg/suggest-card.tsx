@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { fetchSuggestions, type SuggestResponse } from "./api";
+import { FoodIcon } from "./food-icon";
 import { IconSuggest } from "./icons";
 import { haptic } from "./telegram";
 
@@ -44,13 +45,16 @@ export function SuggestCard({ showCalories }: { showCalories: boolean }) {
 
     {data && !data.needsPlan && <ul className="tg-suggestions">
       {data.suggestions.map((suggestion) => <li className="tg-suggestion" key={suggestion.title}>
-        <h3>{suggestion.title}</h3>
-        <p>{suggestion.why}</p>
-        <footer>
-          {showCalories && <span>~{suggestion.approxKcal} ккал</span>}
-          <span>белок ~{suggestion.approxProtein} г</span>
-          <span>{suggestion.timeMinutes <= 5 ? "почти без готовки" : `~${suggestion.timeMinutes} мин`}</span>
-        </footer>
+        <FoodIcon name={suggestion.title} size="lg" />
+        <div className="tg-suggestion-body">
+          <h3>{suggestion.title}</h3>
+          <p>{suggestion.why}</p>
+          <footer>
+            {showCalories && <span>~{suggestion.approxKcal} ккал</span>}
+            <span>белок ~{suggestion.approxProtein} г</span>
+            <span>{suggestion.timeMinutes <= 5 ? "почти без готовки" : `~${suggestion.timeMinutes} мин`}</span>
+          </footer>
+        </div>
       </li>)}
     </ul>}
 

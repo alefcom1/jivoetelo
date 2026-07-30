@@ -7,19 +7,27 @@
 
 import { useEffect, useState } from "react";
 import { formatDayRu, localToday, shiftDay } from "@/lib/dates";
+import { mealCategory } from "@/lib/food-category";
 import { fetchDiaryDay, type DiaryDayResponse, type DiaryMeal } from "./diary-api";
-import { IconInbox } from "./icons";
+import { FoodIcon, foodTint } from "./food-icon";
+import { ArtEmptyPlate } from "./illustrations";
 import { MealEditor } from "./meal-editor";
 import { haptic } from "./telegram";
 import { TgPhoto } from "./photo";
 
 function DiaryMealRow({ meal, showCalories, onOpen }: { meal: DiaryMeal; showCalories: boolean; onOpen: () => void }) {
+  // Превью разбираем обратно на позиции, а не скармливаем строкой целиком:
+  // по строке «Яблоко зелёное, Миндаль жареный» победила бы самая длинная
+  // основа (миндаль), и «Дневник» показал бы для того же приёма пищи не тот
+  // значок, что «Сегодня». Правило выбора основного блюда — одно на оба
+  // экрана, в mealCategory.
+  const category = mealCategory(meal.itemsPreview.split(",").map((part) => part.trim()).filter(Boolean));
   return <li>
     <button className="tg-diary-meal" onClick={onOpen}>
-      <span className="tg-diary-meal-thumb">
+      <span className="tg-diary-meal-thumb" style={foodTint(category)}>
         {meal.photoKey
           ? <TgPhoto photoKey={meal.photoKey} alt="" />
-          : <IconInbox />}
+          : <FoodIcon category={category} size="md" />}
       </span>
       <time>{meal.time}</time>
       <span className="tg-diary-meal-body">
@@ -36,12 +44,16 @@ function DiaryMealRow({ meal, showCalories, onOpen }: { meal: DiaryMeal; showCal
 
 function DiarySummary({ data }: { data: DiaryDayResponse }) {
   const { totals, targets, showCalories } = data;
+  // Цвета те же, что у полос на «Сегодня» (--hue-*): одно и то же число не
+  // должно менять цвет от экрана к экрану.
   return <div className="tg-card tg-diary-summary">
-    {showCalories && <div><strong>{totals.kcal}</strong><span>{targets ? `из ${targets.kcalTarget} ккал` : "ккал"}</span></div>}
-    <div><strong>{totals.protein}</strong><span>белок, г</span></div>
-    <div><strong>{totals.fat}</strong><span>жиры, г</span></div>
-    <div><strong>{totals.carbs}</strong><span>углеводы, г</span></div>
-    <div><strong>{totals.fiber}</strong><span>клетчатка, г</span></div>
+    {showCalories && <div className="tg-bar--energy">
+      <strong>{totals.kcal}</strong><span>{targets ? `из ${targets.kcalTarget} ккал` : "ккал"}</span>
+    </div>}
+    <div className="tg-bar--protein"><strong>{totals.protein}</strong><span>белок, г</span></div>
+    <div className="tg-bar--fat"><strong>{totals.fat}</strong><span>жиры, г</span></div>
+    <div className="tg-bar--carbs"><strong>{totals.carbs}</strong><span>углеводы, г</span></div>
+    <div className="tg-bar--fiber"><strong>{totals.fiber}</strong><span>клетчатка, г</span></div>
   </div>;
 }
 
@@ -133,7 +145,7 @@ export function DiaryTab({ onOpenCamera }: { onOpenCamera: () => void }) {
       <h2>Приёмы пищи</h2>
       {data.meals.length === 0
         ? <div className="tg-empty">
-            <IconInbox />
+            <ArtEmptyPlate />
             {/* Честное пустое состояние: для прошлого дня не притворяемся, что
                 запись здесь всё ещё можно сделать «задним числом» — новая
                 запись всегда ляжет сегодняшним днём (см. хинт под кнопкой ниже). */}

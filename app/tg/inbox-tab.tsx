@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { dismissInboxItem, fetchInbox, type InboxItemDto } from "./api";
+import { ArtPhotos } from "./illustrations";
 import { haptic } from "./telegram";
 import { TgPhoto } from "./photo";
 
@@ -67,7 +68,8 @@ export function InboxTab({ onPick, onBack }: { onPick: (item: InboxItemDto) => v
     return <div className="tg-page">
       {backLink}
       <header className="tg-hero"><h1>Инбокс пуст</h1></header>
-      <section className="tg-card tg-hint-card">
+      <section className="tg-card tg-empty-card">
+        <ArtPhotos />
         <p>
           Пришлите боту фото еды — хоть в кафе, хоть на бегу. Снимки подождут здесь, а разобрать их можно
           вечером, за пару минут.

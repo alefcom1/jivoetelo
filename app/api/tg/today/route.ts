@@ -33,6 +33,10 @@ export async function GET(request: Request) {
       time: meal.eatenTime,
       title: MEAL_TYPE_LABELS[meal.mealType] ?? MEAL_TYPE_LABELS.other,
       items: meal.itemNames,
+      // Снимок отдаём ключом, а не ссылкой: качает его Mini App отдельным
+      // запросом с подписью initData (app/tg/photo.tsx) — в адрес картинки
+      // подпись класть нельзя.
+      photoKey: meal.photoKey,
       kcal: meal.totals.kcal,
       protein: meal.totals.protein,
     })),

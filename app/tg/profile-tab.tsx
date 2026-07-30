@@ -22,6 +22,24 @@ import { haptic } from "./telegram";
 
 const DIGEST_HOURS = Array.from({ length: MAX_DIGEST_HOUR - MIN_DIGEST_HOUR + 1 }, (_, i) => MIN_DIGEST_HOUR + i);
 
+/**
+ * Монограмма вместо аватара. Аватар у Telegram есть (`initDataUnsafe.user.
+ * photo_url`), но лежит он на его CDN — это внешний хост в интерфейсе,
+ * который обязан открываться и без доступа к нему. Буква и тон, выведенные
+ * из самого адреса почты, дают то же узнавание без единого запроса наружу и
+ * при этом у каждого человека свои.
+ */
+function Monogram({ email }: { email: string }) {
+  const letter = (email.trim()[0] ?? "Ж").toUpperCase();
+  // Простая устойчивая свёртка: одна и та же почта — всегда один и тот же
+  // цвет, на любом устройстве и после любой перезагрузки.
+  let sum = 0;
+  for (const char of email) sum = (sum + char.charCodeAt(0) * 31) % 360;
+  return <span className="tg-profile-avatar" style={{ "--food-hue": sum } as React.CSSProperties} aria-hidden>
+    {letter}
+  </span>;
+}
+
 function GoalsSection({ profile, onSaved }: { profile: ProfileResponse; onSaved: () => void }) {
   const { goals, paceResult, latestWeightKg } = profile;
   const [targetWeight, setTargetWeight] = useState(goals?.targetWeightKg != null ? String(goals.targetWeightKg) : "");
@@ -299,12 +317,17 @@ export function ProfileTab({ onUnlinked }: { onUnlinked?: () => void }) {
   }
 
   return <div className="tg-page">
-    <header className="tg-hero"><h1>Профиль</h1></header>
+    <section className="tg-card tg-profile-head">
+      <Monogram email={data.email} />
+      <div className="tg-profile-head-body">
+        <h1>Профиль</h1>
+        <p>{data.email}</p>
+        <span className="tg-badge">Бесплатный тариф</span>
+      </div>
+    </section>
 
     <section className="tg-card">
-      <p className="tg-kicker">Аккаунт</p>
-      <p>{data.email}</p>
-      <p className="tg-hint">Тариф: бесплатный — доступны все возможности сервиса.</p>
+      <p className="tg-hint">Бесплатный тариф — доступны все возможности сервиса.</p>
       <a className="tg-link" href="/app/settings" target="_blank" rel="noreferrer">Данные, согласия и удаление аккаунта — в веб-версии →</a>
     </section>
 

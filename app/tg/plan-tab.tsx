@@ -7,7 +7,9 @@
 // же, одной прокруткой из нескольких секций.
 
 import { useEffect, useState } from "react";
+import { pointsToArea } from "@/lib/sparkline";
 import { buildWeightChart } from "@/lib/weight-chart";
+import { ArtTrend } from "./illustrations";
 import { fetchPlan, type PlanResponse } from "./plan-profile-api";
 
 const CHART_WIDTH = 320;
@@ -36,6 +38,16 @@ function WeightChart({ trend, targetWeightKg }: { trend: PlanResponse["trend"]; 
     role="img"
     aria-label="График тренда веса"
   >
+    <defs>
+      {/* Идентификатор тот же, что у мини-графика на «Сегодня»: экраны не
+          показываются одновременно, а определение градиента — часть того
+          SVG, в котором оно объявлено. */}
+      <linearGradient id="tg-area-gradient" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="var(--brand-coral)" stopOpacity="0.22" />
+        <stop offset="100%" stopColor="var(--brand-coral)" stopOpacity="0" />
+      </linearGradient>
+    </defs>
+    {chart.points.length > 1 && <path className="tg-chart-area" d={pointsToArea(chart.points, CHART_HEIGHT)} />}
     {chart.targetY !== null && <line
       className="tg-chart-target"
       x1={CHART_PADDING} x2={CHART_WIDTH - CHART_PADDING}
@@ -96,7 +108,7 @@ export function PlanTab() {
     {targets
       ? <section className="tg-card tg-plan-target">
           <p className="tg-kicker">Цель по энергии</p>
-          <p className="tg-plan-target-value"><strong>{targets.kcalTarget}</strong><span> ккал в день</span></p>
+          <p className="tg-plan-target-value tg-bar--energy"><strong>{targets.kcalTarget}</strong><span> ккал в день</span></p>
           <p className="tg-hint">Вероятно между {targets.kcalMin} и {targets.kcalMax} ккал · белок {targets.proteinTarget} г · клетчатка {targets.fiberTarget} г</p>
           {targets.adjusted && <p className="tg-hint">Число поднято до безопасного минимума.</p>}
 
@@ -140,7 +152,8 @@ export function PlanTab() {
               <div><strong>{targetWeightKg ?? "—"}</strong><span>цель, кг</span></div>
             </div>
           </div>
-        : <div className="tg-card tg-hint-card">
+        : <div className="tg-card tg-empty-card">
+            <ArtTrend />
             <p>
               {latestWeightKg === null
                 ? "Замеров веса пока нет. Первый появится в веб-профиле или в течение недели покажет тренд здесь."

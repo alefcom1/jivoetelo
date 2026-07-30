@@ -16,6 +16,8 @@ export type DayMeal = {
   eatenTime: string;
   mealType: string;
   itemNames: string[];
+  /** Снимок приёма пищи, если он делался — миниатюра в списке «Сегодня». */
+  photoKey: string | null;
   totals: NutritionTotals;
 };
 
@@ -54,6 +56,7 @@ export async function getDaySummary(userId: number, day: string): Promise<DaySum
         eatenTime: meal.eatenTime,
         mealType: meal.mealType,
         itemNames: mealItemList.map((i) => i.name),
+        photoKey: meal.photoKey,
         totals: sumTotals(mealItemList),
       };
     }),

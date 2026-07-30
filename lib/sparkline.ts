@@ -41,3 +41,20 @@ export function sparklinePoints(
 export function pointsToPolyline(points: SparklinePoint[]): string {
   return points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 }
+
+/**
+ * Та же линия, но замкнутая вниз до `baselineY` — под неё можно положить
+ * градиентную заливку. Отдельная строка, а не заливка самой полилинии: у
+ * `<polyline fill>` фигура замыкается по прямой от последней точки к первой,
+ * и на падающем тренде заливка уезжает выше линии.
+ *
+ * Меньше двух точек — пустая строка: площадь под одной точкой не фигура, и
+ * рисовать там нечего.
+ */
+export function pointsToArea(points: SparklinePoint[], baselineY: number): string {
+  if (points.length < 2) return "";
+  const first = points[0];
+  const last = points[points.length - 1];
+  const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  return `${line} L${last.x.toFixed(1)},${baselineY.toFixed(1)} L${first.x.toFixed(1)},${baselineY.toFixed(1)} Z`;
+}

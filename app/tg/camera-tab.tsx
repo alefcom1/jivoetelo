@@ -10,6 +10,8 @@ import {
 } from "./api";
 import { CONFIDENCE_LABELS, confidenceRange, overallConfidence, type Confidence } from "@/lib/confidence";
 import { scaleGrams } from "@/lib/portions";
+import { FoodIcon } from "./food-icon";
+import { ArtCamera } from "./illustrations";
 import { haptic, useMainButtonApi } from "./telegram";
 import { TgPhoto } from "./photo";
 
@@ -247,7 +249,10 @@ export function CameraTab({
                 // устройства, авторизация ему не нужна и TgPhoto здесь не при чём.
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={preview} alt="Предпросмотр блюда" />
-                : <span>Снимите блюдо или выберите фото — разбор начнётся сразу</span>}
+                : <span className="tg-photo-drop-empty">
+                    <ArtCamera />
+                    Снимите блюдо или выберите фото — разбор начнётся сразу
+                  </span>}
             </label>
           </div>}
 
@@ -301,6 +306,9 @@ export function CameraTab({
     <ul className="tg-draft">
       {items.map((item, index) => <li key={index}>
         <div className="tg-draft-row">
+          {/* Значок категории — не украшение: в списке из пяти позиций он
+              единственное, за что цепляется глаз при беглом просмотре. */}
+          <FoodIcon name={item.name} size="sm" />
           <b>{item.name}</b>
           {/* Степпер и множители порций ниже — это и есть «изменить порцию»:
               отдельной кнопки не нужно, редактирование доступно сразу. */}

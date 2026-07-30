@@ -14,7 +14,16 @@ export type TgTargets = {
   fatTarget: number;
   carbsTarget: number;
 };
-export type TgMeal = { id: number; time: string; title: string; items: string[]; kcal: number; protein: number };
+export type TgMeal = {
+  id: number;
+  time: string;
+  title: string;
+  items: string[];
+  /** Снимок приёма пищи или null, если еду вводили текстом. */
+  photoKey: string | null;
+  kcal: number;
+  protein: number;
+};
 
 /** Точка тренда веса — тот же формат, что и в вебе (lib/trend.ts). */
 export type TgWeightPoint = { onDate: string; weightKg: number; trendKg: number };
