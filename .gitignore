@@ -39,3 +39,6 @@ next-env.d.ts
 
 # typescript incremental build info
 *.tsbuildinfo
+
+# Рабочие копии фоновых агентов — временные, в репозиторий не идут.
+.claude/worktrees/
