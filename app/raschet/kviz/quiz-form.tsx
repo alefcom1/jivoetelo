@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { evaluateQuiz, type QuizAnswers } from "@/lib/quiz";
+import EmailCapture from "../email-capture";
 
 type FormValues = Partial<QuizAnswers>;
 
@@ -137,7 +138,11 @@ export default function QuizForm() {
     window.setTimeout(() => setCopied(false), 2000);
   }
 
-  return <form className="raschet-form" onSubmit={(event) => event.preventDefault()}>
+  // Обёртка — div, а не form: отправлять здесь нечего, вердикт считается
+  // прямо при ответах. Ниже, внутри вердикта, стоит настоящая форма
+  // подписки, а вложенные формы браузер не разбирает (тот же приём, что в
+  // energy-form.tsx).
+  return <div className="raschet-form">
     <fieldset>
       <legend>Что вами движет сейчас?</legend>
       <div className="radio-row">
@@ -240,6 +245,10 @@ export default function QuizForm() {
               {copied ? "Ссылка скопирована" : "Скопировать ссылку на результат"}
             </button>}
         </div>
+        {/* Контекста здесь нет: квиз не считает ни калорий, ни белка —
+            письма серии просто обойдутся без конкретных цифр (renderLetter
+            в lib/email-series.ts). */}
+        <EmailCapture source="raschet_kviz" />
       </div>}
-  </form>;
+  </div>;
 }

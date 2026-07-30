@@ -218,13 +218,17 @@ export const botPreferences = pgTable("bot_preferences", {
 export const emailSubscribers = pgTable("email_subscribers", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
-  // Откуда пришёл адрес: raschet_energiya | raschet_belok | raschet_kviz.
+  // Откуда пришёл адрес: raschet_energiya | raschet_belok | raschet_temp |
+  // raschet_kviz | skolko_kalorij:<слаг блюда>. У страниц блюд источников
+  // по числу блюд — слаг после двоеточия и показывает, какая именно
+  // страница привела подписчика (lib/email-subscribe.ts).
   source: text("source").notNull(),
   consentVersion: text("consent_version"),
   // Секрет для ссылки отписки. Одноразовым его делать нельзя: ссылка живёт
   // во всех письмах серии и должна работать всегда.
   unsubscribeToken: text("unsubscribe_token").notNull().unique(),
-  // Данные расчёта, чтобы первое письмо повторяло увиденные цифры.
+  // Данные расчёта, чтобы первое письмо повторяло увиденные цифры. У
+  // калькулятора без чисел (квиз) и у страницы блюда — пустой объект.
   context: jsonb("context"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),

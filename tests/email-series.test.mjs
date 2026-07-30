@@ -83,18 +83,82 @@ test("темы писем помещаются в список входящих"
   }
 });
 
+// Форма подписки теперь стоит не только на расчёте энергии: у квиза и у
+// страницы блюда чисел нет вовсе, а у белка и темпа — только часть из тех
+// четырёх, что знают тексты писем. Эти тесты проверяют, что renderLetter не
+// падает на неполном контексте и не оставляет писем без единого абзаца.
+// Абзац без плейсхолдера, взятый из каждого шаблона, — маркер того, что
+// текст про сам подход (а не про конкретные цифры) уцелел в письме.
+const PLACEHOLDER_FREE_MARKER = {
+  1: /Формула Миффлина-Сан Жеора/,
+  2: /У вас есть то, чего у формулы нет по определению/,
+  3: /В приложении это устроено так/,
+};
+
+test("без контекста письмо всё равно связное — просто без чисел", () => {
+  for (const letter of LETTER_NUMBERS) {
+    const rendered = renderLetter(letter, {}, LINKS);
+    for (const part of [rendered.subject, rendered.preheader, rendered.text, rendered.html]) {
+      assert.doesNotMatch(part, /\{\{|\}\}/, `письмо ${letter}`);
+    }
+    // Абзацы про формулу и её ограничения не завязаны на конкретные цифры —
+    // они остаются в письме и без контекста, а не выпадают вместе с числами.
+    assert.match(rendered.text, PLACEHOLDER_FREE_MARKER[letter], `письмо ${letter} потеряло текст без цифр`);
+  }
+});
+
+test("тема первого письма не остаётся с дырой от отсутствующего kcalTarget", () => {
+  const { subject } = renderLetter(1, {}, LINKS);
+  assert.doesNotMatch(subject, /\{\{|\}\}/);
+  assert.ok(subject.length > 0 && subject.length <= 60);
+});
+
+test("частичный контекст заполняет то, что есть, и пропускает абзац с недостающим числом", () => {
+  // У расчёта белка есть только proteinTarget — абзац первого письма про
+  // диапазон ккал (kcalMin/kcalMax) в этом случае пропадает, а абзац про
+  // белок остаётся.
+  const { text } = renderLetter(1, { proteinTarget: 96 }, LINKS);
+  assert.match(text, /96 г/);
+  assert.doesNotMatch(text, /\{\{|\}\}/);
+});
+
 test("контекст из базы проверяется заново", () => {
   assert.deepEqual(parseSeriesContext(CTX), CTX);
   assert.equal(parseSeriesContext(null), null);
   assert.equal(parseSeriesContext("1870"), null);
   assert.equal(parseSeriesContext({ ...CTX, kcalTarget: 0 }), null);
   assert.equal(parseSeriesContext({ ...CTX, proteinTarget: "много" }), null);
-  assert.equal(parseSeriesContext({ kcalTarget: 1870 }), null);
 });
 
 test("несогласованные границы отбраковываются: письмо с 2000–1740 бессмысленно", () => {
   assert.equal(parseSeriesContext({ ...CTX, kcalMin: 2100 }), null);
   assert.equal(parseSeriesContext({ ...CTX, kcalMax: 1800 }), null);
+});
+
+// Раньше форма подписки стояла только на расчёте энергии, и все четыре поля
+// были обязательны. Теперь источников несколько, и у каждого свой набор
+// чисел — эти тесты фиксируют новое, более мягкое правило.
+test("поле, которого калькулятор не считает, — это не ошибка", () => {
+  // У расчёта белка нет kcalTarget вовсе, и это не повод браковать контекст —
+  // он просто состоит из одного числа.
+  assert.deepEqual(parseSeriesContext({ proteinTarget: 96 }), { proteinTarget: 96 });
+  assert.deepEqual(parseSeriesContext({ kcalTarget: 1870 }), { kcalTarget: 1870 });
+});
+
+test("пустой контекст — валиден: у страницы блюда и у квиза чисел нет вовсе", () => {
+  assert.deepEqual(parseSeriesContext({}), {});
+});
+
+test("согласованность границ проверяется только для пар, что вообще присутствуют", () => {
+  // Одного kcalTarget без kcalMin/kcalMax сравнивать не с чем — это валидный частичный контекст.
+  assert.deepEqual(parseSeriesContext({ kcalTarget: 1870 }), { kcalTarget: 1870 });
+  // А если оба края есть без цели, перевёрнутая пара всё равно отбраковывается.
+  assert.equal(parseSeriesContext({ kcalMin: 2000, kcalMax: 1800 }), null);
+  assert.deepEqual(parseSeriesContext({ kcalMin: 1800, kcalMax: 2000 }), { kcalMin: 1800, kcalMax: 2000 });
+});
+
+test("лишние поля в объекте игнорируются, а не попадают в контекст", () => {
+  assert.deepEqual(parseSeriesContext({ proteinTarget: 96, dishSlug: "borshch" }), { proteinTarget: 96 });
 });
 
 test("первое письмо уходит сразу, остальные — через 2 и 5 дней", () => {
@@ -134,4 +198,35 @@ test("номера писем проверяются", () => {
   assert.ok(isLetterNumber(3));
   assert.ok(!isLetterNumber(0));
   assert.ok(!isLetterNumber(4));
+});
+
+/**
+ * Серия — это три письма подряд, и второе может ссылаться на то, что было в
+ * первом. Когда абзац с числом выпадает из-за неполного контекста, ссылка на
+ * него из следующего письма превращается в разговор о том, чего человек не
+ * читал. Проверяем не текст, а само правило: абзац живёт только если в
+ * контексте есть все числа, которые он упоминает.
+ */
+test("письмо не упоминает чисел, которых у подписчика не было", () => {
+  const options = { unsubscribeUrl: "https://example.test/u", siteUrl: "https://example.test" };
+  const contexts = [
+    {},
+    { proteinTarget: 104 },
+    { kcalTarget: 1830 },
+    { kcalTarget: 1850, kcalMin: 1720, kcalMax: 1980, proteinTarget: 104 },
+  ];
+
+  for (const context of contexts) {
+    const known = new Set(Object.keys(context));
+    for (const number of [1, 2, 3]) {
+      const letter = renderLetter(number, context, options);
+      const body = `${letter.subject}\n${letter.preheader ?? ""}\n${letter.text}`;
+      assert.doesNotMatch(body, /\{\{|\}\}|undefined|NaN/, `письмо ${number}, контекст ${JSON.stringify(context)}`);
+      // Границы упоминаются только тогда, когда они пришли в контексте.
+      if (!known.has("kcalMin") || !known.has("kcalMax")) {
+        assert.doesNotMatch(body, /границы вокруг/i, `письмо ${number} зовёт границы, которых не было`);
+      }
+      assert.ok(letter.text.trim().length > 400, `письмо ${number} схлопнулось: ${letter.text.trim().length} символов`);
+    }
+  }
 });

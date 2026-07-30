@@ -1,21 +1,45 @@
 "use client";
 
 import { useActionState } from "react";
-import { subscribeToBreakdown, type SubscribeState } from "../subscribe-action";
-import type { Targets } from "@/lib/targets";
+import { subscribeToBreakdown, type SubscribeState } from "./subscribe-action";
+import type { SubscribeSource } from "@/lib/subscribe-source";
 
 const initialState: SubscribeState = { status: "idle" };
+
+/**
+ * Числа расчёта, которые умеют показывать письма серии, — см.
+ * SERIES_CONTEXT_FIELDS в lib/email-series.ts. Список продублирован здесь
+ * буквально, а не импортирован: тот модуль тянет за собой lib/dates.ts ради
+ * scheduleLetterAt, а клиентскому компоненту из всего этого нужны только
+ * четыре имени полей для скрытых input.
+ */
+const CONTEXT_FIELDS = ["kcalTarget", "kcalMin", "kcalMax", "proteinTarget"] as const;
+
+export type EmailCaptureContext = Partial<Record<(typeof CONTEXT_FIELDS)[number], number>>;
 
 /**
  * Предложение получить разбор расчёта письмом. Появляется только после того,
  * как человек увидел числа: до этого предлагать нечего, и форма выглядела бы
  * платой за вход, а не продолжением.
  *
- * Числа уходят скрытыми полями — те же самые, что показаны выше. Так письмо
- * повторяет ровно то, что человек видел, и серверу не нужны ни рост, ни
- * возраст, ни вес.
+ * Раньше форма принимала целиком `Targets` энергии — единственного
+ * калькулятора, где стояла. Теперь источников несколько, и у каждого свой
+ * набор чисел (у белка — только грамм в день, у страницы блюда — вообще
+ * никаких), поэтому компонент берёт источник и произвольное подмножество
+ * чисел, а не завязан на форму одного конкретного расчёта.
+ *
+ * Числа уходят скрытыми полями — те же самые, что показаны на странице. Так
+ * письмо повторяет ровно то, что человек видел, и серверу не нужны ни рост,
+ * ни возраст, ни вес.
  */
-export default function EmailCapture({ targets }: { targets: Targets }) {
+export default function EmailCapture({
+  source,
+  context = {},
+}: {
+  /** Какой калькулятор или какая страница блюда показывает форму — см. lib/subscribe-source.ts. */
+  source: SubscribeSource;
+  context?: EmailCaptureContext;
+}) {
   const [state, formAction, pending] = useActionState(subscribeToBreakdown, initialState);
 
   if (state.status === "success") {
@@ -32,10 +56,10 @@ export default function EmailCapture({ targets }: { targets: Targets }) {
       Без рассылки о скидках.
     </p>
 
-    <input type="hidden" name="kcalTarget" value={targets.kcalTarget} />
-    <input type="hidden" name="kcalMin" value={targets.kcalMin} />
-    <input type="hidden" name="kcalMax" value={targets.kcalMax} />
-    <input type="hidden" name="proteinTarget" value={targets.proteinTarget} />
+    <input type="hidden" name="source" value={source} />
+    {CONTEXT_FIELDS.map((field) =>
+      context[field] !== undefined &&
+      <input key={field} type="hidden" name={field} value={context[field]} />)}
 
     <div className="raschet-capture-row">
       <input
