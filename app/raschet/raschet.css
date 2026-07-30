@@ -484,3 +484,45 @@
 .pace-verdict-safe {
   border-left-color: #7f9a3c;
 }
+
+/* Ответ на странице блюда. Диапазон крупно, точка мелко и следом — это
+   осознанный акцент: у таблиц-конкурентов ровно наоборот, и именно
+   перевёрнутая иерархия отличает нашу страницу от них. */
+.dish-answer {
+  margin: 32px 0 28px;
+  padding: 26px 28px;
+  background: var(--white);
+  border: 1px solid var(--line);
+}
+
+.dish-range {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 6px;
+  font: 500 clamp(36px, 6vw, 54px) / 1 var(--serif);
+  letter-spacing: -0.04em;
+}
+
+.dish-range span {
+  font: 700 12px var(--sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.dish-per100 {
+  margin: 14px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.dish-answer .raschet-submetrics {
+  margin-top: 16px;
+}
+
+.kicker a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
