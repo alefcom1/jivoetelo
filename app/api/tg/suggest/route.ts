@@ -1,3 +1,4 @@
+import { MealAnalysisError, SUGGEST_ERRORS } from "@/lib/ai";
 import { getSuggestionProvider } from "@/lib/ai/suggest";
 import { localToday } from "@/lib/dates";
 import { getDaySummary } from "@/lib/meals";
@@ -44,7 +45,10 @@ export async function GET(request: Request) {
     await recordUsage(auth.user.id, "suggest", result.usage);
     return Response.json({ needsPlan: false, context, suggestions: result.suggestions });
   } catch (error) {
+    if (error instanceof MealAnalysisError && error.reason === "disabled") {
+      return Response.json({ error: SUGGEST_ERRORS.disabled }, { status: 503 });
+    }
     console.error("tg suggest failed", error);
-    return Response.json({ error: "Не получилось подобрать варианты. Попробуйте через минуту." }, { status: 502 });
+    return Response.json({ error: SUGGEST_ERRORS.failed }, { status: 502 });
   }
 }

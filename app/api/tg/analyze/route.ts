@@ -1,4 +1,4 @@
-import { getMealProvider, MealAnalysisError } from "@/lib/ai";
+import { ANALYSIS_ERRORS, getMealProvider, MealAnalysisError } from "@/lib/ai";
 import { getPendingItem } from "@/lib/inbox";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import {
@@ -10,12 +10,6 @@ import {
   savePhoto,
 } from "@/lib/storage";
 import { authorize } from "../_auth";
-
-const ANALYSIS_ERRORS: Record<string, string> = {
-  refused: "Не получилось разобрать. Попробуйте описать еду текстом.",
-  invalid_output: "Разбор не удался — попробуйте ещё раз или заполните вручную.",
-  provider_error: "Сервис разбора сейчас недоступен. Попробуйте через минуту.",
-};
 
 export async function POST(request: Request) {
   const auth = await authorize(request);
@@ -83,7 +77,10 @@ export async function POST(request: Request) {
   } catch (error) {
     if (photoKey) await deletePhoto(photoKey).catch(() => {});
     if (error instanceof MealAnalysisError) {
-      return Response.json({ error: ANALYSIS_ERRORS[error.reason] }, { status: 502 });
+      // 503 у выключенного разбора, а не 502: это не сбой апстрима,
+      // а осознанно недоступная возможность.
+      const status = error.reason === "disabled" ? 503 : 502;
+      return Response.json({ error: ANALYSIS_ERRORS[error.reason] }, { status });
     }
     console.error("tg analyze failed", error);
     return Response.json({ error: ANALYSIS_ERRORS.provider_error }, { status: 500 });

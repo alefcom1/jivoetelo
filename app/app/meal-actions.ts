@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
 import { mealItems, meals, users } from "@/db/schema";
-import { getMealProvider, MealAnalysisError, type MealAnalysis } from "@/lib/ai";
+import { ANALYSIS_ERRORS, getMealProvider, MealAnalysisError, type MealAnalysis } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { getPendingItem, markProcessed } from "@/lib/inbox";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
@@ -22,12 +22,6 @@ import {
 export type AnalyzeResult =
   | { ok: true; analysis: MealAnalysis; photoKey: string | null; sourceText: string | null }
   | { ok: false; error: string };
-
-const ANALYSIS_ERRORS: Record<string, string> = {
-  refused: "Не получилось разобрать этот запрос. Попробуйте описать еду текстом.",
-  invalid_output: "Разбор не удался — попробуйте ещё раз или добавьте еду вручную.",
-  provider_error: "Сервис разбора сейчас недоступен. Попробуйте через минуту или добавьте еду вручную.",
-};
 
 export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
   const user = await getCurrentUser();

@@ -3,8 +3,8 @@
  * Проверка окружения перед деплоем: `npm run preflight`.
  *
  * Смысл — поймать всё, что молча ломается уже в бою: забытый токен прокси
- * (AI тихо уходит в mock и пользователь получает выдуманные калории),
- * включённый приём оплаты без ключей, пароль базы из примера.
+ * (тогда разбор молча выключается), включённый приём оплаты без ключей,
+ * пароль базы из примера.
  *
  * Читает .env рядом с собой, но переменные из окружения имеют приоритет —
  * в docker compose они приходят именно оттуда.
@@ -82,14 +82,26 @@ const authToken = value("ANTHROPIC_AUTH_TOKEN");
 const apiKey = value("ANTHROPIC_API_KEY");
 const provider = value("AI_PROVIDER");
 
-if (provider === "mock") {
-  warn("AI_PROVIDER=mock — разбор еды будет выдуманным. Для продакшена уберите эту переменную.");
+if (provider === "off" || provider === "mock") {
+  ok(
+    provider === "off"
+      ? "AI_PROVIDER=off — разбор и подсказки выключены, экраны предлагают ручной ввод."
+      : "AI_PROVIDER=mock — в бою это то же самое, что off: разбор выключен, выдуманных цифр не будет.",
+  );
   // Mock глушил проверку учётных данных — и однажды спрятал пустой токен
   // прокси: обнаружилось это только тогда, когда через тот же прокси
   // понадобился Telegram. Теперь говорим и в режиме заглушки.
   if (baseUrl && !authToken) {
-    warn("ANTHROPIC_AUTH_TOKEN пуст. Сейчас это незаметно из-за mock, но снятие AI_PROVIDER ничего не включит: прокси ответит 403.");
+    warn("ANTHROPIC_AUTH_TOKEN пуст. Сейчас это незаметно, но снятие AI_PROVIDER ничего не включит: прокси ответит 403.");
   }
+} else if (provider === "demo") {
+  warn(
+    "AI_PROVIDER=demo — разбор отвечает одним и тем же выдуманным блюдом на любую еду, " +
+      "и в интерфейсе это неотличимо от настоящего ответа. Годится, чтобы показать продукт, " +
+      "но не для живых пользователей.",
+  );
+} else if (provider) {
+  fail(`AI_PROVIDER="${provider}" — неизвестное значение. Допустимо: пусто (боевой AI), off, demo.`);
 } else if (baseUrl && authToken) {
   ok(`AI через прокси: ${baseUrl}`);
 } else if (apiKey) {
@@ -97,7 +109,7 @@ if (provider === "mock") {
 } else if (baseUrl && !authToken) {
   fail("ANTHROPIC_BASE_URL задан, а ANTHROPIC_AUTH_TOKEN — нет: прокси ответит 401.");
 } else {
-  fail("Нет ни ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN, ни ANTHROPIC_API_KEY — AI молча уйдёт в mock и покажет пользователям выдуманные цифры.");
+  fail("Нет ни ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN, ни ANTHROPIC_API_KEY — разбор и подсказки будут выключены. Если так и задумано, поставьте AI_PROVIDER=off явно.");
 }
 
 const budget = value("AI_DAILY_BUDGET_USD");

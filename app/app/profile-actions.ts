@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
 import { profiles, weightEntries } from "@/db/schema";
+import { MealAnalysisError, SUGGEST_ERRORS } from "@/lib/ai";
 import { getSuggestionProvider, type MealSuggestion, type SuggestionContext } from "@/lib/ai/suggest";
 import { getCurrentUser } from "@/lib/auth";
 import { isValidDay, localToday } from "@/lib/dates";
@@ -132,7 +133,10 @@ export async function suggestNextMeal(context: SuggestionContext): Promise<Sugge
     await recordUsage(user.id, "suggest", result.usage);
     return { ok: true, suggestions: result.suggestions };
   } catch (error) {
+    if (error instanceof MealAnalysisError && error.reason === "disabled") {
+      return { ok: false, error: SUGGEST_ERRORS.disabled };
+    }
     console.error("suggestNextMeal failed", error);
-    return { ok: false, error: "Не получилось подобрать варианты. Попробуйте через минуту." };
+    return { ok: false, error: SUGGEST_ERRORS.failed };
   }
 }

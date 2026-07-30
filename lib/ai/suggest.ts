@@ -1,5 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { createAnthropicClient, DEFAULT_MODEL, hasAnthropicCredentials, readUsage, supportsFallbacks } from "./client.ts";
+import { createAnthropicClient, DEFAULT_MODEL, readUsage, supportsFallbacks } from "./client.ts";
+import { DisabledSuggestionProvider } from "./disabled.ts";
+import { resolveAiMode } from "./mode.ts";
 import { MealAnalysisError, type TokenUsage } from "./types.ts";
 
 // «Что съесть дальше» (разделы 8.8 и 15.5 спецификации): детерминированный
@@ -185,10 +187,10 @@ let suggestionProvider: SuggestionProvider | null = null;
 
 export function getSuggestionProvider(): SuggestionProvider {
   if (suggestionProvider) return suggestionProvider;
-  if (process.env.AI_PROVIDER === "mock" || !hasAnthropicCredentials()) {
-    suggestionProvider = new MockSuggestionProvider();
-  } else {
-    suggestionProvider = new AnthropicSuggestionProvider(process.env.ANTHROPIC_MODEL);
+  switch (resolveAiMode()) {
+    case "mock": suggestionProvider = new MockSuggestionProvider(); break;
+    case "off": suggestionProvider = new DisabledSuggestionProvider(); break;
+    default: suggestionProvider = new AnthropicSuggestionProvider(process.env.ANTHROPIC_MODEL);
   }
   return suggestionProvider;
 }
