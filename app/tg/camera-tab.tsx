@@ -11,6 +11,7 @@ import {
 import { CONFIDENCE_LABELS, confidenceRange, overallConfidence, type Confidence } from "@/lib/confidence";
 import { scaleGrams } from "@/lib/portions";
 import { haptic, useMainButtonApi } from "./telegram";
+import { TgPhoto } from "./photo";
 
 type DraftItem = {
   name: string;
@@ -208,8 +209,7 @@ export function CameraTab({
 
       <div className="tg-photo">
         <div className="tg-photo-drop">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/api/photos/${inbox.photoKey}`} alt="Снимок еды из инбокса" />
+          <TgPhoto photoKey={inbox.photoKey} alt="Снимок еды из инбокса" variant="wide" />
         </div>
       </div>
       {inbox.note && <p className="tg-hint">Ваша подпись: «{inbox.note}»</p>}
@@ -243,6 +243,8 @@ export function CameraTab({
             <label className="tg-photo-drop">
               <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} />
               {preview
+                // Локальный предпросмотр из файлового выбора: это blob сразу с
+                // устройства, авторизация ему не нужна и TgPhoto здесь не при чём.
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={preview} alt="Предпросмотр блюда" />
                 : <span>Снимите блюдо или выберите фото — разбор начнётся сразу</span>}

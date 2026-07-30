@@ -11,14 +11,14 @@ import { fetchDiaryDay, type DiaryDayResponse, type DiaryMeal } from "./diary-ap
 import { IconInbox } from "./icons";
 import { MealEditor } from "./meal-editor";
 import { haptic } from "./telegram";
+import { TgPhoto } from "./photo";
 
 function DiaryMealRow({ meal, showCalories, onOpen }: { meal: DiaryMeal; showCalories: boolean; onOpen: () => void }) {
   return <li>
     <button className="tg-diary-meal" onClick={onOpen}>
       <span className="tg-diary-meal-thumb">
         {meal.photoKey
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img src={`/api/photos/${meal.photoKey}`} alt="" />
+          ? <TgPhoto photoKey={meal.photoKey} alt="" />
           : <IconInbox />}
       </span>
       <time>{meal.time}</time>

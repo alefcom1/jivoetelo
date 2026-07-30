@@ -385,3 +385,138 @@
 .tg-diary-meal-macros b { font: 500 15px var(--brand-serif); }
 .tg-diary-meal-macros b i { font-style: normal; font-size: 10px; font-weight: 600; color: var(--tg-hint); margin-left: 2px; }
 .tg-diary-meal-macros > span { font: 500 10.5px var(--font-body), sans-serif; color: var(--tg-hint); }
+
+/* Снимки еды в Mini App: см. app/tg/photo.tsx — грузятся fetch-ем и
+   показываются через objectURL, потому что WebView не хранит cookie
+   веб-сессии, а подпись Telegram нельзя класть в адрес картинки. */
+.tg-photo-box {
+  display: block; overflow: hidden; border-radius: inherit;
+  background: color-mix(in srgb, var(--tg-hint) 12%, transparent);
+}
+.tg-photo-box img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tg-photo-box-placeholder {
+  display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
+  padding: 8px; text-align: center; font-size: 11px; line-height: 1.4; color: var(--tg-hint);
+}
+/* Пока грузится, плейсхолдеру нечего показывать текстом — только тихая заливка. */
+.tg-photo-box[data-status="loading"] .tg-photo-box-placeholder { color: transparent; }
+
+/* Квадратная миниатюра — заполняет фиксированный контейнер (88×88 в инбоксе). */
+.tg-photo-box--square { width: 100%; height: 100%; }
+
+/* Широкое превью — фиксированная высота своя, не зависит от контейнера
+   (.tg-photo-drop) и не «плавает» вместе с интринсик-размером фото. */
+.tg-photo-box--wide { width: 100%; height: 220px; border-radius: 12px; }
+
+/* Уточняющие вопросы */
+.tg-clarify { background: var(--brand-lime); border-radius: var(--radius); padding: 16px; }
+.tg-clarify p { margin: 0 0 10px; font: 500 17px/1.3 var(--brand-serif); }
+.tg-clarify div { display: flex; gap: 8px; flex-wrap: wrap; }
+.tg-clarify button {
+  border: 1px solid var(--tg-text); background: transparent; color: var(--tg-text);
+  border-radius: 999px; padding: 9px 16px; font: 600 13px var(--font-body), sans-serif;
+  cursor: pointer; min-height: 40px;
+}
+
+/* Черновик разбора */
+.tg-draft { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tg-draft li { background: var(--tg-surface); border-radius: var(--radius); padding: 14px; }
+.tg-draft-row { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+.tg-draft-row b { font-size: 15px; flex: 1; min-width: 0; }
+.tg-stepper { display: flex; align-items: center; gap: 4px; }
+.tg-stepper button {
+  width: 36px; height: 36px; border: 0; border-radius: 10px; cursor: pointer;
+  background: color-mix(in srgb, var(--tg-hint) 15%, transparent); color: var(--tg-text); font-size: 18px; line-height: 1;
+}
+.tg-stepper span { min-width: 58px; text-align: center; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tg-draft-meta { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--tg-hint); }
+.tg-draft-meta i {
+  font-style: normal; border-radius: 999px; padding: 3px 9px; font-size: 10px; font-weight: 700;
+  background: color-mix(in srgb, var(--brand-coral) 18%, transparent); color: var(--brand-coral);
+}
+.tg-remove { margin-left: auto; width: 36px; height: 36px; border: 0; background: transparent; color: var(--tg-hint); font-size: 20px; cursor: pointer; }
+
+.tg-draft-total { display: flex; gap: 12px; }
+.tg-draft-total div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.tg-draft-total strong { font: 500 24px var(--brand-serif); }
+.tg-draft-total span { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
+
+/* Рекомендации */
+.tg-suggestions { display: flex; flex-direction: column; gap: 10px; }
+.tg-suggestion h3 { margin: 0 0 6px; font: 500 19px var(--brand-serif); }
+.tg-suggestion p { margin: 0 0 10px; font-size: 13px; line-height: 1.6; }
+.tg-suggestion footer { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; font-weight: 700; color: var(--tg-hint); }
+
+/* Нижняя навигация */
+.tg-tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  display: flex; background: var(--tg-surface);
+  border-top: 1px solid color-mix(in srgb, var(--tg-hint) 18%, transparent);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.tg-tabs button {
+  flex: 1; border: 0; background: none; cursor: pointer; padding: 9px 0 7px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  color: var(--tg-hint); min-height: 56px;
+}
+.tg-tabs button.active { color: var(--brand-coral); }
+.tg-tabs svg { display: block; }
+.tg-tabs span { font-size: 10.5px; font-weight: 600; }
+
+/* Загрузка */
+.tg-spinner {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--tg-hint) 25%, transparent);
+  border-top-color: var(--brand-coral); animation: tg-spin 800ms linear infinite;
+}
+@keyframes tg-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tg-spinner { animation-duration: 2s; } }
+
+/* Юридический подвал Mini App: тихий, но всегда доступный. */
+.tg-legal { margin: 26px 0 10px; padding-top: 16px; border-top: 1px solid var(--tg-border, rgba(128,128,128,.2)); }
+.tg-legal p { margin: 0; color: var(--tg-hint); font-size: 11px; line-height: 1.55; }
+.tg-legal div { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; }
+.tg-legal a { color: var(--tg-link); font-size: 11px; font-weight: 600; text-decoration: none; }
+
+/* Множители порции в черновике разбора еды */
+.tg-portions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.tg-portions button {
+  min-height: 36px; padding: 0 12px; border: 0; border-radius: 10px; cursor: pointer;
+  background: color-mix(in srgb, var(--tg-hint) 15%, transparent); color: var(--tg-text); font-size: 13px; font-weight: 700;
+}
+.tg-portions button.tg-portions-reset {
+  background: transparent; color: var(--tg-link); text-decoration: underline;
+}
+
+/* Инбокс фото-снимков, ждущих разбора */
+.tg-inbox { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tg-inbox-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--tg-surface); border-radius: var(--radius); padding: 14px;
+}
+
+/* Превью — это <button>, поэтому сбрасываем его стандартный вид кнопки */
+.tg-inbox-photo {
+  appearance: none; border: 0; padding: 0; margin: 0; background: none; cursor: pointer;
+  flex-shrink: 0; width: 88px; height: 88px; border-radius: 12px; overflow: hidden;
+}
+.tg-inbox-photo img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+
+.tg-inbox-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.tg-inbox-when { margin: 0; font-size: 12px; font-weight: 600; color: var(--tg-hint); }
+.tg-inbox-note {
+  margin: 0; font-style: italic; font-size: 13px; line-height: 1.4; color: var(--tg-text);
+  /* подпись пользователя может быть длинной — ограничиваем двумя строками, чтобы карточка не «прыгала» */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.tg-inbox-actions { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+.tg-inbox-actions .tg-button { min-height: 44px; padding: 10px 18px; }
+
+/* Второстепенное текстовое действие рядом с .tg-button (например «Отклонить», «← В инбокс») */
+.tg-link-button {
+  appearance: none; border: 0; background: none; cursor: pointer; padding: 12px 4px;
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+  color: var(--tg-link); font: 600 14px var(--font-body), sans-serif; text-decoration: none;
+}
+.tg-link-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.tg-link-button:active:not(:disabled) { opacity: 0.75; }

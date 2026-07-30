@@ -13,6 +13,7 @@ import { CONFIDENCE_LABELS, type Confidence } from "@/lib/confidence";
 import { scaleGrams } from "@/lib/portions";
 import { deleteMeal, fetchMealDetail, updateMeal, type DiaryMealItem, type MealDetail } from "./diary-api";
 import { haptic } from "./telegram";
+import { TgPhoto } from "./photo";
 
 const MEAL_TYPES: Array<[string, string]> = [
   ["breakfast", "Завтрак"],
@@ -129,8 +130,7 @@ export function MealEditor({
 
     {meal.photoKey && <div className="tg-photo">
       <div className="tg-photo-drop">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/api/photos/${meal.photoKey}`} alt="Фото приёма пищи" />
+        <TgPhoto photoKey={meal.photoKey} alt="Фото приёма пищи" variant="wide" />
       </div>
     </div>}
     {meal.sourceText && <p className="tg-hint">«{meal.sourceText}»</p>}

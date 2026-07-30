@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { dismissInboxItem, fetchInbox, type InboxItemDto } from "./api";
 import { haptic } from "./telegram";
+import { TgPhoto } from "./photo";
 
 /**
  * Снимки, присланные боту и ещё не разобранные. Экран нужен именно здесь, а
@@ -88,8 +89,7 @@ export function InboxTab({ onPick, onBack }: { onPick: (item: InboxItemDto) => v
       {items.map((item) =>
         <li key={item.id} className="tg-inbox-item">
           <button className="tg-inbox-photo" onClick={() => { haptic("tap"); onPick(item); }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/api/photos/${item.photoKey}`} alt="Снимок еды" />
+            <TgPhoto photoKey={item.photoKey} alt="Снимок еды" />
           </button>
           <div className="tg-inbox-body">
             <p className="tg-inbox-when">{formatTakenAt(item)}</p>

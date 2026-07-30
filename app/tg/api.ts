@@ -134,3 +134,17 @@ export type SuggestResponse = {
 export async function fetchSuggestions(): Promise<SuggestResponse> {
   return handle<SuggestResponse>(await fetch("/api/tg/suggest", { headers: initDataHeader(), cache: "no-store" }));
 }
+
+/**
+ * Скачивает снимок еды как Blob тем же initData-заголовком, что и остальные
+ * запросы Mini App. Обычный <img src="/api/photos/..."> здесь не работает —
+ * WebView не хранит cookie веб-сессии, а подпись Telegram нельзя класть в
+ * query строки картинки: она осела бы в логах сервера, в Referer и в истории
+ * браузера. Поэтому фото качает fetch, а <img> получает уже objectURL —
+ * см. app/tg/photo.tsx.
+ */
+export async function fetchPhoto(key: string): Promise<Blob> {
+  const response = await fetch(`/api/tg/photo/${key}`, { headers: initDataHeader(), cache: "no-store" });
+  if (!response.ok) throw new ApiError({ reason: "error" });
+  return response.blob();
+}
