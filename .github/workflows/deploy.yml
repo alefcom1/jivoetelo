@@ -23,6 +23,28 @@ jobs:
       - name: Забрать код
         uses: actions/checkout@v4
 
+      # Первым шагом, до сборки: пустой секрет доходит до ssh как пустой
+      # аргумент, и выкатка падает справкой по ключам ssh — из такого лога не
+      # понять, что дело всего лишь в незаполненных секретах репозитория.
+      # А ждать этого четыре минуты, пока идут тесты, тем более незачем.
+      - name: Проверить секреты выкатки
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          missing=""
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Не заданы секреты репозитория:$missing"
+            echo "Settings → Secrets and variables → Actions → New repository secret."
+            echo "Как их получить — docs/deploy-github-actions.md."
+            exit 1
+          fi
+
       - name: Проверки перед выкаткой
         run: |
           npm ci
