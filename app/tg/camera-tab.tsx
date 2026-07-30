@@ -12,6 +12,7 @@ import {
 } from "./api";
 import { CONFIDENCE_LABELS, confidenceRange, overallConfidence, type Confidence } from "@/lib/confidence";
 import { formatDayRu } from "@/lib/dates";
+import { mealCategory } from "@/lib/food-category";
 import { withPluralRu } from "@/lib/plural";
 import { scaleGrams } from "@/lib/portions";
 import { AddItem, type NewItem } from "./add-item";
@@ -298,7 +299,10 @@ export function CameraTab({
         <ul className="tg-usual-list">
           {frequent.map((meal) => <li key={meal.key}>
             <button onClick={() => repeatMeal(meal)}>
-              <FoodIcon name={meal.title} size="md" />
+              {/* Категорию берём по составу, а не по склеенному заголовку:
+                  правило выбора основного блюда одно на все экраны, иначе
+                  один и тот же приём пищи получает разные значки. */}
+              <FoodIcon category={mealCategory(meal.items.map((item) => item.name))} size="md" />
               <span className="tg-usual-body">
                 <b>{meal.title}</b>
                 <span>{withPluralRu(meal.count, ["раз", "раза", "раз"])} за два месяца</span>
