@@ -9,6 +9,7 @@ import {
   maxBirthYear,
   minBirthYear,
   nextStep,
+  parseProfileForm,
   planSafetyReasons,
   previousStep,
   resolveCurrentStep,
@@ -154,17 +155,18 @@ test("более быстрый темп не увеличивает дневн�
   }
 });
 
-test("выбранный темп определяет сохранённый план: kcalAdjustment сдвигает цель к тому, что даёт computePace", () => {
+test("выбранный темп уходит прямо в computeTargets и определяет kcalTarget предпросмотра", () => {
   const plan = deriveLivePlan({ ...ADULT, goal: "lose", pace: "moderate" }, YEAR);
-  assert.ok(plan.pace !== null);
-  // Совпадение не идеальное — оба числа независимо округляются до 10, поэтому сравниваем с небольшим допуском.
-  assert.ok(Math.abs(plan.targets.kcalTarget - plan.pace.kcalTarget) <= 10, `${plan.targets.kcalTarget} vs ${plan.pace.kcalTarget}`);
+  assert.equal(plan.pace, "moderate");
+  assert.ok(plan.paceDetails !== null);
+  // Оба числа считает один и тот же computeTargets({ ..., pace }), поэтому совпадение точное.
+  assert.equal(plan.targets.kcalTarget, plan.paceDetails.kcalTarget);
 });
 
-test("без выбранного темпа план для снижения веса использует дефолтный дефицит формулы, kcalAdjustment равен нулю", () => {
+test("без выбранного темпа план для снижения веса использует прежний плоский дефицит формулы", () => {
   const plan = deriveLivePlan({ ...ADULT, goal: "lose", pace: undefined }, YEAR);
-  assert.equal(plan.kcalAdjustment, 0);
-  assert.equal(plan.pace, null);
+  assert.equal(plan.pace, undefined);
+  assert.equal(plan.paceDetails, null);
 });
 
 test("причины смягчения плана независимы и могут прийти вместе", () => {
@@ -193,4 +195,52 @@ test("для цели «поддержание» или «набор массы�
   const plan = deriveLivePlan(minorMaintain, YEAR);
   assert.equal(plan.ageSoftened, false);
   assert.equal(plan.relationshipSoftened, false);
+});
+
+// ===== parseProfileForm — общая точка сохранения для первого онбординга и «Изменить план» =====
+
+const VALID_FORM = {
+  goal: "lose",
+  sexForFormula: "female",
+  activity: "light",
+  birthYear: "1990",
+  heightCm: "168",
+  weightKg: "78",
+  pace: "moderate",
+};
+
+test("корректная форма с выбранным темпом разбирается и сохраняет его как есть", () => {
+  const parsed = parseProfileForm(VALID_FORM, YEAR);
+  assert.ok(parsed !== null);
+  assert.equal(parsed.pace, "moderate");
+  assert.equal(parsed.goal, "lose");
+  assert.equal(parsed.birthYear, 1990);
+  assert.equal(parsed.heightCm, 168);
+  assert.equal(parsed.weightKg, 78);
+});
+
+test("пустой или неизвестный темп разбирается как null, а не как ошибка всей формы", () => {
+  assert.equal(parseProfileForm({ ...VALID_FORM, pace: "" }, YEAR).pace, null);
+  assert.equal(parseProfileForm({ ...VALID_FORM, pace: "невесть что" }, YEAR).pace, null);
+  assert.equal(parseProfileForm({ ...VALID_FORM, goal: "maintain", pace: "" }, YEAR).pace, null);
+});
+
+test("результат разбора формы никогда не содержит kcalAdjustment — повторный онбординг не может задеть накопленную адаптивную поправку", () => {
+  const parsed = parseProfileForm(VALID_FORM, YEAR);
+  assert.ok(!("kcalAdjustment" in parsed), `в разборе формы не должно быть kcalAdjustment: ${JSON.stringify(parsed)}`);
+});
+
+test("форма с недопустимым годом рождения отклоняется целиком, даже если темп указан корректно", () => {
+  assert.equal(parseProfileForm({ ...VALID_FORM, birthYear: String(maxBirthYear(YEAR) + 1) }, YEAR), null);
+  assert.equal(parseProfileForm({ ...VALID_FORM, birthYear: String(minBirthYear(YEAR) - 1) }, YEAR), null);
+});
+
+test("форма с недопустимым ростом или весом отклоняется целиком", () => {
+  assert.equal(parseProfileForm({ ...VALID_FORM, heightCm: "50" }, YEAR), null);
+  assert.equal(parseProfileForm({ ...VALID_FORM, weightKg: "0" }, YEAR), null);
+});
+
+test("форма с неизвестной целью или полом отклоняется целиком", () => {
+  assert.equal(parseProfileForm({ ...VALID_FORM, goal: "cure_everything" }, YEAR), null);
+  assert.equal(parseProfileForm({ ...VALID_FORM, sexForFormula: "other" }, YEAR), null);
 });

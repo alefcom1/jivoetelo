@@ -105,10 +105,10 @@ export function OnboardingFlow({ currentYear }: { currentYear: number }) {
             <p className="onboarding-preview-detail">
               белок {plan.targets.proteinTarget} г · клетчатка {plan.targets.fiberTarget} г
             </p>
-            {plan.pace &&
+            {plan.paceDetails &&
               <p className="onboarding-preview-detail">
-                темп {formatKg(plan.pace.kgPerWeek)} кг в неделю
-                {plan.pace.weeksToGoal !== null && ` · ${withPluralRu(plan.pace.weeksToGoal, ["неделя", "недели", "недель"])} до цели`}
+                темп {formatKg(plan.paceDetails.kgPerWeek)} кг в неделю
+                {plan.paceDetails.weeksToGoal !== null && ` · ${withPluralRu(plan.paceDetails.weeksToGoal, ["неделя", "недели", "недель"])} до цели`}
               </p>}
             {safetyReasons.map((reason) => <p className="onboarding-preview-note" key={reason}>{SAFETY_NOTES[reason]}</p>)}
           </>
@@ -269,7 +269,7 @@ export function OnboardingFlow({ currentYear }: { currentYear: number }) {
               </label>)}
           </div>
           {answers.pace && <p className="field-note">{PACE_OPTIONS.find((o) => o.key === answers.pace)?.note}</p>}
-          {plan?.pace?.limitedBy && <p className="field-note">{LIMIT_REASONS[plan.pace.limitedBy]}</p>}
+          {plan?.paceDetails?.limitedBy && <p className="field-note">{LIMIT_REASONS[plan.paceDetails.limitedBy]}</p>}
           <div className="onboarding-numbers">
             <label>Хотите сбросить, кг (необязательно)
               <input
@@ -298,7 +298,9 @@ export function OnboardingFlow({ currentYear }: { currentYear: number }) {
             <input type="hidden" name="heightCm" value={answers.heightCm ?? ""} />
             <input type="hidden" name="weightKg" value={answers.weightKg ?? ""} />
             <input type="hidden" name="activity" value={answers.activity ?? "light"} />
-            <input type="hidden" name="kcalAdjustment" value={plan?.kcalAdjustment ?? 0} />
+            {/* Пусто, если темп не выбирали (цель не «снижение веса» или шаг темпа
+                пропущен по безопасности) — profiles.pace для этого и nullable. */}
+            <input type="hidden" name="pace" value={plan?.pace ?? ""} />
             {errors[state.status] && <p className="form-error">{errors[state.status]}</p>}
             <div className="button-row">
               <button type="button" className="link-button" onClick={goBack} disabled={!previous}>Назад</button>

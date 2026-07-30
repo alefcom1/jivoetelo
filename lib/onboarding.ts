@@ -11,8 +11,17 @@
 // только вызывает их и рисует результат — так же, как lib/pace.ts не знает о
 // разметке, а pace-form.tsx не знает о формуле.
 
-import { computeTargets, computeTdee, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
-import { computePace, type PaceKey, type PaceResult } from "./pace.ts";
+import {
+  ACTIVITY_LABELS,
+  computeTargets,
+  computeTdee,
+  GOAL_LABELS,
+  type Activity,
+  type Goal,
+  type SexForFormula,
+  type Targets,
+} from "./targets.ts";
+import { computePace, PACE_OPTIONS, type PaceKey, type PaceResult } from "./pace.ts";
 import type { QuizAnswers } from "./quiz.ts";
 
 /**
@@ -89,7 +98,6 @@ export function maxBirthYear(currentYear: number): number {
 }
 
 const DEFAULT_ACTIVITY: Activity = "light";
-const MAX_KCAL_ADJUSTMENT = 450; // тот же потолок, что в lib/targets.ts и applyProposedAdjustment (profile-actions.ts)
 
 export const RELATIONSHIP_LABELS: Record<Relationship, string> = {
   calm: "Спокойно, без особых сложностей",
@@ -250,19 +258,20 @@ export type LivePlan = {
   targets: Targets;
   tdeeKcal: number;
   effectiveGoal: Goal;
-  /** То же число уходит в скрытое поле формы на последнем шаге — предпросмотр не должен обещать одно, а сохранять другое. */
-  kcalAdjustment: number;
-  pace: PaceResult | null;
+  /**
+   * Темп, который реально уйдёт в computeTargets (undefined, если цель не
+   * «снижение веса» или темп ещё не выбран). Это и есть то самое поле,
+   * которое связывает предпросмотр с сохранённым планом — kcalAdjustment
+   * (раздел 14.2) в этой связке не участвует и остаётся нетронутым.
+   */
+  pace: PaceKey | undefined;
+  /** Развёрнутый результат computePace — для «кг в неделю» и срока в предпросмотре; сама цель уже учтена в targets.kcalTarget через computeTargets. */
+  paceDetails: PaceResult | null;
   ageSoftened: boolean;
   relationshipSoftened: boolean;
   /** Активность ещё не выбрана — план посчитан по умолчанию (light); это стоит показать честно, а не выдавать предварительную оценку за точную. */
   usingDefaultActivity: boolean;
 };
-
-function clampAdjustment(value: number): number {
-  const rounded = Math.round(value / 10) * 10;
-  return Math.min(MAX_KCAL_ADJUSTMENT, Math.max(-MAX_KCAL_ADJUSTMENT, rounded));
-}
 
 /**
  * Центральная функция «живого пересчёта». Возвращает null, пока данных не
@@ -270,17 +279,13 @@ function clampAdjustment(value: number): number {
  * отдельного состояния «план» нигде не хранится, оно всегда выводится из
  * answers, точно как targets в energy-form.tsx выводятся из values.
  *
- * Тёмп заслуживает отдельного пояснения. lib/targets.ts даёт дефицит для
- * снижения веса плоскими 15% (GOAL_FACTOR.lose) — разумное умолчание, но шаг
- * «темп» предлагает выбор из четырёх разных дефицитов (lib/pace.ts), и если
- * бы этот выбор не менял сохранённый план, весь шаг был бы декорацией.
- * Поэтому здесь темп действительно определяет план: считаем, что дал бы
- * выбранный темп (computePace), сравниваем с тем, что дала бы формула без
- * поправки, и получившуюся разницу передаём в computeTargets как
- * adjustmentKcal — тем же путём, каким её позже сохраняет форма (поле
- * kcalAdjustment в профиле, раздел 14.2 спецификации). Итоговое число проходит
- * все проверки безопасности computeTargets (нижний порог калорий) наравне с
- * любой другой adjustmentKcal.
+ * Тёмп передаётся в computeTargets как есть (поле TargetInput.pace) — тем же
+ * путём, каким его позже сохраняет форма (profiles.pace). Никакой отдельной
+ * арифметики здесь больше нет: computeTargets сам решает, взять ли дефицит из
+ * lib/pace.ts или использовать прежние плоские 15% (GOAL_FACTOR.lose), когда
+ * темп не выбран. Это гарантирует, что число в предпросмотре и число,
+ * которое дальше увидит человек на «Сегодня» после сохранения профиля, — одно
+ * и то же: оба считаются одной функцией с одними и теми же входами.
  */
 export function deriveLivePlan(answers: OnboardingAnswers, currentYear = new Date().getFullYear()): LivePlan | null {
   if (!canShowPlan(answers, currentYear)) return null;
@@ -299,26 +304,29 @@ export function deriveLivePlan(answers: OnboardingAnswers, currentYear = new Dat
 
   const tdeeKcal = computeTdee(base, currentYear);
 
-  let pace: PaceResult | null = null;
-  let kcalAdjustment = 0;
-  if (goal === "lose" && answers.pace) {
+  // Темп имеет смысл только пока действующая цель — снижение веса: для
+  // смягчённой (несовершеннолетний, тяжёлые отношения с едой) или для
+  // «поддержания»/«набора» отправлять его в расчёт незачем — computeTargets
+  // и сам бы его проигнорировал (там та же проверка goal === "lose"), но
+  // явная отсечка здесь избавляет paceDetails ниже от лишней работы.
+  const pace = goal === "lose" ? answers.pace : undefined;
+  const targets = computeTargets({ ...base, goal, pace }, currentYear);
+
+  let paceDetails: PaceResult | null = null;
+  if (pace) {
     const targetLossKg =
       answers.targetLossKg !== undefined && answers.targetLossKg > 0 && answers.targetLossKg <= MAX_TARGET_LOSS_KG
         ? answers.targetLossKg
         : undefined;
-    pace = computePace({ weightKg: base.weightKg, tdeeKcal, pace: answers.pace, targetLossKg });
-    const baseline = computeTargets({ ...base, goal, adjustmentKcal: 0 }, currentYear);
-    kcalAdjustment = clampAdjustment(pace.kcalTarget - baseline.kcalTarget);
+    paceDetails = computePace({ weightKg: base.weightKg, tdeeKcal, pace, targetLossKg });
   }
-
-  const targets = computeTargets({ ...base, goal, adjustmentKcal: kcalAdjustment }, currentYear);
 
   return {
     targets,
     tdeeKcal,
     effectiveGoal: goal,
-    kcalAdjustment,
     pace,
+    paceDetails,
     ageSoftened,
     relationshipSoftened,
     usingDefaultActivity: answers.activity === undefined,
@@ -337,4 +345,80 @@ export function planSafetyReasons(plan: LivePlan): SafetyReason[] {
   if (plan.relationshipSoftened) reasons.push("hard_relationship");
   if (plan.targets.adjusted) reasons.push("kcal_floor");
   return reasons;
+}
+
+// ===== Сохранение профиля (используется и первым онбордингом, и повторным
+// проходом через «Изменить план» в настройках — app/app/profile-actions.ts) =====
+
+/** Допустимые значения — списки берём из тех же словарей, что рисуют шаги «цель» и «активность», чтобы не заводить третий источник истины. */
+const GOALS = Object.keys(GOAL_LABELS) as Goal[];
+const ACTIVITIES = Object.keys(ACTIVITY_LABELS) as Activity[];
+const SEXES: SexForFormula[] = ["female", "male"];
+const PACE_KEYS: PaceKey[] = PACE_OPTIONS.map((option) => option.key);
+
+export type ProfileFormValues = {
+  goal: Goal;
+  sexForFormula: SexForFormula;
+  birthYear: number;
+  heightCm: number;
+  weightKg: number;
+  activity: Activity;
+  /** null — темп не выбирали (цель не «снижение веса» или профиль заведён до онбординга v2). Законное состояние, не ошибка. */
+  pace: PaceKey | null;
+};
+
+/** Сырые строки прямо из FormData.get(...) — до какой-либо проверки. */
+export type ProfileFormInput = {
+  goal: string;
+  sexForFormula: string;
+  activity: string;
+  birthYear: string;
+  heightCm: string;
+  weightKg: string;
+  pace: string;
+};
+
+/**
+ * Разбирает и валидирует форму сохранения профиля. Чистая функция — её можно
+ * проверить без БД и без server action вокруг неё, а server action
+ * (saveProfile) становится тонкой обвязкой: распаковать FormData, вызвать
+ * это, записать результат.
+ *
+ * Намеренно не знает про kcalAdjustment. Это не пропуск, а гарантия: раздел
+ * 14.2 отдаёт накопленную адаптивную поправку исключительно
+ * applyProposedAdjustment, и то, что в возвращаемом типе для неё просто нет
+ * места, защищает от случая, когда кто-то в будущем добавит в форму лишнее
+ * поле и повторный проход онбординга («Изменить план») тихо обнулит недели
+ * адаптивной подстройки — ровно то, что раньше уже один раз случилось.
+ */
+export function parseProfileForm(
+  input: ProfileFormInput,
+  currentYear = new Date().getFullYear(),
+): ProfileFormValues | null {
+  const birthYear = Number(input.birthYear);
+  const heightCm = Number(input.heightCm);
+  const weightKg = Number(input.weightKg);
+
+  const valid =
+    (GOALS as string[]).includes(input.goal) &&
+    (SEXES as string[]).includes(input.sexForFormula) &&
+    (ACTIVITIES as string[]).includes(input.activity) &&
+    Number.isInteger(birthYear) && birthYear >= minBirthYear(currentYear) && birthYear <= maxBirthYear(currentYear) &&
+    Number.isFinite(heightCm) && heightCm >= MIN_HEIGHT_CM && heightCm <= MAX_HEIGHT_CM &&
+    Number.isFinite(weightKg) && weightKg >= MIN_WEIGHT_KG && weightKg <= MAX_WEIGHT_KG;
+  if (!valid) return null;
+
+  // Темп необязателен и не входит в проверку valid выше: пусто или мусор — это
+  // «не выбран», обычный и законный случай, а не повод отклонить всю форму.
+  const pace = PACE_KEYS.includes(input.pace as PaceKey) ? (input.pace as PaceKey) : null;
+
+  return {
+    goal: input.goal as Goal,
+    sexForFormula: input.sexForFormula as SexForFormula,
+    activity: input.activity as Activity,
+    birthYear,
+    heightCm,
+    weightKg,
+    pace,
+  };
 }

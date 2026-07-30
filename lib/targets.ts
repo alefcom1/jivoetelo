@@ -1,6 +1,8 @@
 // Стартовые цели по формуле Миффлина-Сан Жеора (раздел 14.1 спецификации).
 // Возвращаем диапазон, а не одно число: точность формулы этого не позволяет.
 
+import { computePace, type PaceKey } from "./pace.ts";
+
 export type Goal = "lose" | "maintain" | "gain";
 export type Activity = "sedentary" | "light" | "moderate" | "high";
 export type SexForFormula = "female" | "male";
@@ -14,6 +16,15 @@ export type TargetInput = {
   activity: Activity;
   /** Подтверждённая пользователем адаптивная корректировка (раздел 14.2). */
   adjustmentKcal?: number;
+  /**
+   * Темп снижения веса, выбранный на онбординге (lib/pace.ts). Это осознанная
+   * цель по дефициту, заданная один раз на старте, — не путать с
+   * adjustmentKcal выше, который сервис подстраивает по факту дневника.
+   * Учитывается, только пока действующая цель — «снижение веса»: не задан
+   * (undefined/null) — дефицит считается как раньше, плоскими 15%
+   * (GOAL_FACTOR.lose), это ровно старое поведение для профилей без темпа.
+   */
+  pace?: PaceKey | null;
 };
 
 export type Targets = {
@@ -78,7 +89,15 @@ export function computeTargets(input: TargetInput, currentYear = new Date().getF
 
   const tdee = computeTdee(input, currentYear);
   const adjustment = Math.min(450, Math.max(-450, input.adjustmentKcal ?? 0));
-  let target = tdee * GOAL_FACTOR[goal] + adjustment;
+
+  // Дефицит для снижения веса — либо выбранный темп (lib/pace.ts умеет сам
+  // ограничивать его по доле расхода и по абсолютным потолкам), либо, если
+  // темп не задан, прежние плоские 15% (GOAL_FACTOR.lose). Второй путь ничем
+  // не отличается от расчёта до появления lib/onboarding.ts — это защищает
+  // существующие профили без темпа от любых изменений в цифрах.
+  const deficitBase =
+    goal === "lose" && input.pace ? computePace({ weightKg: input.weightKg, tdeeKcal: tdee, pace: input.pace }).kcalTarget : tdee * GOAL_FACTOR[goal];
+  let target = deficitBase + adjustment;
 
   // Жёсткая нижняя граница автоматических рекомендаций (раздел 4.2).
   const floor = input.sexForFormula === "male" ? 1500 : 1200;
