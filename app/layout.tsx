@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   // `verification`, а встроенные поля Next покрывают только известных ему
   // проверяющих (google, yandex, yahoo, me).
   verification: {
+    google: "VBapmnl9xgeyP2RCGlFlS98ynJVAQ0LUhl4R_0uL1s8",
     yandex: "a8d71d16c0064b34",
     other: { verification: "137dd42d7b9768006bc3a6e8ce74bc" },
   },
