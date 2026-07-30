@@ -78,6 +78,25 @@
 .tg-bar-track { height: 6px; border-radius: 999px; background: color-mix(in srgb, var(--tg-hint) 18%, transparent); overflow: hidden; }
 .tg-bar-fill { height: 100%; border-radius: 999px; background: var(--tg-text); transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1); }
 
+/* Тренд веса — мини-график SVG на «Сегодня» */
+.tg-weight { display: flex; flex-direction: column; gap: 10px; }
+.tg-weight-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.tg-weight-head strong { display: block; font: 500 26px var(--brand-serif); letter-spacing: -0.02em; }
+.tg-weight-head strong small { font-size: 13px; font-weight: 600; color: var(--tg-hint); }
+.tg-weight-change { font-size: 12px; font-weight: 700; color: var(--tg-hint); white-space: nowrap; }
+.tg-weight-svg { display: block; width: 100%; height: 64px; }
+.tg-weight-svg polyline { fill: none; stroke: var(--brand-coral); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Строка-ссылка на инбокс: единственное упоминание фото-инбокса на «Сегодня» — не вкладка */
+.tg-inbox-banner {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  border: 0; border-radius: var(--radius); padding: 14px 16px;
+  background: var(--brand-lime); color: var(--tg-text); cursor: pointer; text-align: left;
+}
+.tg-inbox-banner svg { flex-shrink: 0; }
+.tg-inbox-banner span { flex: 1; font-size: 13px; font-weight: 600; line-height: 1.4; }
+.tg-inbox-banner b { font-weight: 700; }
+
 /* Список приёмов пищи */
 .tg-section { display: flex; flex-direction: column; gap: 10px; }
 .tg-section h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
@@ -162,14 +181,22 @@
 }
 .tg-remove { margin-left: auto; width: 36px; height: 36px; border: 0; background: transparent; color: var(--tg-hint); font-size: 20px; cursor: pointer; }
 
-.tg-draft-total { display: flex; gap: 12px; }
-.tg-draft-total div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.tg-draft-total strong { font: 500 24px var(--brand-serif); }
-.tg-draft-total span { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
+.tg-draft-total-row { display: flex; gap: 12px; }
+.tg-draft-total-row div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.tg-draft-total-row strong { font: 500 24px var(--brand-serif); }
+.tg-draft-total-row span { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
+/* Диапазон и уточняющий вопрос под итогом — только когда уверенность не «высокая». */
+.tg-draft-total-note { margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: var(--tg-hint); }
 
-/* Рекомендации */
+/* Рекомендации: карточка «что съесть сейчас» на «Сегодня» (не отдельная вкладка) */
+.tg-suggest-card { display: flex; flex-direction: column; gap: 12px; }
+.tg-suggest-card-head { display: flex; align-items: center; gap: 8px; color: var(--brand-coral); }
+.tg-suggest-card-head h2 { margin: 0; font: 500 17px var(--brand-serif); color: var(--tg-text); }
+.tg-suggest-card > .tg-button { align-self: flex-start; min-height: 40px; padding: 10px 18px; }
+
 .tg-suggestions { display: flex; flex-direction: column; gap: 10px; }
-.tg-suggestion h3 { margin: 0 0 6px; font: 500 19px var(--brand-serif); }
+.tg-suggestion { background: var(--tg-bg); border-radius: 12px; padding: 14px; }
+.tg-suggestion h3 { margin: 0 0 6px; font: 500 17px var(--brand-serif); }
 .tg-suggestion p { margin: 0 0 10px; font-size: 13px; line-height: 1.6; }
 .tg-suggestion footer { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; font-weight: 700; color: var(--tg-hint); }
 

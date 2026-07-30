@@ -8,6 +8,7 @@ import {
   type ClarificationDto,
   type InboxItemDto,
 } from "./api";
+import { CONFIDENCE_LABELS, confidenceRange, overallConfidence, type Confidence } from "@/lib/confidence";
 import { scaleGrams } from "@/lib/portions";
 import { haptic, useMainButtonApi } from "./telegram";
 
@@ -21,10 +22,8 @@ type DraftItem = {
   fatPer100: number;
   carbsPer100: number;
   fiberPer100: number;
-  confidence: string;
+  confidence: Confidence;
 };
-
-const CONFIDENCE_LABELS: Record<string, string> = { medium: "примерно", low: "неточно" };
 
 const MEAL_TYPES: Array<[string, string]> = [
   ["breakfast", "Завтрак"],
@@ -43,7 +42,7 @@ function toDraft(item: AnalysisItemDto): DraftItem {
     fatPer100: item.per100g.fat,
     carbsPer100: item.per100g.carbs,
     fiberPer100: item.per100g.fiber,
-    confidence: item.confidence,
+    confidence: (item.confidence as Confidence) ?? "medium",
   };
 }
 
@@ -55,7 +54,14 @@ function guessMealType(): string {
   return "snack";
 }
 
-export function AddTab({
+/**
+ * Вкладка «Камера»: снимок сразу уходит на разбор — без промежуточного
+ * подтверждения (раздел «Три отличия от макета», пункт 2, спецификации
+ * Mini App v2). Тот же экран обслуживает и снимки из фото-инбокса: разбор
+ * там начинается сам, как только открыт конкретный снимок, потому что
+ * намерение уже выражено выбором снимка на предыдущем экране.
+ */
+export function CameraTab({
   showCalories,
   onSaved,
   inbox,
@@ -80,15 +86,19 @@ export function AddTab({
   const [mealType, setMealType] = useState(guessMealType());
   const fileRef = useRef<HTMLInputElement>(null);
   const mainButton = useMainButtonApi();
+  // Инбокс-снимок разбирается автоматически один раз при открытии экрана —
+  // без этого флага двойной вызов effect'а в dev-режиме отправил бы разбор
+  // дважды подряд и упёрся бы в антифлуд-лимит на 3 секунды.
+  const autoFiredRef = useRef(false);
 
-  async function handleAnalyze() {
+  async function handleAnalyze(photoOverride?: File) {
     setError(null);
     const formData = new FormData();
     formData.set("mode", inbox ? "inbox" : mode);
     if (inbox) {
       formData.set("inboxId", String(inbox.id));
     } else if (mode === "photo") {
-      const file = fileRef.current?.files?.[0];
+      const file = photoOverride ?? fileRef.current?.files?.[0];
       if (!file) { setError("Выберите фото."); return; }
       formData.set("photo", file);
     } else {
@@ -113,6 +123,15 @@ export function AddTab({
       setBusy(false);
     }
   }
+
+  // Снимок из инбокса: пользователь уже нажал «Разобрать» на предыдущем
+  // экране (список инбокса) — здесь разбор просто запускается сам.
+  useEffect(() => {
+    if (!inbox || items || autoFiredRef.current) return;
+    autoFiredRef.current = true;
+    void handleAnalyze();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inbox?.id]);
 
   async function handleSave() {
     if (!items || items.length === 0) return;
@@ -171,6 +190,15 @@ export function AddTab({
     setClarifications((current) => current.filter((_, i) => i !== clarIndex));
   }
 
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPreview((old) => { if (old) URL.revokeObjectURL(old); return URL.createObjectURL(file); });
+    // Мгновенный разбор: снимок сразу уходит на анализ, без отдельного
+    // подтверждения («Три отличия от макета», пункт 2, спецификации Mini App v2).
+    void handleAnalyze(file);
+  }
+
   if (!items && inbox) {
     return <div className="tg-page">
       <header className="tg-hero">
@@ -186,12 +214,12 @@ export function AddTab({
       </div>
       {inbox.note && <p className="tg-hint">Ваша подпись: «{inbox.note}»</p>}
 
-      {error && <p className="tg-error">{error}</p>}
-      {busy && <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
+      {error ? <p className="tg-error">{error}</p> : <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
 
-      <button className="tg-button tg-button-block" onClick={() => void handleAnalyze()} disabled={busy}>
-        {busy ? "Разбираем…" : "Разобрать"}
-      </button>
+      {/* Кнопка нужна только для повтора после ошибки — при первом заходе разбор уже запущен сам. */}
+      {error && <button className="tg-button tg-button-block" onClick={() => void handleAnalyze()} disabled={busy}>
+        {busy ? "Разбираем…" : "Разобрать ещё раз"}
+      </button>}
       {onCancelInbox &&
         <button className="tg-link-button" onClick={onCancelInbox} disabled={busy}>← В инбокс</button>}
     </div>;
@@ -213,24 +241,28 @@ export function AddTab({
             placeholder="Например: два сырника, ложка сметаны и капучино" />
         : <div className="tg-photo">
             <label className="tg-photo-drop">
-              <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={(e) => {
-                const file = e.target.files?.[0];
-                setPreview((old) => { if (old) URL.revokeObjectURL(old); return file ? URL.createObjectURL(file) : null; });
-              }} />
+              <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} />
               {preview
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={preview} alt="Предпросмотр блюда" />
-                : <span>Снимите блюдо или выберите фото</span>}
+                : <span>Снимите блюдо или выберите фото — разбор начнётся сразу</span>}
             </label>
           </div>}
 
       {error && <p className="tg-error">{error}</p>}
       {busy && <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
 
-      {/* Дублируем действие в интерфейсе: MainButton недоступна вне Telegram. */}
-      <button className="tg-button tg-button-block" onClick={() => void handleAnalyze()} disabled={busy}>
+      {/* Для фото кнопка не нужна: разбор запускается сразу по выбору файла.
+          Для текста ввод не автоматический — отправка требует явного действия;
+          дублируем его в интерфейсе, потому что MainButton недоступна вне Telegram. */}
+      {mode === "text" && <button className="tg-button tg-button-block" onClick={() => void handleAnalyze()} disabled={busy}>
         {busy ? "Разбираем…" : "Разобрать"}
-      </button>
+      </button>}
+      {/* Повтор для фото — только после ошибки автозапуска: повторный выбор
+          того же файла не всегда переигрывает событие выбора в браузере. */}
+      {mode === "photo" && error && <button className="tg-button tg-button-block" onClick={() => void handleAnalyze()} disabled={busy}>
+        {busy ? "Разбираем…" : "Попробовать снова"}
+      </button>}
     </div>;
   }
 
@@ -242,6 +274,13 @@ export function AddTab({
     }),
     { kcal: 0, protein: 0, fiber: 0 },
   );
+
+  // Уверенность всего разбора — по худшей позиции: раздел «Три отличия от
+  // макета» спецификации Mini App v2, пункт 1. Диапазон и вопрос показываем
+  // только там, где она не «высокая»; уверенный разбор — просто число.
+  const confidence = overallConfidence(items.map((item) => item.confidence));
+  const kcalRange = showCalories ? confidenceRange(totals.kcal, confidence) : null;
+  const firstQuestion = clarifications[0]?.question ?? null;
 
   return <div className="tg-page">
     <header className="tg-hero">
@@ -261,6 +300,8 @@ export function AddTab({
       {items.map((item, index) => <li key={index}>
         <div className="tg-draft-row">
           <b>{item.name}</b>
+          {/* Степпер и множители порций ниже — это и есть «изменить порцию»:
+              отдельной кнопки не нужно, редактирование доступно сразу. */}
           <div className="tg-stepper">
             <button aria-label="Меньше" onClick={() => { haptic("tap"); updateItem(index, { grams: Math.max(1, item.grams - 10) }); }}>−</button>
             <span>{item.grams} г</span>
@@ -279,7 +320,9 @@ export function AddTab({
           )}
         </div>
         <div className="tg-draft-meta">
-          {CONFIDENCE_LABELS[item.confidence] && <i>{CONFIDENCE_LABELS[item.confidence]}</i>}
+          {/* Словами, не процентом: модель процента уверенности не сообщает.
+              Для «высокой» ничего не показываем — это и есть «просто число». */}
+          {item.confidence !== "high" && <i>{CONFIDENCE_LABELS[item.confidence]}</i>}
           {showCalories && <span>{Math.round((item.kcalPer100 * item.grams) / 100)} ккал</span>}
           <span>белок {Math.round((item.proteinPer100 * item.grams) / 10) / 10} г</span>
           <button className="tg-remove" aria-label="Убрать позицию"
@@ -289,9 +332,15 @@ export function AddTab({
     </ul>
 
     <div className="tg-card tg-draft-total">
-      {showCalories && <div><strong>{totals.kcal}</strong><span>ккал</span></div>}
-      <div><strong>{Math.round(totals.protein * 10) / 10}</strong><span>белок, г</span></div>
-      <div><strong>{Math.round(totals.fiber * 10) / 10}</strong><span>клетчатка, г</span></div>
+      <div className="tg-draft-total-row">
+        {showCalories && <div><strong>{totals.kcal}</strong><span>ккал</span></div>}
+        <div><strong>{Math.round(totals.protein * 10) / 10}</strong><span>белок, г</span></div>
+        <div><strong>{Math.round(totals.fiber * 10) / 10}</strong><span>клетчатка, г</span></div>
+      </div>
+      {kcalRange && <p className="tg-draft-total-note">
+        Вероятно {kcalRange.min}–{kcalRange.max} ккал ({CONFIDENCE_LABELS[confidence]} уверенность).
+        {firstQuestion ? ` ${firstQuestion}` : ""}
+      </p>}
     </div>
 
     <div className="tg-segment tg-segment-wrap">

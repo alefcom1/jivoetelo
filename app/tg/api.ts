@@ -3,8 +3,22 @@
 import { getWebApp } from "./telegram.ts";
 
 export type TgTotals = { kcal: number; protein: number; fat: number; carbs: number; fiber: number };
-export type TgTargets = { kcalTarget: number; kcalMin: number; kcalMax: number; proteinTarget: number; fiberTarget: number };
+export type TgTargets = {
+  kcalTarget: number;
+  kcalMin: number;
+  kcalMax: number;
+  proteinTarget: number;
+  fiberTarget: number;
+  // Выводятся из kcalTarget/proteinTarget на сервере (lib/macro-split.ts) —
+  // отдельной целью в БД не хранятся.
+  fatTarget: number;
+  carbsTarget: number;
+};
 export type TgMeal = { id: number; time: string; title: string; items: string[]; kcal: number; protein: number };
+
+/** Точка тренда веса — тот же формат, что и в вебе (lib/trend.ts). */
+export type TgWeightPoint = { onDate: string; weightKg: number; trendKg: number };
+export type TgWeight = { entries: TgWeightPoint[]; weeklyChangeKg: number | null };
 
 export type TodayResponse = {
   showCalories: boolean;
@@ -12,6 +26,9 @@ export type TodayResponse = {
   totals: TgTotals;
   targets: TgTargets | null;
   meals: TgMeal[];
+  /** Снимки, присланные боту и ещё не подтверждённые — строка на «Сегодня». */
+  inboxPending: number;
+  weight: TgWeight | null;
 };
 
 export type ApiFailure = { reason: "not_linked" | "invalid_signature" | "not_configured" | "error"; message?: string };

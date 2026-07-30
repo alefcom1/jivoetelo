@@ -183,18 +183,21 @@ try {
   `);
   await tgPage.goto(`${BASE}/tg`);
   await tgPage.waitForSelector(".tg-app", { timeout: 20000 });
-  await tgPage.click('.tg-tabs button:has-text("Инбокс")');
+  // В v2 инбокс — не вкладка, а строка на «Сегодня» (раздел «Три отличия
+  // от макета» спецификации Mini App v2); она видна, только пока есть что подтвердить.
+  await tgPage.waitForSelector(".tg-inbox-banner", { timeout: 15000 });
+  await tgPage.click(".tg-inbox-banner");
   await tgPage.waitForSelector(".tg-inbox", { timeout: 15000 });
   const tgInboxText = await tgPage.textContent(".tg-inbox");
   if (!tgInboxText.includes("каша")) throw new Error(`Снимка нет в Mini App: ${tgInboxText.slice(0, 200)}`);
 
-  step("12. Mini App: разбор снимка и сохранение");
+  step("12. Mini App: мгновенный разбор снимка и сохранение");
   // Пауза под антифлуд: сценарий разбирает второе фото быстрее, чем это
   // возможно для человека, и продуктовый лимит в 3 секунды честно сработал бы.
   await new Promise((r) => setTimeout(r, 3200));
+  // Разбор запускается сам при открытии снимка — отдельной кнопки
+  // подтверждения в v2 нет (раздел «Три отличия от макета», пункт 2).
   await tgPage.click('.tg-inbox .tg-button:has-text("Разобрать")');
-  await tgPage.waitForSelector('.tg-button-block:has-text("Разобрать")', { timeout: 15000 });
-  await tgPage.click('.tg-button-block:has-text("Разобрать")');
   await tgPage.waitForSelector(".tg-draft", { timeout: 25000 });
   await tgPage.click('.tg-button-block:has-text("Сохранить")');
   await tgPage.waitForSelector(".tg-inbox, .tg-hero:has-text(\"Инбокс пуст\")", { timeout: 20000 });
@@ -208,7 +211,8 @@ try {
   const toDismiss = addInboxPhoto(userId, { takenOn: "2026-07-21", takenTime: "19:00", note: null });
   await tgPage.reload();
   await tgPage.waitForSelector(".tg-app", { timeout: 20000 });
-  await tgPage.click('.tg-tabs button:has-text("Инбокс")');
+  await tgPage.waitForSelector(".tg-inbox-banner", { timeout: 15000 });
+  await tgPage.click(".tg-inbox-banner");
   await tgPage.waitForSelector(".tg-inbox", { timeout: 15000 });
   await tgPage.click('.tg-link-button:has-text("Отклонить")');
   await tgPage.waitForSelector('h1:has-text("Инбокс пуст")', { timeout: 15000 });
