@@ -3,13 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import {
   analyzeMeal,
+  fetchFrequentMeals,
   saveMeal,
   type AnalysisItemDto,
   type ClarificationDto,
+  type FrequentMealDto,
   type InboxItemDto,
 } from "./api";
 import { CONFIDENCE_LABELS, confidenceRange, overallConfidence, type Confidence } from "@/lib/confidence";
 import { formatDayRu } from "@/lib/dates";
+import { withPluralRu } from "@/lib/plural";
 import { scaleGrams } from "@/lib/portions";
 import { AddItem, type NewItem } from "./add-item";
 import { FoodIcon } from "./food-icon";
@@ -99,6 +102,10 @@ export function CameraTab({
   const [mealType, setMealType] = useState(guessMealType());
   const fileRef = useRef<HTMLInputElement>(null);
   const mainButton = useMainButtonApi();
+  // «Как обычно?» — частые приёмы пищи из собственного дневника. Грузим
+  // сразу при открытии экрана, в отличие от подсказок «что съесть»: этот
+  // запрос не ходит в AI и не тратит квоту, это чтение своих же записей.
+  const [frequent, setFrequent] = useState<FrequentMealDto[]>([]);
   // Инбокс-снимок разбирается автоматически один раз при открытии экрана —
   // без этого флага двойной вызов effect'а в dev-режиме отправил бы разбор
   // дважды подряд и упёрся бы в антифлуд-лимит на 3 секунды.
@@ -135,6 +142,42 @@ export function CameraTab({
     } finally {
       setBusy(false);
     }
+  }
+
+  // Для снимка из инбокса подсказки не нужны: там уже есть конкретное фото,
+  // которое человек пришёл разобрать.
+  useEffect(() => {
+    if (inbox) return;
+    let cancelled = false;
+    fetchFrequentMeals()
+      .then((result) => { if (!cancelled) setFrequent(result.meals); })
+      // Молча: «как обычно» — приятное дополнение, а не то, без чего экран
+      // не работает. Ошибку показывать не за что.
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [inbox]);
+
+  /** Повтор частого приёма: сразу в черновик, без обращения к разбору. */
+  function repeatMeal(meal: FrequentMealDto) {
+    haptic("tap");
+    setItems(meal.items.map((item) => ({
+      name: item.name,
+      grams: item.grams,
+      suggestedGrams: item.grams,
+      kcalPer100: item.kcalPer100,
+      proteinPer100: item.proteinPer100,
+      fatPer100: item.fatPer100,
+      carbsPer100: item.carbsPer100,
+      fiberPer100: item.fiberPer100,
+      confidence: (item.confidence as Confidence) ?? "high",
+    })));
+    setClarifications([]);
+    // Разбора не было — ни исходного текста, ни снимка, ни JSON-разбора
+    // сохранять не надо: запись создаётся из прошлой, а не из новой оценки.
+    setAnalysis(null);
+    setPhotoKey(null);
+    setSourceText(null);
+    if (meal.mealType !== "other") setMealType(meal.mealType);
   }
 
   // Снимок из инбокса: пользователь уже нажал «Разобрать» на предыдущем
@@ -246,6 +289,28 @@ export function CameraTab({
         {forDay && <p className="tg-kicker">Запись за {formatDayRu(forDay)}</p>}
         <h1>Что вы ели?</h1>
       </header>
+
+      {/* «Как обычно?» — выше способов ввода: люди едят одно и то же, и для
+          большинства записей это и есть самый короткий путь. Разбор здесь
+          не нужен вовсе, поэтому работает и с выключенным AI. */}
+      {frequent.length > 0 && <section className="tg-section tg-usual">
+        <h2>Как обычно</h2>
+        <ul className="tg-usual-list">
+          {frequent.map((meal) => <li key={meal.key}>
+            <button onClick={() => repeatMeal(meal)}>
+              <FoodIcon name={meal.title} size="md" />
+              <span className="tg-usual-body">
+                <b>{meal.title}</b>
+                <span>{withPluralRu(meal.count, ["раз", "раза", "раз"])} за два месяца</span>
+              </span>
+              <span className="tg-usual-macros">
+                {showCalories && <b>{meal.kcal}<i> ккал</i></b>}
+                <span>белок {meal.protein} г</span>
+              </span>
+            </button>
+          </li>)}
+        </ul>
+      </section>}
 
       <div className="tg-segment" role="tablist">
         <button role="tab" aria-selected={mode === "text"} className={mode === "text" ? "active" : ""}

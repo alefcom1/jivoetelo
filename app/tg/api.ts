@@ -134,6 +134,32 @@ export async function dismissInboxItem(id: number): Promise<{ ok: boolean }> {
   return handle<{ ok: boolean }>(response);
 }
 
+/** Частый приём пищи для повтора — «как обычно?» на «Камере». */
+export type FrequentMealDto = {
+  key: string;
+  title: string;
+  mealType: string;
+  count: number;
+  kcal: number;
+  protein: number;
+  items: Array<{
+    name: string;
+    grams: number;
+    kcalPer100: number;
+    proteinPer100: number;
+    fatPer100: number;
+    carbsPer100: number;
+    fiberPer100: number;
+    confidence: string;
+  }>;
+};
+
+export async function fetchFrequentMeals(): Promise<{ meals: FrequentMealDto[] }> {
+  return handle<{ meals: FrequentMealDto[] }>(
+    await fetch("/api/tg/frequent", { headers: initDataHeader(), cache: "no-store" }),
+  );
+}
+
 export type SuggestResponse = {
   needsPlan: boolean;
   context?: { remainingKcal: number; remainingProtein: number; remainingFiber: number; mealTypeLabel: string };

@@ -1,10 +1,11 @@
 // Общий слой дневника: используется и веб-приложением, и Telegram Mini App,
 // чтобы бизнес-правила жили в одном месте (один бэкенд для обеих платформ).
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { mealItems, meals, profiles } from "@/db/schema";
 import type { DiaryItemRow, DiaryMealRow } from "./diary.ts";
+import type { PastMeal } from "./frequent-meals.ts";
 import { sumTotals, type NutritionTotals } from "./nutrition.ts";
 import type { PaceKey } from "./pace.ts";
 import { deletePhoto } from "./storage.ts";
@@ -188,6 +189,66 @@ export async function getDiaryDayRows(userId: number, day: string): Promise<{ me
     : [];
 
   return { meals: dayMeals, items };
+}
+
+/**
+ * Прошлые приёмы пищи за окно наблюдения — сырьё для «как обычно?»
+ * (lib/frequent-meals.ts). Окно, а не вся история: рацион меняется, и
+ * завтрак годовой давности подсказкой быть не должен. Группировка и
+ * ранжирование — в чистом модуле, здесь только чтение.
+ */
+export async function getRecentMealsForRepeat(userId: number, days = 60): Promise<PastMeal[]> {
+  const db = getDb();
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceDay = since.toLocaleDateString("en-CA");
+
+  const rows = await db
+    .select({ id: meals.id, eatenOn: meals.eatenOn, mealType: meals.mealType })
+    .from(meals)
+    .where(and(eq(meals.userId, userId), gte(meals.eatenOn, sinceDay)))
+    .orderBy(meals.eatenOn);
+
+  const ids = rows.map((row) => row.id);
+  if (ids.length === 0) return [];
+
+  const items = await db
+    .select({
+      mealId: mealItems.mealId,
+      name: mealItems.name,
+      grams: mealItems.grams,
+      kcalPer100: mealItems.kcalPer100,
+      proteinPer100: mealItems.proteinPer100,
+      fatPer100: mealItems.fatPer100,
+      carbsPer100: mealItems.carbsPer100,
+      fiberPer100: mealItems.fiberPer100,
+      confidence: mealItems.confidence,
+    })
+    .from(mealItems)
+    .where(inArray(mealItems.mealId, ids));
+
+  const byMeal = new Map<number, PastMeal["items"]>();
+  for (const item of items) {
+    const list = byMeal.get(item.mealId) ?? [];
+    list.push({
+      name: item.name,
+      grams: item.grams,
+      kcalPer100: item.kcalPer100,
+      proteinPer100: item.proteinPer100,
+      fatPer100: item.fatPer100,
+      carbsPer100: item.carbsPer100,
+      fiberPer100: item.fiberPer100,
+      confidence: item.confidence,
+    });
+    byMeal.set(item.mealId, list);
+  }
+
+  return rows.map((row) => ({
+    mealId: row.id,
+    eatenOn: row.eatenOn,
+    mealType: row.mealType,
+    items: byMeal.get(row.id) ?? [],
+  }));
 }
 
 export type MealDetail = {
