@@ -7,9 +7,11 @@
   background: var(--white);
 }
 
+/* 772px, а не 820: столько остаётся у колонки после её собственных полей.
+   Иначе шапка встаёт на 24px левее текста страницы. */
 .raschet-header {
   height: 76px;
-  padding: 0 max(24px, calc((100% - 820px) / 2));
+  padding: 0 max(24px, calc((100% - 772px) / 2));
   display: flex;
   align-items: center;
   gap: 24px;

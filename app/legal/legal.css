@@ -6,9 +6,11 @@
   background: var(--white);
 }
 
+/* 852px, а не 900: столько остаётся у колонки текста после её собственных
+   полей. Иначе логотип встаёт на 24px левее первой строки документа. */
 .legal-header {
   height: 76px;
-  padding: 0 max(24px, calc((100% - 900px) / 2));
+  padding: 0 max(24px, calc((100% - 852px) / 2));
   display: flex;
   align-items: center;
   gap: 24px;
@@ -21,10 +23,15 @@
   font-weight: 800;
 }
 
+/* Колонку центрируем через max-width + auto-поля. Процентный отступ вида
+   calc((100% - 900px) / 2) здесь не годится: проценты считаются от родителя во
+   всю ширину экрана, и вместе с max-width он съедал колонку целиком — на
+   широком мониторе от текста оставался столбец в одно слово. Та же ошибка
+   уже ловилась в raschet.css. */
 .legal-doc {
   max-width: 900px;
   margin: 0 auto;
-  padding: 56px max(24px, calc((100% - 900px) / 2)) 80px;
+  padding: 56px 24px 80px;
 }
 
 .legal-doc > .kicker {
