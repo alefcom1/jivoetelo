@@ -12,10 +12,8 @@ import { ProfileTab } from "./profile-tab";
 import { TodayTab } from "./today-tab";
 import { applyTheme, getWebApp, haptic } from "./telegram";
 
-// Пять вкладок раздела «Пять вкладок» спецификации Mini App v2. «Камера» —
-// эволюция прежней «Добавить»: тот же экран, разбор теперь мгновенный.
-// «Дневник», «План» и «Профиль» на этом шаге — заглушки: полноценные экраны
-// вне задачи этой волны (docs/miniapp-v2.md).
+// Пять вкладок раздела «Пять вкладок» спецификации Mini App v2 (docs/miniapp-v2.md).
+// «Камера» — эволюция прежней «Добавить»: тот же экран, разбор теперь мгновенный.
 type Tab = "today" | "diary" | "camera" | "plan" | "profile";
 type Status = "loading" | "ready" | "needs_link" | "no_telegram" | "error";
 
@@ -141,7 +139,7 @@ export default function MiniApp() {
               onOpenCamera={() => switchTab("camera")}
               onOpenInbox={() => { haptic("tap"); setInboxOpen(true); }}
             />}
-            {tab === "diary" && <DiaryTab />}
+            {tab === "diary" && <DiaryTab onOpenCamera={() => switchTab("camera")} />}
             {tab === "camera" && <CameraTab key="manual" showCalories={today.showCalories} onSaved={handleCameraSaved} />}
             {tab === "plan" && <PlanTab />}
             {tab === "profile" && <ProfileTab />}
