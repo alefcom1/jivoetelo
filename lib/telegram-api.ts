@@ -71,11 +71,24 @@ export type TelegramUpdate = {
   message?: {
     message_id?: number;
     from?: { id?: number; first_name?: string };
-    chat?: { id?: number };
+    chat?: { id?: number; type?: string };
     text?: string;
     caption?: string;
     photo?: TelegramFile[];
     document?: { file_id?: string; mime_type?: string; file_size?: number };
+    /** Общий идентификатор у снимков одного альбома — см. handle-update.ts. */
+    media_group_id?: string;
+    // Вложения, которые бот не разбирает. Нужны не для обработки, а для
+    // осмысленного ответа: «не умею голос» полезнее, чем общая справка.
+    voice?: unknown;
+    audio?: unknown;
+    video?: unknown;
+    video_note?: unknown;
+    sticker?: unknown;
+    animation?: unknown;
+    location?: unknown;
+    contact?: unknown;
+    poll?: unknown;
   };
   callback_query?: {
     id?: string;

@@ -55,6 +55,8 @@ if (command === "set") {
   await call("setMyCommands", {
     commands: [
       { command: "start", description: "Как всё устроено" },
+      { command: "app", description: "Открыть дневник" },
+      { command: "help", description: "Что я умею" },
       { command: "stop", description: "Выключить напоминания" },
     ],
   });

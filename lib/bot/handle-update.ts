@@ -11,7 +11,18 @@
 
 import { localMoment } from "../dates.ts";
 import { snoozeUntil } from "../reminders.ts";
+import { foodCategory } from "../food-category.ts";
 import { inboxButton, type BotLinks } from "./links.ts";
+import {
+  ANSWERS,
+  answerForQuestion,
+  GREETING,
+  looksLikeFood,
+  photoSavedText,
+  PHOTO,
+  TEXT_LOOKS_LIKE_FOOD,
+  UNSUPPORTED,
+} from "./texts.ts";
 import {
   pickPhotoSize,
   TelegramApiError,
@@ -28,6 +39,35 @@ export const MAX_INBOX_PHOTOS_PER_DAY = 30;
 export const MAX_BOT_PHOTO_BYTES = 8 * 1024 * 1024;
 
 const LINK_CODE_RE = /^[0-9A-F]{8}$/;
+
+/**
+ * Альбом приходит не одним апдейтом, а несколькими сообщениями с общим
+ * `media_group_id`. Сохранять надо каждое, а подтверждать — один раз: пять
+ * снимков давали пять одинаковых сообщений подряд.
+ *
+ * Какое из них последнее, заранее неизвестно, поэтому отвечаем на первое, а
+ * остальные молча сохраняем. Память процесса, а не база: цена ошибки —
+ * лишнее подтверждение после перезапуска, заводить ради этого таблицу незачем. Размер ограничен, чтобы карта не росла без предела.
+ */
+const ALBUM_TTL_MS = 60_000;
+const ALBUM_MAX = 200;
+const seenAlbums = new Map<string, number>();
+
+export function shouldConfirmAlbum(mediaGroupId: string | undefined, now: number): boolean {
+  if (!mediaGroupId) return true;
+
+  for (const [key, at] of seenAlbums) {
+    if (now - at > ALBUM_TTL_MS) seenAlbums.delete(key);
+  }
+  if (seenAlbums.has(mediaGroupId)) return false;
+
+  if (seenAlbums.size >= ALBUM_MAX) {
+    const oldest = seenAlbums.keys().next().value;
+    if (oldest !== undefined) seenAlbums.delete(oldest);
+  }
+  seenAlbums.set(mediaGroupId, now);
+  return true;
+}
 
 export type BotStore = {
   findUserByTelegram(telegramUserId: string): Promise<{ id: number } | null>;
@@ -53,30 +93,33 @@ export type BotDeps = {
   links: BotLinks;
 };
 
+/**
+ * Тексты бота живут в ./texts.ts. Здесь — плоский агрегат под старыми
+ * именами: на TEXTS ссылаются напоминания и тесты, и разводить их по новым
+ * путям ради переезда формулировок незачем.
+ */
 export const TEXTS = {
-  greetingLinked:
-    "Готово, аккаунт привязан.\n\nПрисылайте сюда фото еды в любой момент — хоть в кафе, хоть на бегу. Разбирать не обязательно сразу: вечером напомним, и вы соберёте день за пару минут.",
-  greetingUnlinked:
-    "Это бот «Живого Тела». Он принимает фото еды и хранит их, пока вам некогда.\n\nЧтобы связать его с вашим аккаунтом, откройте настройки на сайте, нажмите «Привязать Telegram» и пришлите сюда код из восьми символов.",
-  linkFailed:
-    "Код не подошёл — возможно, он устарел или уже использован. Коды живут пятнадцать минут: сгенерируйте новый в настройках на сайте.",
-  needLinkForPhoto:
-    "Фото пока некуда сохранить: аккаунт не привязан. Возьмите код в настройках на сайте и пришлите его сюда — это разовое действие.",
-  photoTooLarge: "Это фото слишком большое. Обычный снимок с телефона проходит — попробуйте отправить его как фото, а не файлом.",
-  photoFailed: "Не получилось сохранить фото. Попробуйте отправить ещё раз.",
-  dailyLimit:
-    "На сегодня в инбоксе уже достаточно снимков. Разберите то, что накопилось, — и присылайте дальше.",
-  remindersOff: "Хорошо, напоминания выключены. Включить обратно можно в настройках на сайте.",
-  snoozed: "Хорошо, на три дня замолчим. Инбокс никуда не денется.",
-  help:
-    "Присылайте фото еды — сохраним их до вечера.\n\nКоманды: /start — как всё устроено, /stop — выключить напоминания.",
+  greetingLinked: GREETING.linked,
+  greetingUnlinked: GREETING.unlinked,
+  linkFailed: GREETING.linkFailed,
+  needLinkForPhoto: PHOTO.needLink,
+  photoTooLarge: PHOTO.tooLarge,
+  photoFailed: PHOTO.failed,
+  dailyLimit: PHOTO.dailyLimit,
+  remindersOff: ANSWERS.remindersOff,
+  remindersOffNoAccount: ANSWERS.remindersOffNoAccount,
+  snoozed: ANSWERS.snoozed,
+  help: ANSWERS.help,
+  openApp: ANSWERS.openApp,
+  textLooksLikeFood: TEXT_LOOKS_LIKE_FOOD,
+  voice: UNSUPPORTED.voice,
+  video: UNSUPPORTED.video,
+  sticker: UNSUPPORTED.sticker,
+  fileNotImage: UNSUPPORTED.fileNotImage,
+  otherAttachment: UNSUPPORTED.other,
 } as const;
 
-/** Подтверждение после сохранения снимка — с числом уже накопленного за день. */
-export function photoSavedText(pendingToday: number): string {
-  if (pendingToday <= 1) return "Сохранили. Вечером напомним разобрать — или откройте инбокс прямо сейчас.";
-  return `Сохранили, теперь в инбоксе ${pendingToday}. Вечером напомним разобрать.`;
-}
+export { photoSavedText } from "./texts.ts";
 
 function inboxKeyboard(links: BotLinks): { inline_keyboard: InlineKeyboardButton[][] } {
   return { inline_keyboard: [[inboxButton(links)]] };
@@ -141,7 +184,7 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     return;
   }
   if (photo) {
-    await savePhotoToInbox(photo.file_id, message.caption ?? null, tgId, chatId, deps);
+    await savePhotoToInbox(photo.file_id, message.caption ?? null, tgId, chatId, deps, message.media_group_id);
     return;
   }
 
@@ -153,7 +196,32 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
       await trySend(deps.client, chatId, TEXTS.photoTooLarge);
       return;
     }
-    await savePhotoToInbox(document.file_id, message.caption ?? null, tgId, chatId, deps);
+    await savePhotoToInbox(document.file_id, message.caption ?? null, tgId, chatId, deps, message.media_group_id);
+    return;
+  }
+
+  // Вложения, которые бот не разбирает. Отвечаем до общей справки и по
+  // отдельности: человек прислал не мусор, а попытку записать еду, и «голос
+  // не расшифровываю» полезнее, чем «присылайте фото».
+  if (message.voice || message.audio) {
+    await trySend(deps.client, chatId, UNSUPPORTED.voice);
+    return;
+  }
+  if (message.video || message.video_note) {
+    await trySend(deps.client, chatId, UNSUPPORTED.video);
+    return;
+  }
+  if (message.sticker || message.animation) {
+    await trySend(deps.client, chatId, UNSUPPORTED.sticker);
+    return;
+  }
+  if (message.location || message.contact || message.poll) {
+    await trySend(deps.client, chatId, UNSUPPORTED.other);
+    return;
+  }
+  // Документ дошёл сюда, только если он не картинка: изображения перехвачены выше.
+  if (document?.file_id) {
+    await trySend(deps.client, chatId, UNSUPPORTED.fileNotImage);
     return;
   }
 
@@ -163,14 +231,29 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     if (LINK_CODE_RE.test(payload)) return await tryLink(payload, tgId, chatId, deps);
 
     const linked = await deps.store.findUserByTelegram(tgId);
-    await trySend(deps.client, chatId, linked ? TEXTS.greetingLinked : TEXTS.greetingUnlinked);
+    await trySend(deps.client, chatId, linked ? GREETING.linked : GREETING.unlinked);
+    return;
+  }
+
+  if (text === "/help") {
+    await trySend(deps.client, chatId, ANSWERS.help);
+    return;
+  }
+
+  if (text === "/app") {
+    await trySend(deps.client, chatId, ANSWERS.openApp, { replyMarkup: inboxKeyboard(deps.links) });
     return;
   }
 
   if (text === "/stop") {
     const user = await deps.store.findUserByTelegram(tgId);
-    if (user) await deps.store.setRemindersEnabled(user.id, false);
-    await trySend(deps.client, chatId, TEXTS.remindersOff);
+    // Без аккаунта выключать нечего — и говорить «выключено» было бы неправдой.
+    if (!user) {
+      await trySend(deps.client, chatId, ANSWERS.remindersOffNoAccount);
+      return;
+    }
+    await deps.store.setRemindersEnabled(user.id, false);
+    await trySend(deps.client, chatId, ANSWERS.remindersOff);
     return;
   }
 
@@ -178,7 +261,22 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
   const candidate = text.toUpperCase();
   if (LINK_CODE_RE.test(candidate)) return await tryLink(candidate, tgId, chatId, deps);
 
-  await trySend(deps.client, chatId, TEXTS.help);
+  // Вопрос словами — раньше всего этого не было и любой текст получал общую
+  // справку. Порядок именно такой: сначала вопрос, потом еда. «Сколько
+  // стоит подписка» содержит слово из справочника продуктов не чаще, чем
+  // описание ужина содержит слово «тариф», но вопрос конкретнее.
+  const answer = answerForQuestion(text);
+  if (answer) {
+    await trySend(deps.client, chatId, answer);
+    return;
+  }
+
+  if (looksLikeFood(text, (word) => foodCategory(word) !== "other")) {
+    await trySend(deps.client, chatId, TEXT_LOOKS_LIKE_FOOD, { replyMarkup: inboxKeyboard(deps.links) });
+    return;
+  }
+
+  await trySend(deps.client, chatId, ANSWERS.help);
 }
 
 async function tryLink(code: string, tgId: string, chatId: number, deps: BotDeps): Promise<void> {
@@ -192,6 +290,7 @@ async function savePhotoToInbox(
   tgId: string,
   chatId: number,
   deps: BotDeps,
+  mediaGroupId?: string,
 ): Promise<void> {
   const user = await deps.store.findUserByTelegram(tgId);
   if (!user) {
@@ -229,6 +328,9 @@ async function savePhotoToInbox(
     takenOn: moment.day,
     takenTime: moment.time,
   });
+
+  // Снимок сохранён в любом случае; подтверждение — одно на альбом.
+  if (!shouldConfirmAlbum(mediaGroupId, deps.now.getTime())) return;
 
   await trySend(deps.client, chatId, photoSavedText(already + 1), {
     replyMarkup: inboxKeyboard(deps.links),

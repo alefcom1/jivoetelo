@@ -102,7 +102,7 @@ test("фото от привязанного пользователя попад
   assert.equal(inbox[0].userId, 7);
   assert.equal(saved[0].mime, "image/jpeg");
   assert.equal(sent.length, 1);
-  assert.match(sent[0].text, /Сохранили/);
+  assert.match(sent[0].text, /Сохранил/);
 });
 
 test("дата и время съёмки берутся из момента получения, по таймзоне продукта", async () => {
@@ -134,14 +134,14 @@ test("изображение, отправленное файлом, тоже п
   assert.equal(inbox.length, 1);
 });
 
-test("документ не-изображение игнорируется как еда и получает подсказку", async () => {
+test("документ не-изображение получает свой ответ, а не общую справку", async () => {
   const { deps, sent, inbox } = makeDeps();
   await handleUpdate(
     { message: { from: { id: 100 }, chat: { id: 100 }, document: { file_id: "doc", mime_type: "application/pdf", file_size: 5000 } } },
     deps,
   );
   assert.equal(inbox.length, 0);
-  assert.equal(sent[0].text, TEXTS.help);
+  assert.equal(sent[0].text, TEXTS.fileNotImage);
 });
 
 test("слишком большое фото отклоняется без скачивания", async () => {
@@ -233,7 +233,7 @@ test("пустой и битый апдейт не приводят к паде�
 });
 
 test("подтверждение сохранения считает накопленное за день", () => {
-  assert.match(photoSavedText(1), /^Сохранили\./);
+  assert.match(photoSavedText(1), /^Сохранил\./);
   assert.match(photoSavedText(3), /в инбоксе 3/);
 });
 
@@ -250,4 +250,140 @@ test("с настроенным Mini App кнопка открывает инб�
   const button = sent[0].options.replyMarkup.inline_keyboard.flat()[0];
   assert.deepEqual(button.web_app, { url: "https://jivoetelo.ru/tg" });
   assert.equal(button.url, undefined, "две формы кнопки одновременно Telegram не примет");
+});
+
+// --- Сценарии беседы, которых раньше не было: всё, кроме фото и кода,
+// падало в одну общую справку. Ниже — по тесту на каждый разобранный случай.
+
+function textUpdate(text, tgId = 100) {
+  return { message: { from: { id: tgId }, chat: { id: tgId }, text } };
+}
+
+test("голосовое: честно говорим, что не расшифровываем, и даём рабочий путь", async () => {
+  const { deps, sent } = makeDeps();
+  await handleUpdate({ message: { from: { id: 100 }, chat: { id: 100 }, voice: { file_id: "v" } } }, deps);
+  assert.equal(sent[0].text, TEXTS.voice);
+  assert.match(sent[0].text, /фотограф/i, "должен предложить фото как замену");
+});
+
+test("видео и кружок получают ответ про фотографии", async () => {
+  for (const field of ["video", "video_note"]) {
+    const { deps, sent } = makeDeps();
+    await handleUpdate({ message: { from: { id: 100 }, chat: { id: 100 }, [field]: { file_id: "x" } } }, deps);
+    assert.equal(sent[0].text, TEXTS.video, `не разобран ${field}`);
+  }
+});
+
+test("стикер не остаётся без ответа", async () => {
+  const { deps, sent } = makeDeps();
+  await handleUpdate({ message: { from: { id: 100 }, chat: { id: 100 }, sticker: { file_id: "s" } } }, deps);
+  assert.equal(sent[0].text, TEXTS.sticker);
+});
+
+test("геопозиция и контакт получают общий отказ, а не молчание", async () => {
+  for (const field of ["location", "contact", "poll"]) {
+    const { deps, sent } = makeDeps();
+    await handleUpdate({ message: { from: { id: 100 }, chat: { id: 100 }, [field]: {} } }, deps);
+    assert.equal(sent[0].text, TEXTS.otherAttachment, `не разобран ${field}`);
+  }
+});
+
+test("описание еды текстом ведёт в приложение, а не в общую справку", async () => {
+  const { deps, sent } = makeDeps();
+  await handleUpdate(textUpdate("два сырника и кофе"), deps);
+  assert.equal(sent[0].text, TEXTS.textLooksLikeFood);
+  assert.ok(sent[0].options?.replyMarkup, "нужна кнопка перехода в приложение");
+});
+
+test("еда с граммовкой опознаётся даже без знакомого продукта", async () => {
+  const { deps, sent } = makeDeps();
+  await handleUpdate(textUpdate("200 г творожной запеканки"), deps);
+  assert.equal(sent[0].text, TEXTS.textLooksLikeFood);
+});
+
+test("вопрос про здоровье получает дисклеймер, а не совет", async () => {
+  const { deps, sent } = makeDeps();
+  await handleUpdate(textUpdate("а мне при диабете это можно?"), deps);
+  assert.match(sent[0].text, /не врач/i);
+  assert.doesNotMatch(sent[0].text, /рекоменду|советую/i, "бот не должен советовать по здоровью");
+});
+
+test("вопросы про деньги, данные, отвязку и напоминания разведены по темам", async () => {
+  const cases = [
+    ["сколько стоит подписка?", /бесплатн/i],
+    ["как удалить мои данные", /удал/i],
+    ["хочу отвязать телеграм", /отвязать/i],
+    ["почему приходят напоминания", /напоминани/i],
+  ];
+  for (const [question, expected] of cases) {
+    const { deps, sent } = makeDeps();
+    await handleUpdate(textUpdate(question), deps);
+    assert.match(sent[0].text, expected, `не тот ответ на «${question}»`);
+  }
+});
+
+test("/help и /app отвечают по делу", async () => {
+  const { deps: d1, sent: s1 } = makeDeps();
+  await handleUpdate(textUpdate("/help"), d1);
+  assert.equal(s1[0].text, TEXTS.help);
+
+  const { deps: d2, sent: s2 } = makeDeps();
+  await handleUpdate(textUpdate("/app"), d2);
+  assert.equal(s2[0].text, TEXTS.openApp);
+  assert.ok(s2[0].options?.replyMarkup, "у /app должна быть кнопка");
+});
+
+test("/stop без привязки не врёт, что что-то выключил", async () => {
+  const { deps, sent, prefs } = makeDeps();
+  await handleUpdate(textUpdate("/stop", 999), deps);
+  assert.deepEqual(prefs, [], "нечего выключать — в базу лезть незачем");
+  assert.equal(sent[0].text, TEXTS.remindersOffNoAccount);
+});
+
+test("совсем непонятное всё равно получает справку, а не молчание", async () => {
+  const { deps, sent } = makeDeps();
+  await handleUpdate(textUpdate("ъъъ"), deps);
+  assert.equal(sent[0].text, TEXTS.help);
+});
+
+test("альбом сохраняется целиком, но подтверждение приходит одно", async () => {
+  const { deps, sent, inbox } = makeDeps();
+  const album = "album-1";
+  for (let i = 0; i < 4; i++) {
+    await handleUpdate(
+      {
+        message: {
+          from: { id: 100 },
+          chat: { id: 100 },
+          media_group_id: album,
+          photo: [{ file_id: `p${i}`, file_unique_id: `u${i}`, file_size: 1000 }],
+        },
+      },
+      deps,
+    );
+  }
+  assert.equal(inbox.length, 4, "сохраниться должны все снимки");
+  assert.equal(sent.length, 1, "а подтверждение — одно на альбом");
+});
+
+test("одиночные снимки подтверждаются каждый", async () => {
+  const { deps, sent, inbox } = makeDeps();
+  for (let i = 0; i < 3; i++) {
+    await handleUpdate(
+      { message: { from: { id: 100 }, chat: { id: 100 }, photo: [{ file_id: `p${i}`, file_unique_id: `u${i}`, file_size: 1000 }] } },
+      deps,
+    );
+  }
+  assert.equal(inbox.length, 3);
+  assert.equal(sent.length, 3);
+});
+
+test("ни один ответ бота не оценивает еду", () => {
+  // Продуктовое правило всего сервиса, в переписке особенно важное:
+  // сообщение в мессенджере читается лично.
+  const forbidden = /вредн|полезн|слишком много|переел|нельзя есть|плохая еда|отработ|компенсир/i;
+  for (const [key, text] of Object.entries(TEXTS)) {
+    if (typeof text !== "string") continue;
+    assert.doesNotMatch(text, forbidden, `оценочная формулировка в TEXTS.${key}`);
+  }
 });
