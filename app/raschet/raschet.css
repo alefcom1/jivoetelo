@@ -416,3 +416,71 @@
 .raschet-capture-done .field-note {
   margin: 0;
 }
+
+/* Карточки темпа. В отличие от .radio-card, где вариант умещается в пару
+   слов, здесь у каждого есть пояснение — что человек получает и чем платит.
+   Без него выбор между «мягким» и «умеренным» превращается в угадывание. */
+.pace-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.pace-card {
+  cursor: pointer;
+}
+
+.pace-card input {
+  position: absolute;
+  opacity: 0;
+}
+
+.pace-card > span {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  height: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+
+.pace-card b {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.pace-card span span {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.pace-card input:checked + span {
+  background: var(--black);
+  border-color: var(--black);
+  color: white;
+}
+
+.pace-card input:checked + span span {
+  color: #c9cbc4;
+}
+
+.pace-card input:focus-visible + span {
+  outline: 2px solid var(--coral);
+}
+
+/* Вердикт про мышцы — не украшение: это единственное место, где видно, чем
+   именно человек платит за выбранный темп. */
+.pace-verdict {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--coral);
+  background: var(--paper);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.pace-verdict-safe {
+  border-left-color: #7f9a3c;
+}

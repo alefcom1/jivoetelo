@@ -50,6 +50,21 @@ function roundTo10(value: number): number {
   return Math.round(value / 10) * 10;
 }
 
+/**
+ * Суточный расход до поправки на цель. Вынесено отдельно, потому что от него
+ * считается не только норма, но и темп снижения веса (lib/pace.ts): дефицит
+ * имеет смысл мерить долей от расхода, а не долей от веса.
+ */
+export function computeTdee(
+  input: Pick<TargetInput, "sexForFormula" | "birthYear" | "heightCm" | "weightKg" | "activity">,
+  currentYear = new Date().getFullYear(),
+): number {
+  const age = Math.min(100, Math.max(14, currentYear - input.birthYear));
+  const base =
+    10 * input.weightKg + 6.25 * input.heightCm - 5 * age + (input.sexForFormula === "male" ? 5 : -161);
+  return base * (ACTIVITY_MULTIPLIER[input.activity] ?? ACTIVITY_MULTIPLIER.light);
+}
+
 export function computeTargets(input: TargetInput, currentYear = new Date().getFullYear()): Targets {
   const age = Math.min(100, Math.max(14, currentYear - input.birthYear));
 
@@ -61,9 +76,7 @@ export function computeTargets(input: TargetInput, currentYear = new Date().getF
     adjusted = true;
   }
 
-  const base =
-    10 * input.weightKg + 6.25 * input.heightCm - 5 * age + (input.sexForFormula === "male" ? 5 : -161);
-  const tdee = base * (ACTIVITY_MULTIPLIER[input.activity] ?? ACTIVITY_MULTIPLIER.light);
+  const tdee = computeTdee(input, currentYear);
   const adjustment = Math.min(450, Math.max(-450, input.adjustmentKcal ?? 0));
   let target = tdee * GOAL_FACTOR[goal] + adjustment;
 
