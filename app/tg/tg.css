@@ -630,3 +630,11 @@
 .tg-usual-macros b { font: 500 15px var(--brand-serif); }
 .tg-usual-macros b i { font-style: normal; font-size: 10px; font-weight: 600; color: var(--tg-hint); margin-left: 2px; }
 .tg-usual-macros > span { font-size: 10.5px; color: var(--tg-hint); }
+
+/* Служебный экран диагностики сканера (app/tg/scan-test) — одноразовый,
+   удаляется вместе с каталогом, когда ответ получен. */
+.tg-diag { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.tg-diag > div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.tg-diag dt { color: var(--tg-hint); }
+.tg-diag dd { margin: 0; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+.tg-diag-result { margin: 6px 0 10px; font: 500 22px var(--brand-serif); overflow-wrap: anywhere; }
