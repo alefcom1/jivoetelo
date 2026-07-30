@@ -1,5 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { createAnthropicClient, DEFAULT_MODEL, readUsage, supportsFallbacks } from "./client.ts";
+import { createAnthropicClient, readUsage, resolveModel, supportsFallbacks } from "./client.ts";
 import { DisabledSuggestionProvider } from "./disabled.ts";
 import { resolveAiMode } from "./mode.ts";
 import { MealAnalysisError, type TokenUsage } from "./types.ts";
@@ -109,19 +109,18 @@ function buildPrompt(context: SuggestionContext): string {
 
 export class AnthropicSuggestionProvider implements SuggestionProvider {
   private client: Anthropic;
-  private model: string;
 
-  constructor(model?: string) {
+  constructor() {
     this.client = createAnthropicClient();
-    this.model = model ?? DEFAULT_MODEL;
   }
 
   async suggest(context: SuggestionContext): Promise<SuggestionResult> {
-    const withFallbacks = supportsFallbacks(this.model);
+    const model = resolveModel("suggest");
+    const withFallbacks = supportsFallbacks(model);
     let response: Anthropic.Beta.Messages.BetaMessage;
     try {
       response = await this.client.beta.messages.create({
-        model: this.model,
+        model,
         max_tokens: 16000,
         ...(withFallbacks
           ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
@@ -190,7 +189,7 @@ export function getSuggestionProvider(): SuggestionProvider {
   switch (resolveAiMode()) {
     case "mock": suggestionProvider = new MockSuggestionProvider(); break;
     case "off": suggestionProvider = new DisabledSuggestionProvider(); break;
-    default: suggestionProvider = new AnthropicSuggestionProvider(process.env.ANTHROPIC_MODEL);
+    default: suggestionProvider = new AnthropicSuggestionProvider();
   }
   return suggestionProvider;
 }
