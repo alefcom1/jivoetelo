@@ -9,7 +9,9 @@ import {
   type InboxItemDto,
 } from "./api";
 import { CONFIDENCE_LABELS, confidenceRange, overallConfidence, type Confidence } from "@/lib/confidence";
+import { formatDayRu } from "@/lib/dates";
 import { scaleGrams } from "@/lib/portions";
+import { AddItem, type NewItem } from "./add-item";
 import { FoodIcon } from "./food-icon";
 import { ArtCamera } from "./illustrations";
 import { haptic, useMainButtonApi } from "./telegram";
@@ -69,12 +71,20 @@ export function CameraTab({
   onSaved,
   inbox,
   onCancelInbox,
+  forDay,
 }: {
   showCalories: boolean;
   onSaved: () => void;
   /** Снимок из фото-инбокса, если разбор начат оттуда. */
   inbox?: InboxItemDto | null;
   onCancelInbox?: () => void;
+  /**
+   * День, за который делается запись (ГГГГ-ММ-ДД). Приходит из «Дневника»,
+   * когда там открыт не сегодняшний день: раньше запись всё равно ложилась
+   * сегодняшним числом, и человек, дописывающий вчерашний ужин, портил
+   * себе оба дня сразу. Не задан — сегодня, как и было.
+   */
+  forDay?: string | null;
 }) {
   const [mode, setMode] = useState<"text" | "photo">(inbox ? "photo" : "text");
   const [text, setText] = useState("");
@@ -142,12 +152,13 @@ export function CameraTab({
     setError(null);
     try {
       const now = new Date();
-      // Для снимка из инбокса дата и время берутся из момента съёмки, а не
-      // из момента разбора: снятый в обед и разобранный вечером — всё ещё обед.
+      // Дата записи — по убыванию точности: момент съёмки для снимка из
+      // инбокса (снятый в обед и разобранный вечером — всё ещё обед), затем
+      // день, открытый в «Дневнике», и только потом сегодня.
       // suggestedGrams — служебное поле только для интерфейса, API его не ждёт.
       await saveMeal({
         inboxId: inbox?.id ?? null,
-        eatenOn: inbox?.takenOn ?? now.toLocaleDateString("en-CA"),
+        eatenOn: inbox?.takenOn ?? forDay ?? now.toLocaleDateString("en-CA"),
         eatenTime: inbox?.takenTime ?? now.toTimeString().slice(0, 5),
         mealType,
         sourceText,
@@ -229,7 +240,12 @@ export function CameraTab({
 
   if (!items) {
     return <div className="tg-page">
-      <header className="tg-hero"><h1>Что вы ели?</h1></header>
+      <header className="tg-hero">
+        {/* За какой день делается запись — только когда это не сегодня:
+            в обычном случае лишняя строка ничего не добавляет. */}
+        {forDay && <p className="tg-kicker">Запись за {formatDayRu(forDay)}</p>}
+        <h1>Что вы ели?</h1>
+      </header>
 
       <div className="tg-segment" role="tablist">
         <button role="tab" aria-selected={mode === "text"} className={mode === "text" ? "active" : ""}
@@ -340,6 +356,14 @@ export function CameraTab({
         </div>
       </li>)}
     </ul>
+
+    {/* Разбор мог не заметить гарнир или соус — дописать его здесь дешевле,
+        чем переснимать блюдо и тратить ещё один вызов модели. */}
+    <AddItem onAdd={(item: NewItem) => setItems((current) => [...(current ?? []), {
+      ...item,
+      suggestedGrams: item.grams,
+      confidence: (item.confidence as Confidence) ?? "medium",
+    }])} />
 
     <div className="tg-card tg-draft-total">
       <div className="tg-draft-total-row">

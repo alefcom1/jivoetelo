@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { localToday } from "@/lib/dates";
 import { ApiError, fetchToday, type InboxItemDto, type TodayResponse } from "./api";
 import { CameraTab } from "./camera-tab";
 import { DiaryTab } from "./diary-tab";
@@ -37,6 +38,17 @@ export default function MiniApp() {
   // Снимок, выбранный в инбоксе: разбор идёт тем же экраном «Камера», что и
   // обычное добавление, поэтому второго редактора черновика не появляется.
   const [inboxItem, setInboxItem] = useState<InboxItemDto | null>(null);
+  /**
+   * Откуда открыли «Камеру» и за какой день делается запись. Раньше «Камера»
+   * всегда возвращала на «Сегодня» и всегда сохраняла сегодняшним числом —
+   * даже когда её открыли из «Дневника», листая прошлую неделю. Обе ошибки
+   * из одного места: экран не знал, откуда пришёл.
+   */
+  const [cameraFrom, setCameraFrom] = useState<{ tab: Tab; day: string | null }>({ tab: "today", day: null });
+  /** Открытый день «Дневника» — здесь, а не внутри вкладки: переключение
+   * вкладки размонтирует экран, и после «Камеры» человек возвращался бы на
+   * сегодня, а не на тот день, с которого уходил. */
+  const [diaryDay, setDiaryDay] = useState(() => localToday());
 
   const load = useCallback(async () => {
     try {
@@ -79,18 +91,32 @@ export default function MiniApp() {
     haptic("tap");
     setInboxItem(null);
     setInboxOpen(false);
+    // «Камера» из нижней панели — это всегда запись за сегодня с возвратом
+    // на «Сегодня»: сюда нажали не из «Дневника», прошлого дня в виду нет.
+    if (next === "camera") setCameraFrom({ tab: "today", day: null });
     setTab(next);
+  }
+
+  /** Открыть «Камеру», запомнив, куда возвращаться и за какой день писать. */
+  function openCamera(from: Tab, day: string | null = null) {
+    haptic("tap");
+    setInboxItem(null);
+    setInboxOpen(false);
+    setCameraFrom({ tab: from, day });
+    setTab("camera");
   }
 
   function handleCameraSaved() {
     haptic("success");
     // Разбор из инбокса возвращает в список инбокса — там могут быть ещё
-    // неподтверждённые снимки; обычное добавление возвращает на «Сегодня».
+    // неподтверждённые снимки; обычное добавление — туда, откуда «Камеру»
+    // открыли, чтобы человек увидел свою запись в том же списке, где её и
+    // заводил.
     if (inboxItem) {
       setInboxItem(null);
       setInboxOpen(true);
     } else {
-      setTab("today");
+      setTab(cameraFrom.tab);
     }
     void load();
   }
@@ -136,11 +162,20 @@ export default function MiniApp() {
             {tab === "today" && <TodayTab
               data={today}
               firstName={firstName}
-              onOpenCamera={() => switchTab("camera")}
+              onOpenCamera={() => openCamera("today")}
               onOpenInbox={() => { haptic("tap"); setInboxOpen(true); }}
             />}
-            {tab === "diary" && <DiaryTab onOpenCamera={() => switchTab("camera")} />}
-            {tab === "camera" && <CameraTab key="manual" showCalories={today.showCalories} onSaved={handleCameraSaved} />}
+            {tab === "diary" && <DiaryTab
+              day={diaryDay}
+              onDayChange={setDiaryDay}
+              onOpenCamera={(day) => openCamera("diary", day)}
+            />}
+            {tab === "camera" && <CameraTab
+              key="manual"
+              showCalories={today.showCalories}
+              forDay={cameraFrom.day}
+              onSaved={handleCameraSaved}
+            />}
             {tab === "plan" && <PlanTab />}
             {tab === "profile" && <ProfileTab />}
           </>}

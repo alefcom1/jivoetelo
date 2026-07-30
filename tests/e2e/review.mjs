@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { launchBrowser } from "./browser.mjs";
+import { completeOnboarding } from "./onboarding.mjs";
 
 const BASE = "http://127.0.0.1:3111";
 const email = `e2e-m4-${Date.now()}@example.com`;
@@ -30,15 +31,7 @@ try {
   await page.check('input[name="consent_ai"]');
   await page.click('button[type="submit"]');
   await page.waitForURL("**/app", { timeout: 15000 });
-  await page.goto(`${BASE}/app/onboarding`);
-  await page.check('input[name="goal"][value="lose"]');
-  await page.check('input[name="sexForFormula"][value="female"]');
-  await page.fill('input[name="birthYear"]', "1990");
-  await page.fill('input[name="heightCm"]', "168");
-  await page.fill('input[name="weightKg"]', "65");
-  await page.check('input[name="activity"][value="light"]');
-  await page.click('button:has-text("Посчитать мой план")');
-  await page.waitForURL("**/app", { timeout: 15000 });
+  await completeOnboarding(page, BASE, { goal: "lose" });
 
   step("2. Сидируем неделю: 6 дней еды и 10 дней плоского веса");
   const userId = sql(`SELECT id FROM users WHERE email = '${email}'`);

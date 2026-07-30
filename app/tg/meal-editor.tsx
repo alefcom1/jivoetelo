@@ -4,14 +4,18 @@
 // это тот же черновик, что и в CameraTab (степпер, множители порции, крестик
 // удаления позиции) — узнаваемое взаимодействие, хотя экран и API другие:
 // здесь правится уже сохранённая запись, а не черновик свежего разбора.
-// Добавление новой позиции вручную намеренно не сделано: для неё нужны
-// собственные КБЖУ на 100 г, а без нового обращения к разбору (лишний расход
-// AI-квоты за пределы задачи) взять их неоткуда.
+//
+// Позицию можно добавить и руками (app/tg/add-item.tsx). Раньше этого не
+// было: считалось, что КБЖУ на 100 г взять неоткуда, кроме разбора. Теперь
+// они берутся из справочника (lib/food-reference.ts) или вводятся с
+// упаковки — и дневник наполняется даже с выключенным AI.
 
 import { useEffect, useState } from "react";
 import { CONFIDENCE_LABELS, type Confidence } from "@/lib/confidence";
 import { scaleGrams } from "@/lib/portions";
+import { AddItem, type NewItem } from "./add-item";
 import { deleteMeal, fetchMealDetail, updateMeal, type DiaryMealItem, type MealDetail } from "./diary-api";
+import { FoodIcon } from "./food-icon";
 import { haptic } from "./telegram";
 import { TgPhoto } from "./photo";
 
@@ -56,6 +60,22 @@ export function MealEditor({
 
   function updateItem(index: number, patch: Partial<DiaryMealItem>) {
     setItems((current) => current && current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  }
+
+  /**
+   * Добавленной руками позиции идентификатора из базы ещё нет. Выдаём
+   * отрицательный и убывающий — он нужен только React, чтобы различать
+   * строки списка; на сервер он не уходит, `updateMeal` отправляет состав
+   * целиком и без идентификаторов. Отрицательный, чтобы никогда не совпасть
+   * с настоящим, и убывающий, чтобы не совпасть с уже выданным после того,
+   * как какую-то из позиций убрали.
+   */
+  function addItem(item: NewItem) {
+    setItems((current) => {
+      const list = current ?? [];
+      const minId = Math.min(0, ...list.map((existing) => existing.id));
+      return [...list, { ...item, id: minId - 1 }];
+    });
   }
 
   async function handleSave() {
@@ -138,6 +158,7 @@ export function MealEditor({
     <ul className="tg-draft">
       {items.map((item, index) => <li key={item.id}>
         <div className="tg-draft-row">
+          <FoodIcon name={item.name} size="sm" />
           <b>{item.name}</b>
           <div className="tg-stepper">
             <button aria-label="Меньше" onClick={() => { haptic("tap"); updateItem(index, { grams: Math.max(1, item.grams - 10) }); }}>−</button>
@@ -161,6 +182,8 @@ export function MealEditor({
       </li>)}
     </ul>
     {items.length === 0 && <p className="tg-hint">Все позиции убраны — сохранить нечего. Верните позицию назад или удалите запись целиком.</p>}
+
+    <AddItem onAdd={addItem} />
 
     <div className="tg-card tg-draft-total">
       <div className="tg-draft-total-row">

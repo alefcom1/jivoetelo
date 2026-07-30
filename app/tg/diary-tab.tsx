@@ -57,8 +57,23 @@ function DiarySummary({ data }: { data: DiaryDayResponse }) {
   </div>;
 }
 
-export function DiaryTab({ onOpenCamera }: { onOpenCamera: () => void }) {
-  const [day, setDay] = useState(() => localToday());
+/**
+ * @param onOpenCamera Открыть «Камеру» для новой записи. День передаём
+ * явно: экран «Дневник» умеет листать назад, и запись, заведённая с
+ * открытого прошлого дня, должна лечь этим днём, а не сегодняшним.
+ * @param day Открытый день. Хранится в оболочке (app/tg/page.tsx), а не
+ * здесь: переключение вкладки размонтирует этот экран, и после захода в
+ * «Камеру» человек возвращался бы не на тот день, с которого уходил.
+ */
+export function DiaryTab({
+  day,
+  onDayChange,
+  onOpenCamera,
+}: {
+  day: string;
+  onDayChange: (day: string) => void;
+  onOpenCamera: (day: string | null) => void;
+}) {
   const [data, setData] = useState<DiaryDayResponse | null>(null);
   // Изначально true — идёт первая загрузка. В true его переводят только
   // обработчики клика (goToDay ниже), а не сам эффект: правило
@@ -88,7 +103,7 @@ export function DiaryTab({ onOpenCamera }: { onOpenCamera: () => void }) {
     haptic("tap");
     setPending(true);
     setError(null);
-    setDay(next);
+    onDayChange(next);
   }
 
   function reload() {
@@ -146,13 +161,12 @@ export function DiaryTab({ onOpenCamera }: { onOpenCamera: () => void }) {
       {data.meals.length === 0
         ? <div className="tg-empty">
             <ArtEmptyPlate />
-            {/* Честное пустое состояние: для прошлого дня не притворяемся, что
-                запись здесь всё ещё можно сделать «задним числом» — новая
-                запись всегда ляжет сегодняшним днём (см. хинт под кнопкой ниже). */}
+            {/* Для прошлого дня запись делается этим же днём — он передаётся
+                в «Камеру» (см. хинт под кнопкой ниже). */}
             <p>{data.isToday
               ? "Пока пусто. Запишите первый приём — это займёт меньше минуты."
               : "В этот день записей нет."}</p>
-            <button className="tg-button" onClick={onOpenCamera}>Добавить запись</button>
+            <button className="tg-button" onClick={() => onOpenCamera(data.isToday ? null : day)}>Добавить запись</button>
           </div>
         : <>
             <ul className="tg-diary-meals">
@@ -163,9 +177,9 @@ export function DiaryTab({ onOpenCamera }: { onOpenCamera: () => void }) {
                 onOpen={() => { haptic("tap"); setSelectedMealId(meal.id); }}
               />)}
             </ul>
-            <button className="tg-button tg-button-block" onClick={onOpenCamera}>Добавить запись</button>
+            <button className="tg-button tg-button-block" onClick={() => onOpenCamera(data.isToday ? null : day)}>Добавить запись</button>
           </>}
-      {!data.isToday && <p className="tg-hint">Новая запись сохранится сегодняшним днём.</p>}
+      {!data.isToday && <p className="tg-hint">Новая запись сохранится этим днём — {formatDayRu(day)}.</p>}
     </section>
   </div>;
 }

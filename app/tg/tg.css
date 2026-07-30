@@ -590,3 +590,26 @@
 /* Переносимый сегмент (например, четыре темпа снижения в «Профиле»): без
    базиса последняя кнопка на второй строке растягивалась во всю ширину. */
 .tg-segment-wrap button { flex: 1 1 calc(50% - 4px); }
+
+/* Добавление позиции руками (app/tg/add-item.tsx) — поиск по справочнику и
+   запасной ввод чисел с упаковки. */
+.tg-add-item-open { align-self: flex-start; }
+.tg-add-item { display: flex; flex-direction: column; gap: 10px; }
+.tg-add-item-head { display: flex; align-items: center; justify-content: space-between; }
+.tg-add-item-head h3 { margin: 0; font: 500 19px var(--brand-serif); }
+
+.tg-add-item-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.tg-add-item-results button {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px;
+  border: 0; border-radius: 12px; padding: 8px 10px; cursor: pointer; text-align: left;
+  background: var(--tg-bg); color: var(--tg-text); font: inherit;
+}
+.tg-add-item-results button:active { opacity: 0.8; }
+.tg-add-item-name { flex: 1; min-width: 0; font-size: 14px; }
+.tg-add-item-kcal { flex-shrink: 0; font: 500 15px var(--brand-serif); font-variant-numeric: tabular-nums; }
+.tg-add-item-kcal i { font-style: normal; font-size: 10px; font-weight: 600; color: var(--tg-hint); margin-left: 3px; }
+
+.tg-add-item-manual { display: flex; flex-direction: column; }
+/* Шесть числовых полей в две колонки: по одному в строку экран уезжает
+   вниз на полтора роста, а числа тут короткие. */
+.tg-add-item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }

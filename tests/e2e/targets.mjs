@@ -1,4 +1,5 @@
 import { launchBrowser } from "./browser.mjs";
+import { completeOnboarding } from "./onboarding.mjs";
 
 const BASE = "http://127.0.0.1:3111";
 const email = `e2e-m3-${Date.now()}@example.com`;
@@ -28,16 +29,7 @@ try {
   }
 
   step("3. Онбординг: профиль 1990 г., 168 см, 65 кг, лёгкая активность");
-  await page.click('a[href="/app/onboarding"]');
-  await page.waitForSelector(".onboarding-form");
-  await page.check('input[name="goal"][value="maintain"]');
-  await page.check('input[name="sexForFormula"][value="female"]');
-  await page.fill('input[name="birthYear"]', "1990");
-  await page.fill('input[name="heightCm"]', "168");
-  await page.fill('input[name="weightKg"]', "65");
-  await page.check('input[name="activity"][value="light"]');
-  await page.click('button:has-text("Посчитать мой план")');
-  await page.waitForURL("**/app", { timeout: 15000 });
+  await completeOnboarding(page, BASE, { goal: "maintain" });
 
   step("4. Цели видны в итогах дня (~1870 ккал, белок ~104 г)");
   const dayText = await page.textContent("main");
@@ -75,15 +67,7 @@ try {
   if (!weightText.includes("тренд")) throw new Error("Нет тренда");
 
   step("7. Изменение плана: цель «снижение» уменьшает диапазон");
-  await page.goto(`${BASE}/app/onboarding`);
-  await page.check('input[name="goal"][value="lose"]');
-  await page.check('input[name="sexForFormula"][value="female"]');
-  await page.fill('input[name="birthYear"]', "1990");
-  await page.fill('input[name="heightCm"]', "168");
-  await page.fill('input[name="weightKg"]', "65");
-  await page.check('input[name="activity"][value="light"]');
-  await page.click('button:has-text("Посчитать мой план")');
-  await page.waitForURL("**/app", { timeout: 15000 });
+  await completeOnboarding(page, BASE, { goal: "lose" });
   const loseText = await page.textContent("main");
   const match = loseText.match(/из ~(\d{4})/);
   if (!match || Number(match[1]) >= 1870) throw new Error(`Ориентир не уменьшился: ${match?.[0]}`);
