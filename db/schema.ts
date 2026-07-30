@@ -100,6 +100,13 @@ export const profiles = pgTable("profiles", {
   // Накопленная адаптивная корректировка стартовой цели (раздел 14.2 спеки).
   // Меняется только с явного подтверждения пользователя.
   kcalAdjustment: integer("kcal_adjustment").notNull().default(0),
+  // Целевой вес и темп снижения (экран «Профиль», Mini App v2). В отличие от
+  // kcalAdjustment это желаемое пользователем, а не измеренный факт, поэтому
+  // оба поля необязательные: план по калориям и без них считается по цели
+  // «lose/maintain/gain» из lib/targets.ts.
+  targetWeightKg: doublePrecision("target_weight_kg"),
+  // Ключ из lib/pace.ts (PACE_OPTIONS): very_gentle | gentle | moderate | brisk.
+  pace: text("pace"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

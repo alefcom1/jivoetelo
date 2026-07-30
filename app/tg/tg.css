@@ -246,3 +246,71 @@
 }
 .tg-link-button:disabled { opacity: 0.5; cursor: not-allowed; }
 .tg-link-button:active:not(:disabled) { opacity: 0.75; }
+
+/* ---------------------------------------------------------------------- */
+/* Ниже — стили экранов «План» и «Профиль» (Mini App v2). Дописано в конец
+   файла намеренно: так слияние с параллельной веткой (оболочка, «Сегодня»,
+   «Камера») сводится к простому append и не задевает то, что правит другой
+   агент. */
+
+/* Карточка адаптивной цели на экране «План» */
+.tg-plan-target-value { margin: 2px 0 0; display: flex; align-items: baseline; gap: 6px; }
+.tg-plan-target-value strong { font: 500 40px var(--brand-serif); letter-spacing: -0.02em; }
+.tg-plan-target-value span { font-size: 13px; color: var(--tg-hint); font-weight: 600; }
+
+/* Раскрывающееся объяснение «Почему столько?» — нативный <details>, без лишнего JS */
+.tg-explain { margin-top: 6px; border-top: 1px solid color-mix(in srgb, var(--tg-hint) 16%, transparent); padding-top: 10px; }
+.tg-explain summary {
+  cursor: pointer; list-style: none; color: var(--tg-link); font: 600 14px var(--font-body), sans-serif;
+}
+.tg-explain summary::-webkit-details-marker { display: none; }
+.tg-explain summary::marker { content: ""; }
+.tg-explain-body { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.tg-explain-body p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--tg-text); }
+.tg-explain-body b { font-variant-numeric: tabular-nums; }
+
+/* График тренда веса — SVG вручную, без библиотек (технические рамки спеки) */
+.tg-chart { width: 100%; height: 120px; display: block; }
+.tg-chart-line { fill: none; stroke: var(--brand-coral); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.tg-chart-dot { fill: var(--brand-coral); }
+.tg-chart-target { stroke: var(--tg-hint); stroke-width: 1; stroke-dasharray: 4 4; }
+
+.tg-plan-weight { display: flex; flex-direction: column; gap: 12px; }
+/* Тот же класс переиспользует «Профиль» для строки метрик темпа снижения. */
+.tg-plan-weight-stats { display: flex; gap: 12px; margin-top: 4px; }
+.tg-plan-weight-stats div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.tg-plan-weight-stats strong { font: 500 20px var(--brand-serif); font-variant-numeric: tabular-nums; }
+.tg-plan-weight-stats span { font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--tg-hint); }
+
+/* Столбики приверженности по дням недели — факт, не оценка: один цвет, без «плохо/хорошо» */
+.tg-weekbars { display: flex; justify-content: space-between; gap: 6px; margin-top: 14px; }
+.tg-weekbar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tg-weekbar-count { font-size: 11px; font-weight: 700; color: var(--tg-hint); font-variant-numeric: tabular-nums; }
+.tg-weekbar-slot {
+  position: relative; width: 100%; max-width: 22px; height: 64px; border-radius: 6px;
+  overflow: hidden; background: transparent;
+}
+.tg-weekbar-track, .tg-weekbar-fill { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 6px; }
+.tg-weekbar-track { background: color-mix(in srgb, var(--tg-hint) 18%, transparent); }
+.tg-weekbar-fill { background: var(--tg-text); }
+.tg-weekbar-label { font-size: 11px; font-weight: 600; color: var(--tg-hint); }
+
+/* Поля форм «Профиля»: подпись сверху, инпут снизу — компактнее, чем в вебе,
+   потому что экран Mini App узкий */
+.tg-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--tg-hint); margin-top: 12px; }
+.tg-field-label { margin: 12px 0 6px; font-size: 13px; font-weight: 600; color: var(--tg-hint); }
+.tg-check { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.tg-check input { width: 20px; height: 20px; accent-color: var(--brand-coral); }
+
+.tg-profile-goals { display: flex; flex-direction: column; }
+.tg-profile-goals .tg-button { margin-top: 14px; }
+
+.tg-profile-add-weight { display: flex; gap: 8px; margin-top: 10px; }
+.tg-profile-add-weight .tg-input { flex: 1; }
+.tg-profile-weights { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tg-profile-weights li { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-top: 1px solid color-mix(in srgb, var(--tg-hint) 12%, transparent); }
+.tg-profile-weights li:first-child { border-top: 0; }
+.tg-profile-weights span { color: var(--tg-hint); }
+
+.tg-profile-reminder-actions { display: flex; align-items: center; gap: 4px; margin-top: 12px; flex-wrap: wrap; }
+.tg-profile-reminder-actions .tg-button { flex: 1; min-width: fit-content; }
