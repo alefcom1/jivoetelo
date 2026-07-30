@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import EmailCapture from "@/app/raschet/email-capture";
 import {
   DISHES,
   DISH_CATEGORIES,
@@ -11,6 +12,7 @@ import {
   type Dish,
 } from "@/lib/dishes";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
+import { dishSubscribeSource } from "@/lib/subscribe-source";
 
 type Params = { params: Promise<{ dish: string }> };
 
@@ -99,6 +101,12 @@ export default async function DishPage({ params }: Params) {
         <div><strong>{dish.carbs[0]}–{dish.carbs[1]} г</strong><span>Углеводы на 100 г</span></div>
       </div>
     </div>
+
+    {/* Страница статическая, расчёта тут нет — подписке нечего передать,
+        кроме того, какое именно блюдо привело человека (для аналитики
+        источников, см. lib/subscribe-source.ts). Письма серии обойдутся без
+        конкретных чисел — см. renderLetter в lib/email-series.ts. */}
+    <EmailCapture source={dishSubscribeSource(dish.slug)} />
 
     <p className="raschet-lead">{dish.summary}</p>
 

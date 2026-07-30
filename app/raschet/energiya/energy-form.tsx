@@ -9,7 +9,7 @@ import {
   type Goal,
   type SexForFormula,
 } from "@/lib/targets";
-import EmailCapture from "./email-capture";
+import EmailCapture from "../email-capture";
 
 type FormValues = {
   goal: Goal;
@@ -272,7 +272,15 @@ export default function EnergyForm({ currentYear }: { currentYear: number }) {
               {copied ? "Ссылка скопирована" : "Скопировать ссылку на расчёт"}
             </button>}
         </div>
-        <EmailCapture targets={targets} />
+        <EmailCapture
+          source="raschet_energiya"
+          context={{
+            kcalTarget: targets.kcalTarget,
+            kcalMin: targets.kcalMin,
+            kcalMax: targets.kcalMax,
+            proteinTarget: targets.proteinTarget,
+          }}
+        />
       </div>}
   </div>;
 }

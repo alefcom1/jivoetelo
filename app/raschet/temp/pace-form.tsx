@@ -9,6 +9,7 @@ import {
   type Activity,
   type SexForFormula,
 } from "@/lib/targets";
+import EmailCapture from "../email-capture";
 
 type FormValues = {
   sexForFormula: SexForFormula;
@@ -308,6 +309,7 @@ export default function PaceForm({ currentYear }: { currentYear: number }) {
               {copied ? "Ссылка скопирована" : "Скопировать ссылку на расчёт"}
             </button>}
         </div>
+        <EmailCapture source="raschet_temp" context={{ kcalTarget: result.kcalTarget }} />
       </div>}
   </div>;
 }

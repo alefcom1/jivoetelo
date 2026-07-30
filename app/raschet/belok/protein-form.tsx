@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { proteinRange } from "@/lib/protein";
 import { ACTIVITY_LABELS, type Activity } from "@/lib/targets";
+import EmailCapture from "../email-capture";
 
 type FormValues = {
   weightKg: number;
@@ -86,7 +87,10 @@ export default function ProteinForm() {
 
   const showActivityNote = values.activity === "moderate" || values.activity === "high";
 
-  return <form className="raschet-form" onSubmit={(event) => event.preventDefault()}>
+  // Обёртка — div, а не form: отправлять здесь нечего, расчёт идёт прямо при
+  // вводе. Ниже, внутри результата, стоит настоящая форма подписки, а
+  // вложенные формы браузер не разбирает (тот же приём, что в energy-form.tsx).
+  return <div className="raschet-form">
     <div className="raschet-fields">
       <label>
         Вес, кг
@@ -138,6 +142,7 @@ export default function ProteinForm() {
               {copied ? "Ссылка скопирована" : "Скопировать ссылку на расчёт"}
             </button>}
         </div>
+        <EmailCapture source="raschet_belok" context={{ proteinTarget: range.target }} />
       </div>}
-  </form>;
+  </div>;
 }

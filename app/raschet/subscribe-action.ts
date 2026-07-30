@@ -4,6 +4,7 @@ import { subscribeToSeries } from "@/lib/email-subscribe";
 import { normalizeEmail } from "@/lib/email";
 import { parseSeriesContext } from "@/lib/email-series";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { isKnownSubscribeSource } from "@/lib/subscribe-source";
 
 export type SubscribeState = {
   status: "idle" | "success" | "invalid" | "no_consent" | "bad_context" | "error";
@@ -17,13 +18,17 @@ export type SubscribeState = {
 };
 
 /**
- * Подписка на разбор расчёта по почте. Числа приходят из формы скрытыми
- * полями, а не пересчитываются на сервере: пересчёт потребовал бы передать
- * сюда рост, вес, возраст и активность — то есть собрать о человеке больше
- * данных, чем нужно для трёх писем.
+ * Подписка на разбор расчёта по почте — общий обработчик для всех
+ * калькуляторов раздела и для страниц блюд. Числа приходят из формы
+ * скрытыми полями, а не пересчитываются на сервере: пересчёт потребовал бы
+ * передать сюда рост, вес, возраст и активность — то есть собрать о
+ * человеке больше данных, чем нужно для трёх писем. У страницы блюда таких
+ * чисел нет вовсе, и это нормально: соответствующих скрытых полей в форме просто не будет.
  *
- * Клиентским числам мы при этом не верим на слово: `parseSeriesContext`
- * проверяет их согласованность, и письмо с «2000–1740» не уедет.
+ * Клиентским числам и клиентскому источнику мы при этом не верим на слово:
+ * `isKnownSubscribeSource` проверяет, что source — это известный калькулятор
+ * или существующее блюдо, а `parseSeriesContext` — что числа согласованы
+ * между собой, и письмо с «2000–1740» не уедет.
  */
 export async function subscribeToBreakdown(
   _prev: SubscribeState,
@@ -34,6 +39,17 @@ export async function subscribeToBreakdown(
   const email = normalizeEmail(typed);
   if (!email) return { status: "invalid", email: typed, consent };
   if (!consent) return { status: "no_consent", email: typed, consent };
+
+  // В обычной жизни источник всегда наш собственный — его проставляет
+  // EmailCapture, а не человек руками. Провал здесь означает подделанный
+  // запрос или забытое поле после копипаста формы на новую страницу, а не
+  // пользовательскую ошибку, поэтому и статус — общий "error", а не
+  // отдельное сообщение с советом что-то поправить в форме.
+  const rawSource = String(formData.get("source") ?? "");
+  if (!isKnownSubscribeSource(rawSource)) {
+    console.error("email series subscribe: неизвестный источник", rawSource);
+    return { status: "error", email: typed, consent };
+  }
 
   const context = parseSeriesContext({
     kcalTarget: formData.get("kcalTarget"),
@@ -48,7 +64,7 @@ export async function subscribeToBreakdown(
     // что адрес уже в базе, значит раскрывать чужие подписки.
     await subscribeToSeries({
       email,
-      source: "raschet_energiya",
+      source: rawSource,
       consentVersion: LEGAL_VERSION,
       context,
       now: new Date(),

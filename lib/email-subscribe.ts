@@ -10,10 +10,12 @@ import { getDb } from "@/db";
 import { emailDeliveries, emailSubscribers } from "@/db/schema";
 import { LETTER_NUMBERS, scheduleLetterAt, type SeriesContext } from "./email-series.ts";
 import { absoluteUrl } from "./site.ts";
+import type { SubscribeSource } from "./subscribe-source.ts";
 
-/** Откуда пришёл адрес. Пока точка входа одна, но столбец рассчитан на рост. */
-export const SUBSCRIBE_SOURCES = ["raschet_energiya"] as const;
-export type SubscribeSource = (typeof SUBSCRIBE_SOURCES)[number];
+// Разбор и проверка source вынесены в lib/subscribe-source.ts — этот модуль
+// отвечает только за то, что происходит после проверки, то есть за базу.
+export type { CalculatorSource, SubscribeSource } from "./subscribe-source.ts";
+export { CALCULATOR_SOURCES, DISH_SOURCE_PREFIX, dishSubscribeSource, isKnownSubscribeSource } from "./subscribe-source.ts";
 
 export function newUnsubscribeToken(): string {
   return randomBytes(24).toString("base64url");

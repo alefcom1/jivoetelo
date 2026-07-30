@@ -23,31 +23,49 @@ export const SEND_WINDOW_FROM_HOUR = 10;
 export const SEND_WINDOW_UNTIL_HOUR = 20;
 
 /**
- * Числа из расчёта. Все четыре обязательны: письмо построено вокруг них, и
- * отправлять его с прочерками вместо цифр бессмысленно.
+ * Числа, которые умеют показывать письма серии, — ровно те, что встречаются
+ * как {{плейсхолдеры}} в TEMPLATES ниже. Список — это словарь между текстом
+ * письма и полями расчёта, поэтому новое поле здесь имеет смысл заводить
+ * только вместе с текстом, который его использует.
  */
-export type SeriesContext = {
-  kcalTarget: number;
-  kcalMin: number;
-  kcalMax: number;
-  proteinTarget: number;
-};
+export const SERIES_CONTEXT_FIELDS = ["kcalTarget", "kcalMin", "kcalMax", "proteinTarget"] as const;
+export type SeriesContextField = (typeof SERIES_CONTEXT_FIELDS)[number];
 
 /**
- * Разбирает контекст, прочитанный из jsonb. Значения попали туда с клиента,
- * поэтому проверяются заново; при провале письмо не отправляется вовсе.
+ * Числа из расчёта. Раньше форма подписки стояла только на калькуляторе
+ * энергии, и все четыре поля были обязательны. Теперь источников несколько —
+ * у расчёта белка есть только proteinTarget, у страницы блюда нет ни одного, —
+ * поэтому поля необязательны: чего в контексте нет, о том письмо просто не
+ * упоминает (см. renderLetter, который пропускает абзац с отсутствующим
+ * числом, а не падает).
+ */
+export type SeriesContext = Partial<Record<SeriesContextField, number>>;
+
+/**
+ * Разбирает контекст, прочитанный из jsonb или пришедший скрытыми полями
+ * формы, — в обоих случаях это данные с клиента, и они проверяются заново.
+ * Отсутствующее поле — это нормально, источник просто не считает такое
+ * число. Поле, которое есть, но не проходит проверку, — повод отбраковать
+ * весь контекст: лучше не отправить письмо вовсе, чем отправить с
+ * бессмысленной цифрой.
  */
 export function parseSeriesContext(raw: unknown): SeriesContext | null {
   if (typeof raw !== "object" || raw === null) return null;
   const source = raw as Record<string, unknown>;
-  const numbers: Partial<SeriesContext> = {};
-  for (const key of ["kcalTarget", "kcalMin", "kcalMax", "proteinTarget"] as const) {
-    const value = Number(source[key]);
+  const ctx: SeriesContext = {};
+  for (const key of SERIES_CONTEXT_FIELDS) {
+    const entry = source[key];
+    if (entry === undefined || entry === null || entry === "") continue;
+    const value = Number(entry);
     if (!Number.isFinite(value) || value <= 0) return null;
-    numbers[key] = Math.round(value);
+    ctx[key] = Math.round(value);
   }
-  const ctx = numbers as SeriesContext;
-  if (ctx.kcalMin > ctx.kcalTarget || ctx.kcalTarget > ctx.kcalMax) return null;
+  // Порядок границ проверяем только для пар, что вообще присутствуют:
+  // письмо с «2000–1740» бессмысленно, а письмо без kcalMin — обычное дело
+  // для калькулятора, который его не считает.
+  if (ctx.kcalMin !== undefined && ctx.kcalTarget !== undefined && ctx.kcalMin > ctx.kcalTarget) return null;
+  if (ctx.kcalTarget !== undefined && ctx.kcalMax !== undefined && ctx.kcalTarget > ctx.kcalMax) return null;
+  if (ctx.kcalMin !== undefined && ctx.kcalMax !== undefined && ctx.kcalMin > ctx.kcalMax) return null;
   return ctx;
 }
 
@@ -65,6 +83,12 @@ export type RenderedLetter = {
 
 type LetterTemplate = {
   subject: string;
+  /**
+   * Тема письма без чисел — на случай, если источник не считает kcalTarget
+   * (расчёт белка, квиз, страница блюда). Нужна только там, где в subject
+   * вообще есть подстановка — сейчас это единственное такое письмо.
+   */
+  subjectFallback?: string;
   preheader: string;
   paragraphs: string[];
 };
@@ -77,6 +101,7 @@ type LetterTemplate = {
 const TEMPLATES: Record<LetterNumber, LetterTemplate> = {
   1: {
     subject: "Что означают ваши {{kcalTarget}} ккал",
+    subjectFallback: "Что важно знать про ваш расчёт",
     preheader: "Разбираем ваш расчёт: что формула знает про вас, а что — нет",
     paragraphs: [
       "По данным, которые вы указали, получилось {{kcalTarget}} ккал в день — это наиболее вероятное значение. Настоящая потребность вашего тела, скорее всего, лежит в границах {{kcalMin}}–{{kcalMax}} ккал. Такой разброс даёт сама формула, а не погрешность подсчёта.",
@@ -116,12 +141,24 @@ const TEMPLATES: Record<LetterNumber, LetterTemplate> = {
 
 const PLACEHOLDER_RE = /\{\{(\w+)\}\}/g;
 
-function fillPlaceholders(source: string, ctx: SeriesContext): string {
-  return source.replace(PLACEHOLDER_RE, (match, key: string) => {
-    const value = (ctx as Record<string, number>)[key];
-    if (typeof value !== "number") throw new Error(`Unknown placeholder ${match}`);
+/**
+ * Возвращает null, если хоть один плейсхолдер сослался на число, которого в
+ * контексте нет, — вместо того чтобы падать. У калькулятора белка нет
+ * kcalTarget, у страницы блюда нет вообще ничего, и это не повод ронять всё
+ * письмо: `renderLetter` использует null, чтобы пропустить абзац или
+ * подставить текст без чисел.
+ */
+function fillPlaceholders(source: string, ctx: SeriesContext): string | null {
+  let resolved = true;
+  const filled = source.replace(PLACEHOLDER_RE, (match, key: string) => {
+    const value = ctx[key as SeriesContextField];
+    if (typeof value !== "number") {
+      resolved = false;
+      return match;
+    }
     return formatNumber(value);
   });
+  return resolved ? filled : null;
 }
 
 /**
@@ -143,9 +180,14 @@ function escapeHtml(value: string): string {
 
 export function renderLetter(letter: LetterNumber, ctx: SeriesContext, links: LetterLinks): RenderedLetter {
   const template = TEMPLATES[letter];
-  const subject = fillPlaceholders(template.subject, ctx);
-  const preheader = fillPlaceholders(template.preheader, ctx);
-  const paragraphs = template.paragraphs.map((p) => fillPlaceholders(p, ctx));
+  // Тема без подстановки — на fallback, где числа нет вовсе. Абзац с
+  // отсутствующим числом просто выпадает: письмо остаётся связным текстом
+  // про сам подход, только без конкретной цифры для этого человека.
+  const subject = fillPlaceholders(template.subject, ctx) ?? template.subjectFallback ?? template.subject;
+  const preheader = fillPlaceholders(template.preheader, ctx) ?? template.preheader;
+  const paragraphs = template.paragraphs
+    .map((p) => fillPlaceholders(p, ctx))
+    .filter((p): p is string => p !== null);
 
   const signature = "Живое Тело\n" + links.siteUrl;
   const footer =
