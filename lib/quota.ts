@@ -30,17 +30,33 @@ export async function getUsageToday(userId: number): Promise<Record<AiOperation,
   return used;
 }
 
-/** Сколько сервис потратил на AI сегодня, USD (по всем пользователям). */
+/**
+ * Сколько сервис потратил на AI сегодня, USD (по всем пользователям).
+ *
+ * Группируем по операции, а не суммируем всё разом: операции обслуживают
+ * разные модели с разницей в цене втрое-впятеро, и одна общая ставка
+ * превращала бы предохранитель в фикцию.
+ */
 export async function spentTodayUsd(): Promise<number> {
   const rows = await getDb()
     .select({
+      kind: aiUsage.kind,
       input: sql<number>`coalesce(sum(${aiUsage.inputTokens}), 0)::bigint`,
       output: sql<number>`coalesce(sum(${aiUsage.outputTokens}), 0)::bigint`,
     })
     .from(aiUsage)
-    .where(eq(aiUsage.onDate, localToday()));
-  const row = rows[0];
-  return estimateCostUsd({ inputTokens: Number(row?.input ?? 0), outputTokens: Number(row?.output ?? 0) });
+    .where(eq(aiUsage.onDate, localToday()))
+    .groupBy(aiUsage.kind);
+
+  return rows.reduce(
+    (total, row) =>
+      total +
+      estimateCostUsd(
+        { inputTokens: Number(row.input ?? 0), outputTokens: Number(row.output ?? 0) },
+        row.kind as AiOperation,
+      ),
+    0,
+  );
 }
 
 /**

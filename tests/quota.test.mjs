@@ -62,3 +62,32 @@ test("сообщение о дневном лимите называет чис�
   assert.match(message, /вручную/, "должен остаться бесплатный путь без AI");
   assert.match(message, new RegExp(OPERATION_LABELS.analyze_photo));
 });
+
+/**
+ * Предохранитель считает деньги, а операции обслуживают разные модели. Пока
+ * ставка была одна на всё, дневной потолок срабатывал впятеро раньше, чем
+ * тратились настоящие деньги, — и съедал ровно ту экономию, ради которой
+ * модели и разводились по задачам.
+ */
+test("расход считается по ставке той модели, что обслуживает операцию", () => {
+  const usage = { inputTokens: 1_000_000, outputTokens: 1_000_000 };
+  const photo = estimateCostUsd(usage, "analyze_photo");
+  const text = estimateCostUsd(usage, "analyze_text");
+  const suggest = estimateCostUsd(usage, "suggest");
+
+  assert.ok(photo > text, `разбор фото дороже текстового: ${photo} против ${text}`);
+  assert.equal(text, suggest, "текст и подсказки на одной модели");
+  // Без операции — самая дорогая ставка: завысить безопаснее, чем занизить.
+  assert.ok(estimateCostUsd(usage) >= photo, "умолчание не должно быть дешевле любой известной операции");
+});
+
+test("оптимизация моделей действительно расширяет дневной потолок", () => {
+  // Типовой разбор фото после сжатия снимка.
+  const meal = { inputTokens: 1900, outputTokens: 400 };
+  const before = estimateCostUsd(meal); // как считалось раньше — по Opus
+  const after = estimateCostUsd(meal, "analyze_photo");
+  assert.ok(after < before * 0.7, `экономия должна быть заметной: было ${before}, стало ${after}`);
+  // Прейскурантные ставки Sonnet, без вводной скидки: около 250 разборов в
+  // сутки против полутора сотен на Opus. Со скидкой до 31 августа — заметно больше.
+  assert.ok(3 / after > 240, `при потолке $3 должно выходить больше 240 разборов, вышло ${Math.floor(3 / after)}`);
+});

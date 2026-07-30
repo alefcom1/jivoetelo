@@ -37,18 +37,34 @@ export const OPERATION_LABELS: Record<AiOperation, string> = {
 export const MIN_INTERVAL_MS = 3000;
 
 /**
- * Цены модели за миллион токенов — только для наблюдаемости и глобального
- * предохранителя. Для другой модели поправьте здесь.
+ * Цены за миллион токенов — по модели, которая реально обслуживает операцию
+ * (см. resolveModel в lib/ai/client.ts). Раньше здесь была одна ставка Opus
+ * на всё, и это было не просто неточно: дневной предохранитель считал расход
+ * впятеро больше настоящего и обрубал разбор задолго до реального потолка —
+ * то есть съедал ровно ту экономию, ради которой модели и разводились.
+ *
+ * Ставки прейскурантные, без вводных скидок: предохранитель должен
+ * ошибаться в сторону осторожности, а не оптимизма.
  */
-const PRICE_PER_MTOK = { input: 5, output: 25 };
+const PRICE_PER_MTOK: Record<AiOperation, { input: number; output: number }> = {
+  analyze_photo: { input: 3, output: 15 }, // Sonnet 5
+  analyze_text: { input: 1, output: 5 }, // Haiku 4.5
+  suggest: { input: 1, output: 5 }, // Haiku 4.5
+};
+
+/** Самая дорогая из ставок — умолчание, когда операция неизвестна. */
+const PRICE_FALLBACK = { input: 5, output: 25 };
 
 export type TokenUsage = { inputTokens: number; outputTokens: number };
 
-export function estimateCostUsd(usage: TokenUsage): number {
-  return (
-    (usage.inputTokens / 1_000_000) * PRICE_PER_MTOK.input +
-    (usage.outputTokens / 1_000_000) * PRICE_PER_MTOK.output
-  );
+/**
+ * Операцию передавать необязательно: без неё считаем по ставке Opus. Это
+ * сознательный перестраховочный путь для вызовов, где операция не известна, —
+ * завысить оценку безопаснее, чем занизить.
+ */
+export function estimateCostUsd(usage: TokenUsage, operation?: AiOperation): number {
+  const price = (operation && PRICE_PER_MTOK[operation]) || PRICE_FALLBACK;
+  return (usage.inputTokens / 1_000_000) * price.input + (usage.outputTokens / 1_000_000) * price.output;
 }
 
 /** Глобальный дневной потолок расходов на AI, USD. Переопределяется env. */
