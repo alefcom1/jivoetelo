@@ -201,20 +201,20 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
 .invite-wide{padding-left:max(32px,calc((100% - 1280px)/2));padding-right:max(32px,calc((100% - 1280px)/2))}
 /* Ширина снимка ограничена, а не растянута по колонке: телефон на 400px в
    ширину стал бы 865px в высоту и занял бы экран целиком. */
-.invite-shots{display:grid;grid-template-columns:repeat(3,minmax(0,280px));gap:24px;margin-bottom:40px}
+.invite-body{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:48px;align-items:center}.invite-shots{display:grid;grid-template-columns:repeat(3,minmax(0,260px));gap:20px}
 .invite-shots figure{margin:0}
 .invite-shots img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:var(--white)}
 .invite-shots figcaption{margin-top:12px;font-size:12px;line-height:1.5;color:#66675f}
-.invite-enter{display:flex;align-items:center;gap:24px}
-.invite-qr{display:flex;align-items:center;gap:16px}
-.invite-qr img{display:block;width:132px;height:132px;border:1px solid var(--line);border-radius:8px}
-.invite-qr p{max-width:190px;margin:0;font-size:13px;line-height:1.5;color:#5c5e57}
+.invite-enter{display:flex;flex-direction:column;align-items:flex-start;gap:16px}
+.invite-qr{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+.invite-qr img{display:block;width:180px;height:180px;border:1px solid var(--line);border-radius:8px}
+.invite-qr p{max-width:200px;margin:0;font-size:13px;line-height:1.5;color:#5c5e57}
 /* Кнопка — запасной вход для широкого экрана: там ведущий способ QR. */
 .invite-enter .invite-button{display:none}
 /* На узком экране всё наоборот: свой экран камерой не отсканируешь. */
 @media(max-width:850px){
   .invite{padding:48px 20px}
-  .invite-shots{grid-template-columns:1fr 1fr;gap:14px}
+  .invite-body{grid-template-columns:1fr;gap:28px}.invite-shots{grid-template-columns:1fr 1fr;gap:14px}
   .invite-shots figure:nth-child(3){display:none}
   .invite-qr{display:none}
   .invite-enter .invite-button{display:inline-flex;align-items:center;gap:14px;width:100%;justify-content:center}

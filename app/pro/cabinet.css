@@ -106,3 +106,41 @@
   .pro-cab-week{flex-wrap:wrap}
   .pro-cab-week div{min-width:calc(100%/4 - 5px)}
 }
+
+/* Метка состояния клиента. Показывается вместе с основанием — цвет ведёт
+   взгляд по списку, а мелкая строка под ним говорит, из чего вывод сделан.
+   Без основания это было бы утверждение о человеке, которое нечем подкрепить. */
+.pro-cab-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pro-cab-status {
+  flex: none;
+  margin: 0;
+  text-align: right;
+}
+
+.pro-cab-status b {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.pro-cab-status span {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.pro-cab-status-steady b { color: #4c6b33; }
+.pro-cab-status-attention b { color: #a2503c; }
+.pro-cab-status-idle b { color: var(--muted); }
+
+@media (max-width: 850px) {
+  .pro-cab-title { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .pro-cab-status { text-align: left; }
+}

@@ -11,8 +11,9 @@
  * данными клиента ходят через `withClientScope`, и только так.
  */
 
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.ts";
+import { localToday, shiftDay } from "../dates.ts";
 import {
   meals,
   proApplications,
@@ -197,6 +198,8 @@ export type ClientRow = {
   acceptedAt: Date;
   /** Дата последней записи в дневнике. Ничего о содержимом не сообщает. */
   lastMealOn: string | null;
+  /** Дней с записями за последние семь. Тоже о регулярности, а не о еде. */
+  loggedDays: number;
 };
 
 /**
@@ -207,6 +210,10 @@ export type ClientRow = {
  * том, ведётся ли дневник вообще, а не о его содержимом, и без него список
  * бесполезен — специалист не поймёт, с кем работа идёт, а с кем нет. Само
  * содержимое остаётся за `withClientScope`.
+ *
+ * По той же причине считается и число дней с записями за неделю: это
+ * регулярность, а не еда. Из неё складывается метка в списке — и складывается
+ * прозрачно, вместе с основанием (см. `./status.ts`).
  */
 export async function listClients(specialistUserId: number): Promise<ClientRow[]> {
   const lastMeal = getDb()
@@ -215,7 +222,20 @@ export async function listClients(specialistUserId: number): Promise<ClientRow[]
     .groupBy(meals.userId)
     .as("last_meal");
 
-  return await getDb()
+  // Семь дней, считая сегодняшний, — поэтому смещение на шесть.
+  const since = shiftDay(localToday(), -6);
+  const week = getDb()
+    .select({
+      userId: meals.userId,
+      // Именно distinct: три записи за один день — это один день, а не три.
+      days: sql<number>`count(distinct ${meals.eatenOn})`.as("logged_days"),
+    })
+    .from(meals)
+    .where(gte(meals.eatenOn, since))
+    .groupBy(meals.userId)
+    .as("week_logged");
+
+  const rows = await getDb()
     .select({
       clientUserId: specialistClients.clientUserId,
       clientName: specialistClients.clientName,
@@ -224,13 +244,20 @@ export async function listClients(specialistUserId: number): Promise<ClientRow[]
       shareWeight: specialistClients.shareWeight,
       acceptedAt: specialistClients.acceptedAt,
       lastMealOn: lastMeal.lastOn,
+      loggedDays: week.days,
     })
     .from(specialistClients)
     .leftJoin(lastMeal, eq(lastMeal.userId, specialistClients.clientUserId))
+    .leftJoin(week, eq(week.userId, specialistClients.clientUserId))
     .where(
       and(eq(specialistClients.specialistUserId, specialistUserId), isNull(specialistClients.revokedAt)),
     )
     .orderBy(desc(specialistClients.acceptedAt));
+
+  // leftJoin отдаёт null тому, у кого записей за неделю не было; для правил
+  // это ноль, а не «неизвестно». Приводим здесь, чтобы дальше не гадали.
+  // count() в postgres возвращается строкой — Number обязателен.
+  return rows.map((row) => ({ ...row, loggedDays: Number(row.loggedDays ?? 0) }));
 }
 
 /** Одна строка клиента — для экрана клиента в кабинете. */

@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "../cabinet.css";
 import { getCurrentUser } from "@/lib/auth";
-import { formatDayRu } from "@/lib/dates";
+import { formatDayRu, localToday } from "@/lib/dates";
 import { grantedScopes, SCOPE_LABELS, type ClientLink } from "@/lib/pro/access";
 import { getSpecialistProfile, requireApprovedSpecialist } from "@/lib/pro/guard";
+import { clientStatus } from "@/lib/pro/status";
 import { listClients } from "@/lib/pro/store";
 import { InvitePanel } from "./invite-panel";
 
@@ -77,6 +78,7 @@ export default async function ClientsPage() {
   }
 
   const now = new Date();
+  const today = localToday();
   const clients = await listClients(specialist.userId);
 
   return (
@@ -113,11 +115,25 @@ export default async function ClientsPage() {
               revokedAt: null,
             };
             const scopes = grantedScopes(link, now);
+            // Метка — вместе с основанием, из которого она сделана. Голый
+            // ярлык был бы утверждением о человеке, показанным третьему лицу:
+            // клиент согласился делиться данными, а не быть охарактеризованным.
+            const status = clientStatus({
+              loggedDays: client.loggedDays,
+              lastMealOn: client.lastMealOn,
+              today,
+            });
 
             return (
               <li key={client.clientUserId}>
                 <Link className="pro-cab-card" href={`/pro/clients/${client.clientUserId}`}>
-                  <h2>{client.clientName || "Без имени"}</h2>
+                  <div className="pro-cab-title">
+                    <h2>{client.clientName || "Без имени"}</h2>
+                    <p className={`pro-cab-status pro-cab-status-${status.kind}`}>
+                      <b>{status.label}</b>
+                      <span>{status.basis}</span>
+                    </p>
+                  </div>
                   <div className="pro-cab-chips">
                     {scopes.length === 0
                       ? <span className="pro-cab-chip pro-cab-chip-muted">данные не открыты</span>

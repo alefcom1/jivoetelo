@@ -60,25 +60,30 @@ export function AppInvite({
       <p>{lead}</p>
     </div>
 
-    <div className="invite-shots">
-      {SHOTS.map((shot) => (
-        <figure key={shot.src}>
-          <Image src={shot.src} alt={shot.alt} width={560} height={1212} sizes="(max-width: 850px) 40vw, 280px" />
-          <figcaption>{shot.caption}</figcaption>
-        </figure>
-      ))}
-    </div>
-
-    <div className="invite-enter">
-      {/* Оба входа в разметке, лишний прячет CSS: так правильный виден
-          сразу, а не после того, как отработает скрипт. */}
-      <div className="invite-qr">
-        <Image src={qr} alt={`QR-код со ссылкой на бота ${botLink(start)}`} width={180} height={180} unoptimized />
-        <p>Наведите камеру телефона — откроется Telegram</p>
+    {/* Экраны и вход стоят рядом, а не друг под другом: QR внизу слева
+        оставлял справа пустое поле в половину секции, и блок читался
+        съехавшим. На узком экране сетка складывается в одну колонку. */}
+    <div className="invite-body">
+      <div className="invite-shots">
+        {SHOTS.map((shot) => (
+          <figure key={shot.src}>
+            <Image src={shot.src} alt={shot.alt} width={560} height={1212} sizes="(max-width: 850px) 45vw, 260px" />
+            <figcaption>{shot.caption}</figcaption>
+          </figure>
+        ))}
       </div>
-      <a className="invite-button black-button" href={botLink(start)} target="_blank" rel="noreferrer">
-        Открыть в Telegram <b>↗</b>
-      </a>
+
+      <div className="invite-enter">
+        {/* Оба входа в разметке, лишний прячет CSS: так правильный виден
+            сразу, а не после того, как отработает скрипт. */}
+        <div className="invite-qr">
+          <Image src={qr} alt={`QR-код со ссылкой на бота ${botLink(start)}`} width={180} height={180} unoptimized />
+          <p>Наведите камеру телефона — откроется Telegram</p>
+        </div>
+        <a className="invite-button black-button" href={botLink(start)} target="_blank" rel="noreferrer">
+          Открыть в Telegram <b>↗</b>
+        </a>
+      </div>
     </div>
   </section>;
 }
