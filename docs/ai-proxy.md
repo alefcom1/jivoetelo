@@ -33,8 +33,8 @@ ANTHROPIC_AUTH_TOKEN=<PROXY_SECRET воркера>
 | Операция | Переменная | Умолчание | Почему |
 | --- | --- | --- | --- |
 | Разбор фото (`analyze_photo`) | `ANTHROPIC_MODEL_VISION` | `claude-sonnet-5` | Зрение здесь и есть продукт, экономить нельзя, но Opus избыточен |
-| Разбор текста (`analyze_text`) | `ANTHROPIC_MODEL_TEXT` | `claude-haiku-4-5` | «Борщ и кусок хлеба» в JSON — простая задача |
-| Подсказки (`suggest`) | `ANTHROPIC_MODEL_SUGGEST` | `claude-haiku-4-5` | Остаток дня считает наш код, модель только формулирует варианты |
+| Разбор текста (`analyze_text`) | `ANTHROPIC_MODEL_TEXT` | `claude-haiku-4-5-20251001` | «Борщ и кусок хлеба» в JSON — простая задача |
+| Подсказки (`suggest`) | `ANTHROPIC_MODEL_SUGGEST` | `claude-haiku-4-5-20251001` | Остаток дня считает наш код, модель только формулирует варианты |
 
 Старая переменная `ANTHROPIC_MODEL` осталась для обратной совместимости:
 если задана, она перекрывает все три операции разом, как было до того, как

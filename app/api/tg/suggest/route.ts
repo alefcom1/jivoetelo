@@ -1,4 +1,5 @@
 import { MealAnalysisError, SUGGEST_ERRORS } from "@/lib/ai";
+import { resolveModel } from "@/lib/ai/client";
 import { getSuggestionProvider } from "@/lib/ai/suggest";
 import { localToday } from "@/lib/dates";
 import { getDaySummary } from "@/lib/meals";
@@ -48,7 +49,10 @@ export async function GET(request: Request) {
     if (error instanceof MealAnalysisError && error.reason === "disabled") {
       return Response.json({ error: SUGGEST_ERRORS.disabled }, { status: 503 });
     }
-    console.error("tg suggest failed", error);
+    // Модель в логе обязательна: ровно на неверном её идентификаторе
+    // подсказки однажды и упали, а сообщение «tg suggest failed» без имени
+    // модели не давало ни одной зацепки.
+    console.error(`tg suggest failed (модель ${resolveModel("suggest")})`, error);
     return Response.json({ error: SUGGEST_ERRORS.failed }, { status: 502 });
   }
 }

@@ -36,16 +36,26 @@ export function hasAnthropicCredentials(): boolean {
  * дорога она нужна только одной из трёх:
  *  - разбор фото (analyze_photo) — claude-sonnet-5. Зрение здесь и есть
  *    продукт: экономить на нём нельзя, но Opus для этой задачи избыточен;
- *  - разбор текста (analyze_text) — claude-haiku-4-5. «Борщ и кусок хлеба»
+ *  - разбор текста (analyze_text) — claude-haiku-4-5-20251001. «Борщ и кусок хлеба»
  *    в структурированный JSON — простая задача;
- *  - подсказки «что съесть дальше» (suggest) — claude-haiku-4-5. Арифметику
+ *  - подсказки «что съесть дальше» (suggest) — claude-haiku-4-5-20251001. Арифметику
  *    остатка дня считает наш детерминированный слой (buildPrompt в
  *    suggest.ts), модель только формулирует варианты под готовые цифры.
  */
+/**
+ * Умолчания моделей по операциям.
+ *
+ * Идентификаторы должны быть теми, что принимает API, а не «читаемыми
+ * именами». У части моделей псевдоним без даты существует, у части — нет:
+ * `claude-haiku-4-5` API не знает, правильный идентификатор датированный.
+ * Здесь на этом уже споткнулись — подсказки и разбор текста молча падали с
+ * ошибкой провайдера, а тест этого не ловил, потому что сверял константу
+ * саму с собой (см. tests/ai-model.test.mjs).
+ */
 const DEFAULT_MODEL_BY_OPERATION: Record<AiOperation, string> = {
   analyze_photo: "claude-sonnet-5",
-  analyze_text: "claude-haiku-4-5",
-  suggest: "claude-haiku-4-5",
+  analyze_text: "claude-haiku-4-5-20251001",
+  suggest: "claude-haiku-4-5-20251001",
 };
 
 const MODEL_ENV_BY_OPERATION: Record<AiOperation, string> = {

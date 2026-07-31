@@ -12,7 +12,7 @@ let provider: MealVisionProvider | null = null;
  *   ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN через прокси-воркер
  *   (docs/ai-proxy.md); модель разбор фото/текста выбирает сам по операции
  *   (см. resolveModel в lib/ai/client.ts) — по умолчанию claude-sonnet-5
- *   для фото и claude-haiku-4-5 для текста, переопределяются
+ *   для фото и claude-haiku-4-5-20251001 для текста, переопределяются
  *   ANTHROPIC_MODEL_VISION / ANTHROPIC_MODEL_TEXT, а старый ANTHROPIC_MODEL
  *   по-прежнему перекрывает всё разом;
  * - `mock` — детерминированный разбор без внешних вызовов, для разработки;

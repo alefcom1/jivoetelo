@@ -4,10 +4,20 @@ import { resolveModel } from "../lib/ai/client.ts";
 
 /**
  * Модель под задачу, а не одна на всё (docs/ai-proxy.md): фото — дороже
- * (claude-sonnet-5, зрение экономить нельзя), текст и подсказки — дешевле
- * (claude-haiku-4-5, задача простая). Старый ANTHROPIC_MODEL должен
- * перекрывать все три операции разом — это обратная совместимость с тем,
- * что уже настроено в проде.
+ * (claude-sonnet-5, зрение экономить нельзя), текст и подсказки — дешевле,
+ * задача простая. Старый ANTHROPIC_MODEL должен перекрывать все три операции
+ * разом — это обратная совместимость с тем, что уже настроено в проде.
+ *
+ * ## Чего эти проверки не ловят
+ *
+ * Здесь стояло `claude-haiku-4-5`, и тест исправно проходил — при том что
+ * API такого идентификатора не знает. Подсказки и разбор текста падали в
+ * проде с ошибкой провайдера, а пользователь видел «попробуйте через минуту».
+ *
+ * Сверка константы с той же константой доказывает только, что её не
+ * переименовали. Правильность идентификатора offline не проверяется вовсе —
+ * её подтверждает единственно живой вызов. Поэтому ниже добавлена проверка
+ * формы: датированный хвост у моделей, где он обязателен.
  */
 
 const KEYS = ["ANTHROPIC_MODEL", "ANTHROPIC_MODEL_VISION", "ANTHROPIC_MODEL_TEXT", "ANTHROPIC_MODEL_SUGGEST"];
@@ -29,8 +39,8 @@ function withEnv(values, run) {
 test("без переменных окружения — разумные умолчания по операции", () => {
   withEnv({}, () => {
     assert.equal(resolveModel("analyze_photo"), "claude-sonnet-5");
-    assert.equal(resolveModel("analyze_text"), "claude-haiku-4-5");
-    assert.equal(resolveModel("suggest"), "claude-haiku-4-5");
+    assert.equal(resolveModel("analyze_text"), "claude-haiku-4-5-20251001");
+    assert.equal(resolveModel("suggest"), "claude-haiku-4-5-20251001");
   });
 });
 
@@ -45,8 +55,8 @@ test("переменная под операцию переопределяет 
   withEnv({ ANTHROPIC_MODEL_VISION: "claude-opus-5" }, () => {
     assert.equal(resolveModel("analyze_photo"), "claude-opus-5");
     // Текст и подсказки не задеты — у них своя переменная.
-    assert.equal(resolveModel("analyze_text"), "claude-haiku-4-5");
-    assert.equal(resolveModel("suggest"), "claude-haiku-4-5");
+    assert.equal(resolveModel("analyze_text"), "claude-haiku-4-5-20251001");
+    assert.equal(resolveModel("suggest"), "claude-haiku-4-5-20251001");
   });
 });
 
@@ -84,6 +94,21 @@ test("ANTHROPIC_MODEL старше переменных под операцию 
 test("пустая строка в переменной — как будто её нет", () => {
   withEnv({ ANTHROPIC_MODEL: "", ANTHROPIC_MODEL_VISION: "   " }, () => {
     assert.equal(resolveModel("analyze_photo"), "claude-sonnet-5");
-    assert.equal(resolveModel("analyze_text"), "claude-haiku-4-5");
+    assert.equal(resolveModel("analyze_text"), "claude-haiku-4-5-20251001");
+  });
+});
+
+test("идентификаторы моделей — те, что принимает API, а не читаемые имена", () => {
+  // Именно этого не хватило, чтобы поймать неработающие подсказки. Проверка
+  // грубая и неполная: она не подтверждает, что модель существует, — это
+  // выясняется только живым вызовом. Но форму «haiku без даты» она ловит.
+  withEnv({}, () => {
+    for (const op of ["analyze_photo", "analyze_text", "suggest"]) {
+      const model = resolveModel(op);
+      assert.match(model, /^claude-/, `${op}: ${model}`);
+      if (model.includes("haiku")) {
+        assert.match(model, /-\d{8}$/, `${op}: у haiku идентификатор датированный, а получили ${model}`);
+      }
+    }
   });
 });
