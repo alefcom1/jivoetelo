@@ -51,12 +51,12 @@ export default function Home() {
             >{item}</button>)}
       </nav>
       <div className="header-actions"><a className="login" href="/login">Войти</a><a className="header-cta" href="/register">Начать <b>↗</b></a></div>
-      {menu && <div className="mega-menu"><div><p>Продукт</p><a href="#experience">Дневник питания <b>→</b></a><a href="#experience">Персональный план <b>→</b></a><a href="#experience">Прогресс и привычки <b>→</b></a></div><div><p>Решения</p><a href="#specialists">Для себя <b>→</b></a><Link href="/pro">Для специалистов <b>→</b></Link><a href="#specialists">Для команд <b>→</b></a></div><aside>Не «идеальный» рацион.<br /><em>Ваш устойчивый ритм.</em></aside></div>}
+      {menu && <div className="mega-menu"><div><p>Продукт</p><a href="#experience">Дневник питания <b>→</b></a><a href="#experience">Персональный план <b>→</b></a><a href="#experience">Прогресс и привычки <b>→</b></a></div><div><p>Решения</p><a href="#specialists">Для себя <b>→</b></a><Link href="/pro">Для специалистов <b>→</b></Link><a href="#specialists">Для команд <b>→</b></a></div><aside>Считает по фотографии.<br /><em>Работает в Telegram.</em></aside></div>}
     </header>
 
-    <section className="intro" id="top"><div className="intro-grid"><div className="intro-copy"><p className="kicker">Новая культура заботы о себе <i /></p><h1>Питание —<br />не задача.<br /><em>Отношения.</em></h1><p className="intro-lead">Живое Тело помогает видеть питание в контексте вашей настоящей жизни — без строгих правил, тревоги и бесконечного подсчёта.</p><div className="intro-actions"><Link className="black-button" href="/raschet/plan">Создать свой план <b>↗</b></Link><a href="#experience">Смотреть продукт <span>↓</span></a></div><div className="intro-meta"><span>01 / 04</span><i /><span>Питание в ритме вашего тела</span></div></div><div className="intro-statement"><p>Хорошее питание<br />начинается не с контроля.</p><b>С внимательного<br />вопроса к себе.</b><span>Живое Тело<br />2026</span></div></div></section>
+    <section className="intro" id="top"><div className="intro-grid"><div className="intro-copy"><p className="kicker">Дневник питания по фотографиям <i /></p><h1>Сфотографируйте<br />еду.<br /><em>Остальное посчитаем.</em></h1><p className="intro-lead">Сфотографируйте тарелку — увидите состав. Через неделю записей сервис поймёт вашу норму точнее любой формулы: по тому, как отзывается ваше тело, а не по среднему человеку вашего роста.</p><div className="intro-actions"><Link className="black-button" href="/raschet/plan">Создать свой план <b>↗</b></Link><a href="#experience">Смотреть продукт <span>↓</span></a></div><div className="intro-meta"><span>01 / 04</span><i /><span>Питание в ритме вашего тела</span></div></div><div className="intro-statement"><p>Сначала — увидеть,<br />что происходит.</p><b>Решения<br />потом.</b><span>Живое Тело<br />2026</span></div></div></section>
 
-    <section className="experience" id="experience"><div className="section-top"><p className="kicker">Личный кабинет <i /></p><div><h2>Знать, что важно<br /><em>именно сегодня.</em></h2><p>Вместо сводки калорий — ясный следующий шаг. Вместо штрафов — понимание динамики.</p></div></div>
+    <section className="experience" id="experience"><div className="section-top"><p className="kicker">Личный кабинет <i /></p><div><h2>Как выглядит<br /><em>ваш день.</em></h2><p>Пять чисел за день, четыре записи и одна подсказка. Ничего, что нужно настраивать, и ничего, что горит красным.</p></div></div>
       {/* Снимок настоящего кабинета, а не нарисованный макет. Прежний макет
           обещал разделы «Дневник / План / Динамика» и оценку «ваш ритм
           сегодня» — ничего этого в продукте нет и не планировалось.
@@ -72,7 +72,7 @@ export default function Home() {
       </figure>
     </section>
 
-    <section className="principles"><div className="principles-title"><p className="kicker">В основе <i /></p><h2>Система, которая<br />не мешает <em>жить.</em></h2></div><div className="principles-list"><article><span>01</span><div><h3>Еда за несколько секунд</h3><p>Фото, голос или текст — выберите самый естественный для вас способ записать приём пищи.</p></div><b>↗</b></article><article><span>02</span><div><h3>Честная оценка, а не иллюзия точности</h3><p>Сервис показывает, насколько уверен в расчёте, и уточняет только то, что влияет на результат.</p></div><b>↗</b></article><article><span>03</span><div><h3>План, который адаптируется</h3><p>Сон, активность и реальная динамика меняют рекомендации — не вы подстраиваетесь под таблицу.</p></div><b>↗</b></article></div></section>
+    <section className="principles"><div className="principles-title"><p className="kicker">В основе <i /></p><h2>На чём это<br /><em>построено.</em></h2></div><div className="principles-list"><article><span>01</span><div><h3>Записать проще, чем не записать</h3><p>Фотография в Telegram, строка текста, позиция из справочника — что быстрее в эту минуту, то и подойдёт. Разбирать можно потом.</p></div><b>↗</b></article><article><span>02</span><div><h3>Где мы не уверены — там так и написано</h3><p>У каждой позиции стоит уверенность оценки. Уточнить сервис просит только то, что заметно меняет результат.</p></div><b>↗</b></article><article><span>03</span><div><h3>Норма пересчитывается по вашим данным</h3><p>Не по тому, что должно происходить с человеком вашего веса, а по тому, что происходит с вами: сколько вы едите на самом деле и как меняется вес.</p></div><b>↗</b></article></div></section>
 
     {/* После принципов и до Pro: человек уже понял, что за сервис, и здесь
         уместно показать, где им пользуются на самом деле — в телефоне. */}
@@ -87,7 +87,8 @@ export default function Home() {
       }
     />
 
-    <section className="specialists" id="specialists"><div><p className="kicker">Живое Тело Pro <i /></p><h2>Профессиональная<br />забота <em>о каждом.</em></h2><p>Специалист видит не просто отчёт, а контекст: регулярность, самочувствие, точки, где нужна поддержка.</p><Link className="white-button" href="/pro">Узнать о Pro <b>↗</b></Link></div>      {/* Тоже снимок. В прежнем макете у клиентов стояли бейджи «Стабильный
+    <section className="specialists" id="specialists"><div><p className="kicker">Живое Тело Pro <i /></p><h2>Для нутрициологов<br /><em>и тренеров.</em></h2><p>Клиент сам выбирает, что открыть: итоги недели, дневник, вес — или ничего. Специалист видит ровно это и ничего сверх, а закрыть доступ можно в любой момент.</p><Link className="white-button" href="/pro">Узнать о Pro <b>↗</b></Link></div>
+      {/* Тоже снимок. В прежнем макете у клиентов стояли бейджи «Стабильный
           ритм» и «Нужна поддержка» — оценки человека, которых продукт не
           выдаёт принципиально. На настоящем экране вместо них видно то, что
           есть: какие разделы клиент открыл сам. */}
@@ -109,7 +110,7 @@ export default function Home() {
     <SiteFooter>
       <div className="footer-top">
         <a className="logo" href="#top"><span><Logo /></span>Живое Тело</a>
-        <h2>Начните слышать<br /><em>себя.</em></h2>
+        <h2>Начните с одной<br /><em>фотографии.</em></h2>
         <Link className="coral-button" href="/raschet/plan">Создать свой план <b>↗</b></Link>
       </div>
     </SiteFooter>
