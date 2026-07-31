@@ -1,0 +1,115 @@
+/* ===== Pro: кабинет нутрициолога ===== */
+/* Оболочка и шапка раздела. Своя, а не общая с `/raschet`: та живёт в
+   raschet.css, который сюда не подключён, и заимствование класса дало бы
+   ненастроенную шапку. Ширина полей совпадает с .pro-page, чтобы логотип
+   встал по одной вертикали с заголовком. */
+.pro-shell{min-height:100vh;background:var(--white)}
+.pro-header{height:76px;padding:0 max(32px,calc((100% - 1280px)/2));display:flex;align-items:center;gap:24px;border-bottom:1px solid var(--line)}
+.pro-header .header-cta{margin-left:auto}
+.pro-page{padding:76px max(32px,calc((100% - 1280px)/2)) 0}
+.pro-hero{padding:0 0 130px}
+.pro-hero .kicker{display:block;margin-bottom:28px}
+.pro-hero h1{font:500 clamp(62px,7vw,105px)/.82 var(--serif);letter-spacing:-.08em;margin:0 0 27px;max-width:680px}
+.pro-hero h1 em{font-style:italic;color:var(--coral);font-weight:400}
+.pro-lead{max-width:550px;color:#61635c;font-size:14px;line-height:1.7;margin:0}
+.pro-access,.pro-honest,.pro-fit,.pro-status,.pro-faq,.pro-apply{padding:130px max(32px,calc((100% - 1280px)/2));border-top:1px solid var(--line)}
+.pro-access h2,.pro-honest h2,.pro-fit h2,.pro-status h2,.pro-faq h2,.pro-apply h2{font:500 clamp(44px,5vw,72px)/.87 var(--serif);letter-spacing:-.075em;margin:0 0 45px}
+.pro-access-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:30px;margin-bottom:20px}
+.pro-step h3{margin:0 0 12px;font:500 21px var(--serif);letter-spacing:-.04em}
+.pro-step p{margin:0;font-size:14px;line-height:1.65;color:#5c5e57}
+.pro-honest-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:26px}
+.pro-honest-item h3{margin:0 0 8px;font:500 20px var(--serif);letter-spacing:-.03em}
+.pro-honest-item p{margin:0;font-size:13px;line-height:1.6;color:#666860}
+.pro-fit{display:grid;grid-template-columns:1fr 1fr;gap:80px}
+.pro-fit-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.pro-fit-list li{font-size:14px;line-height:1.6;color:#3d3f3a;padding-left:20px;position:relative}
+.pro-fit-list li:before{content:"";position:absolute;left:0;top:6px;width:8px;height:8px;background:var(--coral);border-radius:50%}
+.pro-status p{max-width:640px;margin:0 0 18px;font-size:14px;line-height:1.65;color:#5c5e57}
+.pro-status p:last-of-type{margin:0}
+.pro-faq-list{display:flex;flex-direction:column;gap:0}
+.pro-faq-list details{border-top:1px solid var(--line);padding:20px 0;cursor:pointer}
+.pro-faq-list details:last-child{border-bottom:1px solid var(--line)}
+.pro-faq-list summary{font-size:14px;font-weight:600;color:var(--black);list-style:none;display:flex;justify-content:space-between;align-items:center}
+.pro-faq-list summary::-webkit-details-marker{display:none}
+.pro-faq-list summary:after{content:"▼";font-size:11px;color:var(--muted);transition:transform .2s;width:14px;text-align:right}
+.pro-faq-list details[open]>summary:after{transform:scaleY(-1)}
+.pro-faq-list details p{margin:16px 0 0;font-size:13px;line-height:1.65;color:#5c5e57}
+/* Секция выравнивается по левому краю, как и все остальные: центрированный
+   заголовок над левой формой читался как вёрстка, которую забыли доделать. */
+.pro-apply{background:var(--white)}
+.pro-apply p{max-width:560px;margin:0 0 28px;font-size:14px;line-height:1.65;color:#5c5e57}
+@media(max-width:850px){
+  .pro-page{padding:65px 20px 0}
+  .pro-hero{padding:0 0 80px}
+  .pro-hero h1{font-size:clamp(44px,8vw,62px);margin-bottom:20px}
+  .pro-access,.pro-honest,.pro-fit,.pro-status,.pro-faq,.pro-apply{padding:80px 20px;border-top:1px solid var(--line)}
+  .pro-access h2,.pro-honest h2,.pro-fit h2,.pro-status h2,.pro-faq h2,.pro-apply h2{font-size:clamp(32px,6vw,44px);margin-bottom:32px}
+  .pro-access-steps{grid-template-columns:1fr;gap:20px}
+  .pro-fit{grid-template-columns:1fr;gap:50px}
+  .pro-fit h2:not(:first-child){margin-top:30px}
+}
+
+/* ===== Живой предпросмотр плана в онбординге =====
+   .onboarding — грид в две колонки: форма (авто-поток, колонка 1) и липкий
+   .onboarding-preview (колонка 2). У блока предпросмотра явно заданы
+   grid-column/grid-row, поэтому его порядок в разметке не важен для расчёта
+   сетки на широких экранах — остальные четыре элемента (заголовок, два
+   вводных абзаца и форма) сами заполняют колонку 1 построчно. */
+.onboarding{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:32px;align-items:start}
+.onboarding-preview{grid-column:2;grid-row:1/5;position:sticky;top:96px;background:var(--paper);border:1px solid var(--line);padding:24px}
+.onboarding-preview-caption{margin:0 0 16px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.onboarding-preview-placeholder{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+.onboarding-preview-range{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0}
+.onboarding-preview-range strong{font:500 40px var(--serif);letter-spacing:-.02em}
+/* Подпись «ккал в день» — иначе letter-spacing строки выше наследуется в
+   пикселях и буквы слипаются (см. комментарий у .energy small выше). */
+.onboarding-preview-range small{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:normal}
+.onboarding-preview-detail{margin:12px 0 0;color:var(--muted);font-size:12px}
+.onboarding-preview-note{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+@media(max-width:900px){
+  .onboarding{grid-template-columns:1fr}
+  .onboarding-preview{grid-column:1;grid-row:auto;position:static;top:auto}
+}
+
+/* ===== Инбокс фото из бота ===== */
+.inbox h1{font:500 34px/1 var(--serif);letter-spacing:-.03em;margin:0 0 14px}
+.inbox-empty{color:var(--muted);font-size:14px;line-height:1.6;max-width:420px;margin:0 0 18px}
+.inbox-count{color:var(--muted);font-size:14px;line-height:1.6;margin:0 0 20px}
+.inbox-list{list-style:none;margin:0 0 20px;padding:0;display:flex;flex-direction:column;gap:10px}
+.inbox-item{display:flex;gap:16px;align-items:flex-start;background:var(--white);border:1px solid var(--line);padding:14px}
+/* flex:0 0 96px — превью не должно сжиматься, когда текст справа длинный */
+.inbox-item img{width:96px;height:96px;flex:0 0 96px;object-fit:cover;border:1px solid var(--line);border-radius:3px}
+.inbox-item-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.inbox-when{margin:0;font-size:12px;font-weight:700;color:var(--muted)}
+.inbox-note{margin:2px 0 0;color:#3d3f3a;font-size:14px;font-style:italic;line-height:1.5}
+.inbox-item-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:10px}
+.inbox-item-actions form{margin:0}
+.inbox-note-foot{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+
+/* ===== Настройка напоминаний бота ===== */
+.bot-reminders{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+/* Зануляем собственные отступы .consent/.field-note — интервалы уже задаёт gap контейнера */
+.bot-reminders .consent{margin:0}
+.bot-reminders .field-note{margin:0}
+.bot-hour{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:var(--muted)}
+.bot-hour select{padding:9px 12px;border:1px solid var(--line);background:var(--white);color:var(--black);font-size:14px;font-weight:400}
+
+/* Форма заявки. Поля наследуют вид от .auth-card/.settings-block в globals.css,
+   но живут в потоке страницы, а не в карточке, поэтому ширина ограничена здесь. */
+.pro-form{display:flex;flex-direction:column;gap:18px;max-width:520px}
+.pro-field{display:flex;flex-direction:column;gap:7px}
+.pro-field label{font-size:12px;font-weight:800;letter-spacing:.02em}
+.pro-field input[type=text],.pro-field input[type=email],.pro-field select,.pro-field textarea{width:100%;padding:12px;border:1px solid var(--line);background:var(--white);outline-color:var(--coral);font:inherit;font-size:14px}
+.pro-field textarea{line-height:1.5;resize:vertical}
+.pro-consent{flex-direction:row}
+.pro-consent label{display:flex;gap:10px;align-items:flex-start;font-size:12px;font-weight:500;line-height:1.5;color:#5c5e57}
+.pro-consent input{width:15px;height:15px;margin:2px 0 0;flex:none;accent-color:var(--coral)}
+.pro-consent a{text-decoration:underline;text-underline-offset:2px}
+.pro-consent a:hover{color:var(--coral)}
+.pro-submit{align-self:flex-start;border:0;border-radius:3px;padding:13px 22px;background:var(--black);color:var(--white);font-size:12px;font-weight:800}
+.pro-submit:disabled{opacity:.55}
+.pro-done{max-width:520px;padding:26px;background:var(--lime)}
+.pro-done h2{margin:0 0 12px;font:500 32px var(--serif);letter-spacing:-.05em}
+.pro-done p{margin:0 0 10px;font-size:14px;line-height:1.6;color:#3d3f3a}
+.pro-done p:last-child{margin:0}
+@media(max-width:850px){.pro-form,.pro-done{max-width:none}.pro-header{padding:0 20px}}

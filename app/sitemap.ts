@@ -21,6 +21,7 @@ const STATIC_PAGES: Array<{ path: string; priority: number; changeFrequency: "mo
   { path: "/raschet/temp", priority: 0.8, changeFrequency: "monthly" },
   { path: "/raschet/kviz", priority: 0.7, changeFrequency: "monthly" },
   { path: "/skolko-kalorij", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/pro", priority: 0.7, changeFrequency: "monthly" },
   { path: "/register", priority: 0.6, changeFrequency: "yearly" },
   { path: "/login", priority: 0.3, changeFrequency: "yearly" },
   { path: "/legal", priority: 0.3, changeFrequency: "yearly" },

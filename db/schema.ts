@@ -290,3 +290,151 @@ export const mealItems = pgTable("meal_items", {
   fiberPer100: doublePrecision("fiber_per_100").notNull().default(0),
   confidence: text("confidence").notNull().default("medium"),
 });
+
+/**
+ * ## Живое Тело Про — доступ специалиста к данным клиента
+ *
+ * Четыре таблицы ниже описывают одну вещь: **специалист видит данные клиента
+ * только потому, что клиент явно это разрешил, и ровно столько, сколько
+ * разрешил.** Всё остальное — детали этой мысли.
+ *
+ * Почему не роль в `users` и не флаг «Pro». Роль отвечает на вопрос «кто он»,
+ * а нам нужен ответ на вопрос «кто кому что показал». Это отношение, у него
+ * есть срок, объём и история, и оно принадлежит клиенту, а не специалисту.
+ */
+
+/**
+ * Профиль специалиста. Отдельно от `users`, потому что специалист — это тот
+ * же человек с тем же входом: у нутрициолога есть и собственный дневник.
+ *
+ * `status` не декоративный: до подтверждения специалист не может пригласить
+ * ни одного клиента. Мы пускаем в пилот руками, и это осознанно —
+ * саморегистрация «специалистом» кого угодно в продукте, где на кону данные
+ * о питании и весе чужих людей, стоила бы дороже любого роста.
+ */
+export const specialists = pgTable("specialists", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  displayName: text("display_name").notNull(),
+  // Чем занимается: «нутрициолог», «диетолог», «тренер». Свободный текст —
+  // список профессий в этой отрасли не устоялся, и выбор из справочника
+  // заставил бы половину выбирать «другое».
+  specialization: text("specialization"),
+  city: text("city"),
+  about: text("about"),
+  // pending | approved | rejected | suspended
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+});
+
+/**
+ * Одноразовый код приглашения. Специалист называет код клиенту, клиент
+ * вводит его у себя — и только тогда видит экран согласия.
+ *
+ * Почему приглашение идёт от специалиста к клиенту, а не наоборот: клиент
+ * не должен искать специалиста по базе и не должен вводить чужой email.
+ * Код живёт коротко и гасится при использовании — как коды привязки
+ * Telegram, и по тем же причинам.
+ */
+export const specialistInvites = pgTable("specialist_invites", {
+  code: text("code").primaryKey(),
+  specialistUserId: integer("specialist_user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  usedByUserId: integer("used_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Связь «специалист — клиент» и объём доступа.
+ *
+ * Строка не удаляется при отзыве: `revokedAt` ставится, доступ прекращается
+ * немедленно, а запись остаётся историей. Удалять её значило бы стирать
+ * ответ на вопрос «а кто вообще видел мои данные в марте» — ровно то, ради
+ * чего ведётся журнал ниже.
+ *
+ * Объём хранится тремя булевыми полями, а не строкой-перечислением: клиент
+ * отмечает галочки, и «итоги без дневника» — обычный выбор, а не крайний
+ * случай. Ни одно поле не включено по умолчанию.
+ */
+export const specialistClients = pgTable(
+  "specialist_clients",
+  {
+    id: serial("id").primaryKey(),
+    specialistUserId: integer("specialist_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    clientUserId: integer("client_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Недельные итоги: энергия, макросы, регулярность. Минимальный объём.
+    shareSummary: boolean("share_summary").notNull().default(false),
+    // Дневник по дням: что и когда ел, с фотографиями.
+    shareDiary: boolean("share_diary").notNull().default(false),
+    // Вес и тренд.
+    shareWeight: boolean("share_weight").notNull().default(false),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull().defaultNow(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // Одна действующая связь на пару. Повторное приглашение обновляет объём,
+    // а не заводит вторую строку с другими галочками.
+    uniqueIndex("specialist_clients_pair").on(table.specialistUserId, table.clientUserId),
+    index("specialist_clients_by_specialist").on(table.specialistUserId, table.revokedAt),
+    index("specialist_clients_by_client").on(table.clientUserId, table.revokedAt),
+  ],
+);
+
+/**
+ * Журнал доступа: кто, когда и что открыл.
+ *
+ * Пишется на каждое чтение данных клиента и показывается **клиенту**, а не
+ * специалисту. Это не аудит для нас — это то, что превращает обещание
+ * «данные ваши» в проверяемое утверждение. Человек должен иметь возможность
+ * увидеть строку «11 августа, 14:20 — открыт дневник за неделю» и сопоставить
+ * её со своими ожиданиями.
+ */
+export const specialistAccessLog = pgTable(
+  "specialist_access_log",
+  {
+    id: serial("id").primaryKey(),
+    specialistUserId: integer("specialist_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    clientUserId: integer("client_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // summary | diary | weight — что именно смотрели.
+    scope: text("scope").notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("specialist_access_log_by_client").on(table.clientUserId, table.at)],
+);
+
+/**
+ * Заявка в пилотную группу Про со страницы /pro.
+ *
+ * Отдельно от `waitlist_subscribers`: там ожидание приглашения в основной
+ * продукт, здесь — кастдев-анкета специалиста, и поля у неё свои. Смешивать
+ * их значило бы получить таблицу, где половина колонок всегда пуста.
+ */
+export const proApplications = pgTable("pro_applications", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull(),
+  name: text("name").notNull(),
+  specialization: text("specialization"),
+  city: text("city"),
+  // Сколько клиентов ведёт сейчас — главный вопрос анкеты: он отделяет
+  // практикующего специалиста от интересующегося.
+  clientsCount: text("clients_count"),
+  // Чем пользуется сейчас: таблицы, мессенджеры, другой сервис.
+  currentTools: text("current_tools"),
+  comment: text("comment"),
+  consentVersion: text("consent_version"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
