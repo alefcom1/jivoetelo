@@ -4,6 +4,86 @@
 > Соседний документ — [site-content-plan.md](./site-content-plan.md) — про
 > сайт целиком (SEO, калькуляторы, письма). Этот — только про `/`.
 
+## Заголовки: общая болезнь страницы
+
+Почти каждый заголовок на главной построен на отрицании или на метафоре:
+
+- «Питание — не задача. **Отношения**.»
+- «Система, которая **не мешает** жить.»
+- «**Не** „идеальный“ рацион. Ваш устойчивый ритм.»
+- «Хорошее питание начинается **не** с контроля.»
+- «Честная оценка, **а не** иллюзия точности»
+- «**Вместо** сводки калорий — ясный следующий шаг. **Вместо** штрафов…»
+- «О теле — с уважением.»
+
+Шесть отрицаний подряд читаются как манифест против чего-то, а не как
+описание продукта. Чтобы понять «Питание — не задача. Отношения», нужно
+сначала догадаться, с чем спорит эта фраза. Человек, попавший на страницу из
+поиска, догадываться не станет.
+
+Та же болезнь была и в моих новых заголовках: «Три движения, а не три
+экрана» — ровно та же конструкция.
+
+**Правило:** заголовок отвечает на вопрос, который читатель уже задаёт, его
+же словами, и понятен без абзаца под собой. Позиционирование и интонация
+живут в подзаголовке и в тексте — у заголовка другая работа.
+
+### Что на что менять
+
+| Секция | Было | Стало |
+|---|---|---|
+| Интро, H1 | Питание — не задача. *Отношения.* | см. варианты ниже |
+| Интро, надзаголовок | Новая культура заботы о себе | Дневник питания по фотографиям |
+| Врезка на фото | Хорошее питание начинается не с контроля. *С внимательного вопроса к себе.* | Сначала — увидеть, что происходит. *Решения потом.* |
+| Меню, врезка | Не «идеальный» рацион. *Ваш устойчивый ритм.* | Считает по фотографии. *Работает в Telegram.* |
+| Кабинет | Знать, что важно *именно сегодня.* | Как выглядит *ваш день.* |
+| Принципы | Система, которая *не мешает жить.* | На чём это *построено.* |
+| Принцип 01 | Еда за несколько секунд | Записать проще, чем не записать |
+| Принцип 02 | Честная оценка, а не иллюзия точности | Где мы не уверены — там так и написано |
+| Принцип 03 | План, который адаптируется | Норма пересчитывается по вашим данным |
+| Pro | Профессиональная забота *о каждом.* | Для нутрициологов *и тренеров.* |
+| Журнал | О теле — *с уважением.* | блок убрать (см. ниже) |
+| Подвал | Начните слышать *себя.* | Начните с одной *фотографии.* |
+
+И мои новые — переписанные по тому же правилу:
+
+| Секция | Было у меня | Стало |
+|---|---|---|
+| День | Три движения, а не три экрана. | Как проходит *обычный день.* |
+| Честность | Никто не знает вашу норму. Мы говорим об этом вслух. | Почему мы показываем диапазон, *а не одну цифру.* |
+| Границы | Чего здесь не будет. | Чего здесь *не будет.* (оставить — это и есть тема) |
+| Расчёты | Сначала посчитайте. Решите потом. | Расчёты *без регистрации.* |
+| Цена | Сейчас — бесплатно, и это не приманка. | Сколько это *стоит.* |
+
+Курсивом отмечено, что уходит в коралловый `<em>` — типографический приём
+страницы сохраняется, меняется только смысл слов.
+
+### Варианты для H1
+
+Главный заголовок — решение о бренде, поэтому три варианта, а не один.
+
+**А. Действие (рекомендую).**
+> Сфотографируйте еду.
+> *Остальное посчитаем.*
+
+Понятно с первого взгляда, называет саму механику и обещает облегчение.
+Позиционирование «мы не считаем вас виноватым» переезжает в лид и в секцию
+«Чего здесь не будет» — там оно и уместнее, потому что подкреплено.
+
+**Б. Отличие.**
+> Дневник питания,
+> *который не читает нотаций.*
+
+Сразу называет и категорию, и отличие. Минус: снова отрицание, и обещание
+проверить нечем — читатель узнает, правда ли это, только внутри продукта.
+
+**В. Спокойствие.**
+> Знать, что вы едите.
+> *Без подсчётов в уме.*
+
+Мягче варианта А, но «подсчёты в уме» — то, чего человек и так не делает;
+фраза спорит с несуществующей привычкой.
+
 ## Сколько там сейчас текста
 
 Вся главная — около **450 слов**, из них половина в подвале. Для сравнения:
@@ -92,7 +172,7 @@ FatSecret, YAZIO, «Дневник питания». Наше отличие —
 
 Надзаголовок: `ЗА ОДИН ДЕНЬ`
 
-> ## Три движения, а не три экрана.
+> ## Как проходит *обычный день.*
 
 > **Утром.** Сфотографировали завтрак и отправили в Telegram. Разбирать
 > сразу не нужно — снимок дождётся вечера.
@@ -133,7 +213,7 @@ FatSecret, YAZIO, «Дневник питания». Наше отличие —
 
 Надзаголовок: `ЧЕСТНОСТЬ`
 
-> ## Никто не знает вашу норму. Мы говорим об этом вслух.
+> ## Почему мы показываем диапазон, *а не одну цифру.*
 
 > Любой калькулятор выдаёт одно число: 1847 ккал. Оно выглядит как
 > измерение, а на деле это среднее по людям вашего роста, веса и возраста.
@@ -186,7 +266,7 @@ FatSecret, YAZIO, «Дневник питания». Наше отличие —
 
 Надзаголовок: `ГРАНИЦЫ`
 
-> ## Чего здесь не будет.
+> ## Чего здесь *не будет.*
 
 > **Не будет запрещённых продуктов.** Ни «вредного», ни «читмила», ни
 > списков того, что нельзя. Еда — это еда.
@@ -214,7 +294,7 @@ FatSecret, YAZIO, «Дневник питания». Наше отличие —
 
 Надзаголовок: `БЕЗ РЕГИСТРАЦИИ`
 
-> ## Сначала посчитайте. Решите потом.
+> ## Расчёты *без регистрации.*
 
 > Все расчёты идут прямо в браузере: мы не сохраняем ни ответы, ни результат.
 > Аккаунт нужен только тогда, когда захочется вести дневник.
@@ -238,7 +318,7 @@ FatSecret, YAZIO, «Дневник питания». Наше отличие —
 
 Надзаголовок: `ЦЕНА`
 
-> ## Сейчас — бесплатно, и это не приманка.
+> ## Сколько это *стоит.*
 
 > Дневник, разбор фотографий, план и подсказки доступны бесплатно и целиком.
 > Ограничение одно и техническое: **20 разборов по фото в день, 40 по тексту
@@ -325,18 +405,13 @@ FatSecret, YAZIO, «Дневник питания». Наше отличие —
 | Лаймовый | `#d9e49c` | pale sage-lime |
 | Линия | `#d7d4ca` | warm grey line |
 
-**Общая часть промпта (вставлять в каждый):**
+Признаки серии, которые повторяются во всех кадрах: бумажный фон с зерном,
+один чернильный блок со срезанным углом, тонкая коралловая дуга, настоящая
+фотография еды при дневном свете слева, матовая керамика без глазури, сухая
+веточка эвкалипта и ровно одно лаймовое пятно на кадр.
 
-> Editorial collage illustration, calm and warm. Background: warm off-white
-> paper `#f4f1ea` with subtle paper grain. One near-black `#171917`
-> geometric block with a single cut corner. A thin hand-drawn arc line in
-> muted terracotta coral `#e56d55`, 1–2 px, crossing the composition.
-> Optional translucent glass panel with soft edges. Real food photography
-> integrated into the collage, natural daylight from the left, soft shadows,
-> matte ceramic tableware in unglazed stoneware. Dried eucalyptus or bay
-> branch as a botanical accent. No text, no logos, no UI elements, no people's
-> faces. Muted, desaturated palette — nothing neon, nothing glossy. Warm,
-> unhurried, adult. 16:9, high detail, photorealistic collage.
+Отдельной «общей частью» их держать не нужно — в промптах ниже они уже
+вписаны в каждый.
 
 **Чего просить нельзя** (иначе разойдётся с продуктом):
 
@@ -347,96 +422,172 @@ FatSecret, YAZIO, «Дневник питания». Наше отличие —
 - никаких идеально уложенных «фитнес-боулов» — еда должна выглядеть съеденной
   наполовину, обычной, домашней.
 
-### Промпт 1 — секция «Как это выглядит за день»
+### Как пользоваться
 
-Триптих, три отдельных изображения одинакового формата (4:5), стоят в ряд.
+Каждый промпт ниже — самостоятельный: копируется целиком, без сборки из
+частей. Стилевые признаки серии (бумажный фон, чернильный блок, коралловая
+дуга, керамика, эвкалипт) повторены в каждом намеренно — иначе генератор
+уводит кадры в разные стороны и они перестают выглядеть одним набором.
 
-**1а. Утро.**
-> [общая часть] Composition: a breakfast plate photographed from directly
-> above on a linen tablecloth — porridge in a matte stoneware bowl, a few
-> blueberries, a scattering of almonds, a spoon resting to the side. Morning
-> light, long soft shadow to the right. The near-black block sits behind the
-> upper-left corner of the plate; the coral arc passes under the bowl. Pale
-> sage-lime `#d9e49c` appears only as a single small element — a mint leaf or
-> a napkin edge. The plate is half-eaten, not styled to perfection. 4:5.
+Отрицательная часть («Avoid:») — не украшение. Весы, сантиметровые ленты,
+«до/после» и зелёные галочки — язык диет-культуры, от которого продукт
+отказывается; нарисованный интерфейс спорил бы с настоящими скриншотами,
+стоящими на той же странице.
 
-**1б. День.**
-> [общая часть] Composition: an unremarkable weekday lunch on a café table —
-> buckwheat, a piece of baked chicken, a cucumber salad, a glass of water.
-> Shot at a 30-degree angle, shallow depth of field. Daylight through a
-> window on the left. A translucent glass panel overlaps the right third of
-> the frame and softens what is behind it. The coral arc rises from the
-> bottom-right corner. Nothing decorative, nothing arranged: a fork lies where
-> it was put down. 4:5.
+### Промпт 1 — «Утро» (триптих, 1 из 3)
 
-**1в. Вечер.**
-> [общая часть] Composition: an evening table after dinner — an empty
-> stoneware plate with traces of a meal, a glass, a folded linen napkin, a
-> dried eucalyptus branch lying across the corner. Warm low lamp light from
-> the upper right, long shadows, the room around it dark. The near-black
-> block occupies the left edge. Peaceful, finished, unhurried. 4:5.
+```
+Editorial collage illustration, photorealistic, calm and warm. Background:
+warm off-white paper #f4f1ea with subtle paper grain. Composition: a
+breakfast bowl photographed from directly above on a rumpled linen
+tablecloth — porridge in a matte unglazed stoneware bowl, a scattering of
+blueberries and almonds, a spoon resting to the side, the bowl half-eaten
+rather than styled. Soft morning daylight from the left, long gentle shadow
+to the right. Behind the upper-left corner of the bowl, a near-black #171917
+geometric block with one cut corner. A thin hand-drawn arc line in muted
+terracotta coral #e56d55, 1-2 px, passes under the bowl and leaves the
+frame. Pale sage-lime #d9e49c appears exactly once, as a single mint leaf.
+A dried eucalyptus sprig lies at the edge. Muted, desaturated palette,
+nothing neon, nothing glossy. Warm, unhurried, adult. Aspect ratio 4:5,
+high detail.
+Avoid: text, logos, numbers, user interface, phone screens, people, faces,
+hands, kitchen scales, measuring tape, before-and-after, green ticks, charts,
+percentages, perfectly arranged fitness bowls, bright saturated colours.
+```
 
-### Промпт 2 — секция «Честная оценка вместо точной цифры»
+### Промпт 2 — «День» (триптих, 2 из 3)
 
-Здесь нужен не натюрморт, а метафора коридора. Абстрактнее остальных.
+```
+Editorial collage illustration, photorealistic, calm and warm. Background:
+warm off-white paper #f4f1ea with subtle paper grain. Composition: an
+unremarkable weekday lunch on a café table — buckwheat, a piece of baked
+chicken, a cucumber-and-herb salad, a glass of water. Shot at a 30-degree
+angle, shallow depth of field, the background softly out of focus. Daylight
+through a window on the left. A translucent glass panel with soft edges
+overlaps the right third of the frame and gently veils what is behind it.
+A thin hand-drawn arc line in muted terracotta coral #e56d55, 1-2 px, rises
+from the bottom-right corner. A near-black #171917 geometric block with one
+cut corner sits at the far right edge. Nothing decorative, nothing arranged:
+a fork lies where it was put down, a napkin is creased. Matte unglazed
+stoneware. Muted, desaturated palette. Aspect ratio 4:5, high detail.
+Avoid: text, logos, numbers, user interface, phone screens, people, faces,
+hands, kitchen scales, measuring tape, before-and-after, green ticks, charts,
+percentages, perfectly arranged fitness bowls, bright saturated colours.
+```
 
-> [общая часть] Composition: an abstract editorial illustration of a widening
-> corridor. From a single point at the left edge, two thin terracotta coral
-> `#e56d55` lines diverge to the right, opening into a cone; the space between
-> them is filled with a very light warm wash, like watercolour on paper. A few
-> faint parallel lines inside the cone suggest possible paths. Behind the cone,
-> a large near-black `#171917` block with one cut corner. Bottom-right: a
-> single matte stoneware bowl seen from above, photographed, grounding the
-> abstraction in something real. No numbers, no axes, no chart labels, no
-> grid. Calm, precise, not technical. 16:9.
+### Промпт 3 — «Вечер» (триптих, 3 из 3)
 
-Замечание: это визуальный родственник «конуса неопределённости» в прогнозе
-погоды и веерных диаграмм Банка Англии — тот же самый жанр, что и наш график
-на странице расчёта. Совпадение намеренное.
+```
+Editorial collage illustration, photorealistic, calm and warm. Background:
+warm off-white paper #f4f1ea with subtle paper grain, mostly in shadow.
+Composition: an evening table after dinner — an empty matte unglazed
+stoneware plate with faint traces of a meal, a used glass, a folded linen
+napkin, and a dried eucalyptus branch lying diagonally across the corner.
+Warm low lamp light from the upper right, long soft shadows, the room around
+the table dark and quiet. A near-black #171917 geometric block with one cut
+corner occupies the left edge. A thin hand-drawn arc line in muted terracotta
+coral #e56d55, 1-2 px, curves across the lower third. Pale sage-lime #d9e49c
+appears exactly once, as a single dried leaf. The mood is finished,
+peaceful, unhurried — the end of an ordinary day. Muted, desaturated palette.
+Aspect ratio 4:5, high detail.
+Avoid: text, logos, numbers, user interface, phone screens, people, faces,
+hands, kitchen scales, measuring tape, before-and-after, green ticks, charts,
+percentages, candles, romantic dinner styling, bright saturated colours.
+```
 
-### Промпт 3 — секция «Чем мы не являемся»
+### Промпт 4 — «Диапазон вместо цифры»
 
-Тёмная секция, значит и иллюстрация тёмная. Контраст со всей страницей.
+Здесь нужен не натюрморт, а метафора коридора: из одной точки расходятся две
+границы, между ними — область возможного. Тот же жанр, что «конус
+неопределённости» в прогнозе погоды и веерные диаграммы Банка Англии; наш
+график на странице расчёта сделан в нём же, и совпадение намеренное.
 
-> Editorial collage illustration on a near-black `#171917` background with
-> subtle paper grain. Composition: a single ripe pear and a piece of dark
-> chocolate lying side by side on a matte stoneware plate, lit by a warm low
-> light from the upper left, deep soft shadows. They are treated identically —
-> same light, same framing, neither highlighted nor diminished. A thin
-> terracotta coral `#e56d55` arc passes behind the plate. Pale sage-lime
-> `#d9e49c` appears once, as a small dried leaf. No text, no symbols, no
-> crossing-out, no green ticks or red marks, no scales, no measuring tape.
-> Warm, quiet, adult. 16:9.
+```
+Abstract editorial collage illustration, calm and precise, on a warm
+off-white paper #f4f1ea background with subtle paper grain. Composition: a
+widening corridor. From a single point at the left edge, two thin muted
+terracotta coral #e56d55 lines diverge to the right and open into a cone;
+the space between them is filled with a very light warm wash, like
+watercolour bleeding into paper. A few faint parallel lines inside the cone
+suggest possible paths, fading as they go right. Behind the cone, a large
+near-black #171917 geometric block with one cut corner. In the bottom-right
+corner, grounding the abstraction in something real: a single matte unglazed
+stoneware bowl photographed from directly above, half-eaten porridge inside,
+soft daylight. A dried eucalyptus sprig at the very edge. Muted, desaturated
+palette. Aspect ratio 16:9, high detail.
+Avoid: numbers, digits, axis labels, gridlines, chart legends, arrows,
+infographic styling, text, logos, user interface, people, faces, kitchen
+scales, green ticks, bright saturated colours.
+```
 
-Смысл кадра: груша и шоколад сняты совершенно одинаково. Никакой знак не
-говорит, что одно лучше другого. Это и есть содержание секции, переданное
+### Промпт 5 — «Чего здесь не будет»
+
+Тёмная секция — тёмная иллюстрация, единственная на странице. Содержание
+кадра: груша и шоколад сняты совершенно одинаково, и ни один знак не
+говорит, что одно лучше другого. Это и есть смысл секции, переданный
 изображением.
 
-### Промпт 4 — секция «Посчитать до регистрации»
+```
+Editorial collage illustration, photorealistic, on a near-black #171917
+background with subtle paper grain. Composition: a ripe pear and a piece of
+dark chocolate lying side by side on a matte unglazed stoneware plate,
+photographed from a low three-quarter angle. Both are lit identically by a
+warm low light from the upper left — same light, same framing, same focus;
+neither is highlighted, neither is diminished. Deep soft shadows fall to the
+right. A thin hand-drawn arc line in muted terracotta coral #e56d55, 1-2 px,
+passes behind the plate. Pale sage-lime #d9e49c appears exactly once, as a
+small dried leaf near the edge. Muted, desaturated palette, warm and quiet
+and adult. Aspect ratio 16:9, high detail.
+Avoid: text, logos, symbols, crossing-out, X marks, green ticks, red marks,
+traffic-light colours, numbers, calorie labels, kitchen scales, measuring
+tape, user interface, people, faces, hands, any visual sign that ranks one
+food above the other.
+```
 
-Узкая горизонтальная полоса-шапка над плиткой калькуляторов.
+### Промпт 6 — «Расчёты без регистрации»
 
-> [общая часть] Composition: a horizontal banner. Left half: an open paper
-> notebook on a wooden table, a pencil laid diagonally across it, the page
-> blank except for faint ruled lines. Right half: a near-black `#171917`
-> block with one cut corner, and in front of it a scattering of everyday
-> ingredients photographed from above — an egg, a handful of buckwheat, half
-> an avocado, a slice of bread — spaced apart like specimens, not arranged
-> into a dish. A thin terracotta coral `#e56d55` line runs the full width of
-> the image, connecting the notebook to the ingredients. Ultra-wide 4:1.
+Узкая полоса-шапка над плиткой калькуляторов.
 
-### Промпт 5 — секция «Живое Тело Pro» (по желанию)
+```
+Editorial collage illustration, photorealistic, calm and warm, in a very
+wide horizontal banner format. Background: warm off-white paper #f4f1ea with
+subtle paper grain. Left half: an open paper notebook on a bare wooden
+table, a pencil laid diagonally across it, the page blank except for faint
+ruled lines; soft daylight from the left. Right half: a near-black #171917
+geometric block with one cut corner, and in front of it everyday ingredients
+photographed from directly above and spaced widely apart like specimens
+rather than arranged into a dish — one egg, a small heap of buckwheat, half
+an avocado, a slice of rye bread. A thin hand-drawn arc line in muted
+terracotta coral #e56d55, 1-2 px, runs the full width of the image and
+visually connects the notebook to the ingredients. A dried eucalyptus sprig
+near the right edge. Muted, desaturated palette. Aspect ratio 4:1, high
+detail.
+Avoid: text, handwriting, numbers, logos, user interface, calculators,
+phone screens, people, faces, hands, kitchen scales, charts, bright
+saturated colours.
+```
 
-Сейчас там снимок кабинета специалиста и коралловая тень — этого достаточно.
-Если понадобится второй кадр, например для страницы `/pro`:
+### Промпт 7 — «Живое Тело Pro» (по желанию)
 
-> [общая часть] Composition: two mugs of tea on a wooden table, seen from
-> above, one on each side of the frame, with an open paper notebook between
-> them. Nothing else. Warm daylight from the left, soft shadows. A thin
-> terracotta coral `#e56d55` arc curves between the two mugs, connecting them.
-> The near-black `#171917` block occupies the bottom-left corner. The mood is
-> a conversation between two adults, not a consultation. No people, no faces,
-> no hands. 16:9.
+На главной в этой секции уже стоит настоящий снимок кабинета специалиста с
+коралловой тенью — этого достаточно. Кадр ниже пригодится для страницы
+`/pro`, где иллюстраций пока нет.
+
+```
+Editorial collage illustration, photorealistic, calm and warm. Background:
+warm off-white paper #f4f1ea with subtle paper grain. Composition: two mugs
+of tea on a bare wooden table seen from directly above, one on each side of
+the frame, an open paper notebook lying between them, nothing else. Warm
+daylight from the left, soft shadows. A thin hand-drawn arc line in muted
+terracotta coral #e56d55, 1-2 px, curves between the two mugs and connects
+them. A near-black #171917 geometric block with one cut corner occupies the
+bottom-left corner. The mood is a conversation between two adults meeting as
+equals — not a consultation, not an examination. Matte unglazed stoneware
+mugs. Muted, desaturated palette. Aspect ratio 16:9, high detail.
+Avoid: text, handwriting, logos, numbers, user interface, laptops, phone
+screens, people, faces, hands, white coats, clipboards, stethoscopes,
+clinical styling, bright saturated colours.
+```
 
 ### Как заводить готовые файлы
 
