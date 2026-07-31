@@ -16,6 +16,7 @@ const SITE_URL = "https://jivoetelo.ru";
 const STATIC_PAGES: Array<{ path: string; priority: number; changeFrequency: "monthly" | "yearly" }> = [
   { path: "/", priority: 1, changeFrequency: "monthly" },
   { path: "/raschet", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/raschet/plan", priority: 0.9, changeFrequency: "monthly" },
   { path: "/raschet/energiya", priority: 0.9, changeFrequency: "monthly" },
   { path: "/raschet/belok", priority: 0.8, changeFrequency: "monthly" },
   { path: "/raschet/temp", priority: 0.8, changeFrequency: "monthly" },

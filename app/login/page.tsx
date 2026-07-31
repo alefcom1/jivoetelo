@@ -25,6 +25,9 @@ export default function LoginPage() {
         {errors[state.status] && <p className="form-error">{errors[state.status]}</p>}
         <button className="black-button" type="submit" disabled={pending}>{pending ? "Входим…" : "Войти"}</button>
       </form>
+      <p className="auth-switch">
+        <Link href="/reset">Забыли пароль?</Link>
+      </p>
       <p className="auth-switch">Ещё нет аккаунта? <Link href="/register">Создать</Link></p>
     </div>
   </main>;

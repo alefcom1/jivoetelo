@@ -203,11 +203,31 @@ try {
   fail(`APP_TIMEZONE="${timezone}" — неизвестная таймзона.`);
 }
 
-const operator = value("LEGAL_OPERATOR_NAME");
-if (!operator) {
-  warn("LEGAL_OPERATOR_NAME не задан — в юридических документах останется пометка «реквизиты не заполнены» (docs/legal.md).");
+// Реквизиты оператора проверяем все четыре, а не только имя.
+//
+// Признак «заполнено» в lib/legal-operator.ts смотрит ровно на
+// LEGAL_OPERATOR_NAME — значит, заполнив имя и забыв ИНН, можно получить
+// документы, где имя настоящее, а ИНН заменён на «будет указано после
+// регистрации». Это хуже, чем незаполненные реквизиты целиком: выглядит
+// как готовый документ с дырой посередине.
+const OPERATOR_FIELDS = [
+  ["LEGAL_OPERATOR_NAME", "наименование (ИП или ООО)"],
+  ["LEGAL_OPERATOR_INN", "ИНН"],
+  ["LEGAL_OPERATOR_OGRN", "ОГРН или ОГРНИП"],
+  ["LEGAL_OPERATOR_ADDRESS", "адрес"],
+];
+const operatorFilled = OPERATOR_FIELDS.filter(([key]) => value(key));
+const operatorMissing = OPERATOR_FIELDS.filter(([key]) => !value(key));
+
+if (operatorMissing.length === 0) {
+  ok(`Реквизиты оператора заполнены: ${value("LEGAL_OPERATOR_NAME")}, ИНН ${value("LEGAL_OPERATOR_INN")}.`);
+} else if (operatorFilled.length === 0) {
+  warn("Реквизиты оператора не заданы — в юридических документах останется пометка «будет указано после регистрации» (docs/legal.md).");
 } else {
-  ok(`Оператор персональных данных: ${operator}.`);
+  warn(
+    `Реквизиты оператора заполнены частично. Не хватает: ${operatorMissing.map(([key, label]) => `${key} (${label})`).join(", ")}. ` +
+      "Документы покажут настоящее наименование рядом с заглушкой вместо ИНН — так публиковать нельзя.",
+  );
 }
 
 // --- Порт приложения --------------------------------------------------------

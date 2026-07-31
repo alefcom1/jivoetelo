@@ -447,3 +447,28 @@ export const proApplications = pgTable("pro_applications", {
   consentVersion: text("consent_version"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Одноразовые ссылки смены пароля.
+ *
+ * Отдельная таблица, а не колонка в `users`: у одного человека может быть
+ * несколько запросов подряд (не пришло письмо, нажал ещё раз), и каждый
+ * должен гаситься сам по себе. Колонка хранила бы только последний.
+ *
+ * Храним хеш токена, а не токен — как у сессий: утечка базы не должна давать
+ * готовых ключей к чужим аккаунтам.
+ */
+export const passwordResets = pgTable(
+  "password_resets",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // По пользователю — чтобы ограничивать частоту запросов, не сканируя таблицу.
+  (table) => [index("password_resets_user").on(table.userId, table.createdAt)],
+);

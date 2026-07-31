@@ -81,6 +81,10 @@ const noopMailer: Mailer = {
   kind: "noop",
   async send(email) {
     console.info(`[mail:noop] → ${email.to} · ${email.subject}`);
+    // Тело печатаем целиком. Без него письмо со ссылкой смены пароля,
+    // отправленное на ненастроенной почте, исчезает бесследно — а именно
+    // этот сценарий и нужен, пока SMTP не подключён: ссылку берут из лога.
+    if (email.text) console.info(email.text.split("\n").map((line) => `[mail:noop] │ ${line}`).join("\n"));
   },
 };
 
