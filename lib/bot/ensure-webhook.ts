@@ -57,22 +57,28 @@ export async function ensureWebhook(): Promise<void> {
   const client = createTelegramClient(token);
 
   try {
+    // Вебхук перерегистрируем, только если адрес разошёлся: setWebhook с тем
+    // же адресом безвреден, но лишний запрос при каждом перезапуске не нужен.
     const info = await client.call<WebhookInfo>("getWebhookInfo", {});
     if (info?.url === webhookUrl) {
       console.log("[bot] вебхук уже на месте");
-      return;
+    } else {
+      await client.call("setWebhook", {
+        url: webhookUrl,
+        secret_token: secret,
+        allowed_updates: ["message", "callback_query"],
+        // Накопившееся за время простоя не разбираем: это чаще всего дубли
+        // того, что человек уже прислал заново.
+        drop_pending_updates: true,
+      });
+      console.log(`[bot] вебхук зарегистрирован: ${webhookUrl}`);
     }
 
-    await client.call("setWebhook", {
-      url: webhookUrl,
-      secret_token: secret,
-      allowed_updates: ["message", "callback_query"],
-      // Накопившееся за время простоя не разбираем: это чаще всего дубли
-      // того, что человек уже прислал заново.
-      drop_pending_updates: true,
-    });
-    console.log(`[bot] вебхук зарегистрирован: ${webhookUrl}`);
-
+    // Команды и кнопку выставляем всегда, а не только вместе с вебхуком.
+    // Иначе получается ловушка: домен привязали в BotFather уже после первой
+    // выкатки, приложение перезапустили — а кнопка не появилась, потому что
+    // вебхук к тому моменту был на месте и код выходил раньше. Оба вызова
+    // идемпотентны и стоят одного запроса.
     await client.call("setMyCommands", { commands: COMMANDS });
 
     // Синяя кнопка «Дневник» рядом со строкой ввода. Telegram отклоняет
