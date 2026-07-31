@@ -1,7 +1,7 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AppInvite } from "./app-invite";
 import { Logo } from "./logo";
@@ -19,20 +19,9 @@ import { SiteFooter } from "./site-footer";
  */
 
 const navItems = ["Продукт", "Решения", "Журнал", "О нас"];
-const meals = [
-  ["08:15", "Завтрак", "Яйца, гречка, зелень", "468"],
-  ["13:20", "Обед", "Рыба, овощи, булгур", "612"],
-  ["19:00", "Ужин", "Время выбрать, что поддержит вас", ""],
-];
 
 export default function Home() {
   const [menu, setMenu] = useState(false);
-  const [period, setPeriod] = useState("Сегодня");
-  // Кнопки внутри макета кабинета ведут на регистрацию: макет — картинка,
-  // но нажимают на него всерьёз, и нажатие должно куда-то приводить.
-  // Переходим router'ом, а не ссылкой: стили здесь навешаны на button.
-  const router = useRouter();
-  const toRegister = () => router.push("/register");
 
   return <main>
     {/* Меню закрывается, когда курсор уходит со всей шапки: сама выпадающая
@@ -68,7 +57,19 @@ export default function Home() {
     <section className="intro" id="top"><div className="intro-grid"><div className="intro-copy"><p className="kicker">Новая культура заботы о себе <i /></p><h1>Питание —<br />не задача.<br /><em>Отношения.</em></h1><p className="intro-lead">Живое Тело помогает видеть питание в контексте вашей настоящей жизни — без строгих правил, тревоги и бесконечного подсчёта.</p><div className="intro-actions"><Link className="black-button" href="/raschet/plan">Создать свой план <b>↗</b></Link><a href="#experience">Смотреть продукт <span>↓</span></a></div><div className="intro-meta"><span>01 / 04</span><i /><span>Питание в ритме вашего тела</span></div></div><div className="intro-statement"><p>Хорошее питание<br />начинается не с контроля.</p><b>С внимательного<br />вопроса к себе.</b><span>Живое Тело<br />2026</span></div></div></section>
 
     <section className="experience" id="experience"><div className="section-top"><p className="kicker">Личный кабинет <i /></p><div><h2>Знать, что важно<br /><em>именно сегодня.</em></h2><p>Вместо сводки калорий — ясный следующий шаг. Вместо штрафов — понимание динамики.</p></div></div>
-      <div className="product-frame"><aside className="app-side"><a className="app-logo" href="#top">Ж</a><div className="app-nav"><button className="selected">⌂<span>Сегодня</span></button><button>◒<span>Дневник</span></button><button>⌁<span>План</span></button><button>⌇<span>Динамика</span></button></div><button className="profile-dot">МС</button></aside><div className="app-main"><div className="app-top"><div><p>СРЕДА, 18 ИЮНЯ</p><h3>Добрый день, Марина.</h3></div><div className="periods">{["Сегодня", "Неделя", "Месяц"].map(x => <button className={period === x ? "active" : ""} onClick={() => setPeriod(x)} key={x}>{x}</button>)}</div><button className="round-plus" onClick={toRegister}>+</button></div><div className="score-row"><div className="day-score"><p>Ваш ритм сегодня</p><strong>Хороший</strong><span>Вы бережно держите свой темп</span></div><div className="progress-circle"><b>74</b><small>%</small></div><div className="energy"><p>Энергия на сегодня</p><strong>1 480 <small>ккал</small></strong><span>из 2 000 ккал</span><div><i style={{width:"74%"}} /></div></div></div><div className="app-columns"><div className="meal-column"><div className="subhead"><h4>Ваш день</h4><button>Открыть дневник →</button></div>{meals.map((m,i)=><article className="meal-row" key={m[1]}><time>{m[0]}</time><i className={`meal-marker m${i}`} /><div><b>{m[1]}</b><span>{m[2]}</span></div>{m[3] ? <strong>{m[3]}<small> ккал</small></strong> : <button onClick={toRegister}>Подобрать →</button>}</article>)}</div><div className="insight"><span>Ж</span><p>Сегодня вам подойдёт ужин с овощами и источником белка.</p><button onClick={toRegister}>Собрать идею <b>↗</b></button></div></div></div></div>
+      {/* Снимок настоящего кабинета, а не нарисованный макет. Прежний макет
+          обещал разделы «Дневник / План / Динамика» и оценку «ваш ритм
+          сегодня» — ничего этого в продукте нет и не планировалось.
+          Пересобрать: node scripts/site-shots.mjs */}
+      <figure className="product-frame">
+        <Image
+          src="/site/cabinet.webp"
+          alt="Экран «Сегодня» в личном кабинете: итоги дня, приёмы пищи с составом и подсказка «что съесть дальше»"
+          width={1920}
+          height={1200}
+          sizes="(max-width: 850px) 100vw, 1280px"
+        />
+      </figure>
     </section>
 
     <section className="principles"><div className="principles-title"><p className="kicker">В основе <i /></p><h2>Система, которая<br />не мешает <em>жить.</em></h2></div><div className="principles-list"><article><span>01</span><div><h3>Еда за несколько секунд</h3><p>Фото, голос или текст — выберите самый естественный для вас способ записать приём пищи.</p></div><b>↗</b></article><article><span>02</span><div><h3>Честная оценка, а не иллюзия точности</h3><p>Сервис показывает, насколько уверен в расчёте, и уточняет только то, что влияет на результат.</p></div><b>↗</b></article><article><span>03</span><div><h3>План, который адаптируется</h3><p>Сон, активность и реальная динамика меняют рекомендации — не вы подстраиваетесь под таблицу.</p></div><b>↗</b></article></div></section>
@@ -86,7 +87,20 @@ export default function Home() {
       }
     />
 
-    <section className="specialists" id="specialists"><div><p className="kicker">Живое Тело Pro <i /></p><h2>Профессиональная<br />забота <em>о каждом.</em></h2><p>Специалист видит не просто отчёт, а контекст: регулярность, самочувствие, точки, где нужна поддержка.</p><Link className="white-button" href="/pro">Узнать о Pro <b>↗</b></Link></div><div className="pro-screen"><div className="pro-head"><span>КЛИЕНТЫ</span><button>+ Пригласить клиента</button></div><div className="pro-client"><i /><div><b>Алина Никитина</b><span>План: мягкое снижение веса</span></div><em>Стабильный ритм</em></div><div className="pro-client"><i /><div><b>Ирина Мартынова</b><span>План: регулярное питание</span></div><em>Нужна поддержка</em></div><div className="pro-client"><i /><div><b>Виктория С.</b><span>План: работа с белком</span></div><em>Стабильный ритм</em></div></div></section>
+    <section className="specialists" id="specialists"><div><p className="kicker">Живое Тело Pro <i /></p><h2>Профессиональная<br />забота <em>о каждом.</em></h2><p>Специалист видит не просто отчёт, а контекст: регулярность, самочувствие, точки, где нужна поддержка.</p><Link className="white-button" href="/pro">Узнать о Pro <b>↗</b></Link></div>      {/* Тоже снимок. В прежнем макете у клиентов стояли бейджи «Стабильный
+          ритм» и «Нужна поддержка» — оценки человека, которых продукт не
+          выдаёт принципиально. На настоящем экране вместо них видно то, что
+          есть: какие разделы клиент открыл сам. */}
+      <figure className="pro-screen">
+        <Image
+          src="/site/pro.webp"
+          alt="Список клиентов в кабинете специалиста: у каждого видно, какие разделы он открыл — итоги недели, дневник, вес"
+          width={1320}
+          height={647}
+          sizes="(max-width: 850px) 100vw, 600px"
+        />
+      </figure>
+    </section>
 
     <section className="journal" id="journal"><div className="section-top"><p className="kicker">Журнал <i /></p><div><h2>О теле —<br /><em>с уважением.</em></h2><p>Понятные материалы о еде, энергии и привычках, написанные без давления.</p></div></div><div className="articles"><article><span>ЗНАНИЯ · 6 МИН</span><h3>Почему регулярность важнее «идеального» рациона</h3><a href="#journal">Читать статью →</a></article><article><span>ПРАКТИКА · 4 МИН</span><h3>Как вернуть себе чувство голода и насыщения</h3><a href="#journal">Читать статью →</a></article><article><span>ВЗГЛЯД · 8 МИН</span><h3>Тело не обязано быть проектом по улучшению</h3><a href="#journal">Читать статью →</a></article></div></section>
 
