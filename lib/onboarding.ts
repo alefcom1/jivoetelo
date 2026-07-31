@@ -11,6 +11,7 @@
 // только вызывает их и рисует результат — так же, как lib/pace.ts не знает о
 // разметке, а pace-form.tsx не знает о формуле.
 
+import { softeningReason, type SafetySignals } from "./safety.ts";
 import {
   ACTIVITY_LABELS,
   computeTargets,
@@ -34,6 +35,15 @@ export type Relationship = QuizAnswers["relationship"];
 export type OnboardingAnswers = {
   goal?: Goal;
   relationship?: Relationship;
+  /**
+   * Признаки из квиза «стоит ли вам сейчас». Онбординг их не спрашивает, но
+   * воронка, которая начинается с квиза, может передать — и тогда цель
+   * смягчается по тем же правилам, по которым квиз даёт свой вердикт.
+   */
+  sleep?: SafetySignals["sleep"];
+  lifeLoad?: SafetySignals["lifeLoad"];
+  recentDieting?: SafetySignals["recentDieting"];
+  motivation?: SafetySignals["motivation"];
   sexForFormula?: SexForFormula;
   birthYear?: number;
   heightCm?: number;
@@ -123,9 +133,29 @@ export function isMinor(answers: OnboardingAnswers, currentYear = new Date().get
 export function effectiveGoal(answers: OnboardingAnswers, currentYear = new Date().getFullYear()): Goal {
   const goal = answers.goal ?? "maintain";
   if (goal !== "lose") return goal;
-  if (isMinor(answers, currentYear)) return "maintain";
-  if (answers.relationship === "hard") return "maintain";
-  return "lose";
+  // Решение принимает lib/safety.ts — то же самое, по которому говорит квиз
+  // на сайте. Раньше здесь стояли свои две проверки из шести, и дневник
+  // выходил менее бережным, чем витрина.
+  return softeningReason(safetySignals(answers, currentYear)) ? "maintain" : "lose";
+}
+
+/**
+ * Собирает признаки для lib/safety.ts из ответов онбординга.
+ *
+ * Онбординг спрашивает не всё: сна, нагрузки и истории диет в нём нет, и
+ * поля остаются пустыми. Это не «всё хорошо», а «не знаем» — и функция
+ * смягчения именно так их и трактует. Довести сюда остальные признаки можно
+ * будет, когда воронка начнёт их передавать.
+ */
+export function safetySignals(answers: OnboardingAnswers, currentYear = new Date().getFullYear()): SafetySignals {
+  return {
+    relationship: answers.relationship,
+    minor: isMinor(answers, currentYear),
+    sleep: answers.sleep,
+    lifeLoad: answers.lifeLoad,
+    recentDieting: answers.recentDieting,
+    motivation: answers.motivation,
+  };
 }
 
 /** Все ли обязательные для конкретного шага данные уже введены и в границах — от этого зависит, активна ли кнопка «Далее». */

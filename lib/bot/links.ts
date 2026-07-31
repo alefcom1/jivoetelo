@@ -16,12 +16,15 @@ import type { InlineKeyboardButton } from "../telegram-api.ts";
 export type BotLinks = {
   inboxUrl: string;
   miniAppUrl: string | null;
+  /** Публичный расчёт — единственное, что можно предложить незнакомому человеку. */
+  planUrl: string;
 };
 
 export function botLinks(): BotLinks {
   return {
     inboxUrl: absoluteUrl("/app/inbox"),
     miniAppUrl: process.env.TELEGRAM_MINIAPP_URL?.trim() || null,
+    planUrl: absoluteUrl("/raschet/plan"),
   };
 }
 
@@ -39,4 +42,16 @@ export function openAppButton(links: BotLinks): InlineKeyboardButton {
   return links.miniAppUrl
     ? { text: "Открыть дневник", web_app: { url: links.miniAppUrl } }
     : { text: "Открыть дневник", url: links.inboxUrl };
+}
+
+/**
+ * Кнопка расчёта для того, у кого ещё нет аккаунта.
+ *
+ * Ведёт на обычную страницу, а не в Mini App: Mini App начинается с экрана
+ * привязки, и незнакомому человеку он покажет форму ввода кода вместо
+ * ответа на вопрос, ради которого тот пришёл. Расчёт же работает без
+ * аккаунта вовсе — он целиком считается в браузере.
+ */
+export function planButton(links: BotLinks): InlineKeyboardButton {
+  return { text: "Посчитать норму", url: links.planUrl };
 }

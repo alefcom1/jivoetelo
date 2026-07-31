@@ -12,7 +12,7 @@
 import { localMoment } from "../dates.ts";
 import { snoozeUntil } from "../reminders.ts";
 import { foodCategory } from "../food-category.ts";
-import { inboxButton, openAppButton, type BotLinks } from "./links.ts";
+import { inboxButton, openAppButton, planButton, type BotLinks } from "./links.ts";
 import { sendWelcome } from "./media.ts";
 import {
   ANSWERS,
@@ -248,7 +248,7 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     if (LINK_CODE_RE.test(payload)) return await tryLink(payload, tgId, chatId, deps);
 
     const linked = await deps.store.findUserByTelegram(tgId);
-    await greet(deps, chatId, linked ? GREETING.linked : GREETING.unlinked);
+    await greet(deps, chatId, linked ? GREETING.linked : GREETING.unlinked, Boolean(linked));
     return;
   }
 
@@ -306,16 +306,20 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
  * Если картинка не уходит, sendWelcome сам присылает тот же текст, поэтому
  * отдельной ветки «а вдруг не получилось» здесь нет.
  */
-function greet(deps: BotDeps, chatId: number, text: string): Promise<void> {
+function greet(deps: BotDeps, chatId: number, text: string, linked: boolean): Promise<void> {
+  // Кнопка зависит от того, есть ли аккаунт. Незнакомому человеку «Открыть
+  // дневник» бесполезна: она ведёт туда, где потребуют войти. Ему нужен
+  // расчёт, который работает без всякого аккаунта.
+  const button = linked ? openAppButton(deps.links) : planButton(deps.links);
   return sendWelcome(deps.client, chatId, text, {
     parseMode: "HTML",
-    replyMarkup: { inline_keyboard: [[openAppButton(deps.links)]] },
+    replyMarkup: { inline_keyboard: [[button]] },
   });
 }
 
 async function tryLink(code: string, tgId: string, chatId: number, deps: BotDeps): Promise<void> {
   const user = await deps.store.linkByCode(code, tgId);
-  if (user) return await greet(deps, chatId, TEXTS.greetingLinked);
+  if (user) return await greet(deps, chatId, TEXTS.greetingLinked, true);
   await say(deps.client, chatId, TEXTS.linkFailed);
 }
 

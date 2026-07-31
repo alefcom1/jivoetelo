@@ -1,8 +1,17 @@
-// Логика квиза «Стоит ли вам сейчас снижать вес». Правила проверяются по
-// порядку — первое сработавшее правило определяет вердикт, дальше не
-// смотрим. Порядок важен: он расставляет приоритеты (например, тяжёлые
-// отношения с едой важнее любых других ответов) и должен совпадать с
-// порядком, описанным в тестах.
+/**
+ * Квиз «Стоит ли вам сейчас снижать вес» — тексты вердиктов.
+ *
+ * Само решение здесь больше не принимается: его принимает `softeningReason`
+ * из lib/safety.ts, а этот модуль лишь пересказывает вывод словами. Раньше
+ * правила были записаны тут, а в онбординге — своя, вдвое более короткая их
+ * версия, и дневник получался менее бережным, чем витрина сайта.
+ *
+ * Порядок вердиктов совпадает с порядком причин в safety.ts и проверяется
+ * тестом: любой набор ответов, на который квиз говорит «не сейчас», обязан
+ * смягчать цель и в онбординге.
+ */
+
+import { softeningReason } from "./safety.ts";
 
 export type QuizAnswers = {
   motivation: "health" | "look" | "energy" | "unsure";
@@ -20,8 +29,9 @@ export type QuizVerdict = {
 };
 
 export function evaluateQuiz(answers: QuizAnswers): QuizVerdict {
-  if (answers.relationship === "hard" ||
-    (answers.relationship === "tense" && answers.recentDieting === "constantly")) {
+  const reason = softeningReason(answers);
+
+  if (reason === "hard_relationship") {
     return {
       key: "care",
       title: "Сейчас важнее отношения с едой, а не цифры",
@@ -37,7 +47,7 @@ export function evaluateQuiz(answers: QuizAnswers): QuizVerdict {
     };
   }
 
-  if (answers.lifeLoad === "overloaded" || answers.sleep === "poor") {
+  if (reason === "overload") {
     return {
       key: "steady",
       title: "Хорошее время для регулярности, а не для дефицита",
@@ -52,8 +62,7 @@ export function evaluateQuiz(answers: QuizAnswers): QuizVerdict {
     };
   }
 
-  if (answers.recentDieting === "constantly" ||
-    (answers.recentDieting === "recently" && answers.motivation !== "health")) {
+  if (reason === "dieting_cycle") {
     return {
       key: "maintain",
       title: "Похоже, вам стоит сделать паузу",

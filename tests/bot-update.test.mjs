@@ -85,7 +85,11 @@ function makeDeps(overrides = {}) {
       store,
       now: NOW,
       timeZone: "Europe/Moscow",
-      links: { inboxUrl: "https://jivoetelo.ru/app/inbox", miniAppUrl: overrides.miniAppUrl ?? null },
+      links: {
+        inboxUrl: "https://jivoetelo.ru/app/inbox",
+        miniAppUrl: overrides.miniAppUrl ?? null,
+        planUrl: "https://jivoetelo.ru/raschet/plan",
+      },
     },
     sent,
     photos,
@@ -430,14 +434,24 @@ test("каждый ответ уходит с разметкой", () => {
   );
 });
 
-test("приветствие уходит картинкой с кнопкой входа", async () => {
+test("незнакомому человеку предлагают расчёт, а не вход в дневник", async () => {
+  // «Открыть дневник» ведёт туда, где потребуют войти, — для того, кто
+  // только что написал боту впервые, это тупик. Расчёт работает без
+  // аккаунта вовсе.
   const { deps, photos } = makeDeps();
   await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text: "/start" } }, deps);
 
   assert.equal(photos.length, 1);
   assert.equal(photos[0].caption, TEXTS.greetingUnlinked);
   const button = photos[0].options.replyMarkup.inline_keyboard.flat()[0];
-  assert.equal(button.text, "Открыть дневник");
+  assert.equal(button.text, "Посчитать норму");
+  assert.equal(button.url, "https://jivoetelo.ru/raschet/plan");
+});
+
+test("привязанному человеку предлагают дневник, а не расчёт заново", async () => {
+  const { deps, photos } = makeDeps();
+  await handleUpdate({ message: { from: { id: 100 }, chat: { id: 100 }, text: "/start" } }, deps);
+  assert.equal(photos[0].options.replyMarkup.inline_keyboard.flat()[0].text, "Открыть дневник");
 });
 
 test("успешная привязка тоже показывает картинку, неудачная — нет", async () => {
