@@ -19,10 +19,9 @@
  * не получают ничего.
  */
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "../../db/index.ts";
 import { specialistAccessLog, specialistClients, specialists } from "../../db/schema.ts";
-import { getCurrentUser } from "../auth.ts";
 import { canAccess, type AccessDenial, type AccessScope, type ClientLink, type SpecialistStatus } from "./access.ts";
 
 export type ApprovedSpecialist = { userId: number; displayName: string };
@@ -53,6 +52,12 @@ export async function getSpecialistProfile(
  * ли вообще такой раздел.
  */
 export async function requireApprovedSpecialist(): Promise<ApprovedSpecialist | null> {
+  // `getCurrentUser` импортируется лениво: он тянет `next/headers`, и обычный
+  // импорт наверху сделал бы весь модуль незагружаемым в обычном node — а
+  // значит, непроверяемым тестом. Периметр безопасности обязан быть
+  // проверяемым, поэтому цена одной ленивой строки здесь оправдана:
+  // `withClientScope` в сессии не нуждается и грузится сам по себе.
+  const { getCurrentUser } = await import("../auth.ts");
   const user = await getCurrentUser();
   if (!user) return null;
   const profile = await getSpecialistProfile(user.id);
@@ -60,8 +65,18 @@ export async function requireApprovedSpecialist(): Promise<ApprovedSpecialist | 
   return { userId: user.id, displayName: profile.displayName };
 }
 
-/** Действующая связь пары или `null`. Отозванные сюда не попадают. */
-export async function getActiveLink(specialistUserId: number, clientUserId: number): Promise<ClientLink | null> {
+/**
+ * Строка связи пары или `null`, если её нет вовсе.
+ *
+ * Отозванные связи возвращаются **вместе с датой отзыва**, а не
+ * отфильтровываются в SQL. Это выглядит как лишняя работа, но раньше здесь
+ * стояло `isNull(revokedAt)` — и это была ошибка разделения: база решала то,
+ * что принадлежит `canAccess`. Внешне всё работало (доступ закрывался), но
+ * причина отказа приходила «связи нет» вместо «отозвано», а целая ветка
+ * проверенного тестами модуля не срабатывала в бою ни разу. Правила живут в
+ * одном месте, и это `./access.ts`.
+ */
+export async function getLink(specialistUserId: number, clientUserId: number): Promise<ClientLink | null> {
   const rows = await getDb()
     .select({
       specialistUserId: specialistClients.specialistUserId,
@@ -76,7 +91,6 @@ export async function getActiveLink(specialistUserId: number, clientUserId: numb
       and(
         eq(specialistClients.specialistUserId, specialistUserId),
         eq(specialistClients.clientUserId, clientUserId),
-        isNull(specialistClients.revokedAt),
       ),
     )
     .limit(1);
@@ -106,7 +120,7 @@ export async function withClientScope<T>(
   now: Date = new Date(),
 ): Promise<ScopeResult<T>> {
   const profile = await getSpecialistProfile(specialistUserId);
-  const link = await getActiveLink(specialistUserId, clientUserId);
+  const link = await getLink(specialistUserId, clientUserId);
 
   const decision = canAccess({
     specialistUserId,

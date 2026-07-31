@@ -14,13 +14,29 @@
 .pro-lead{max-width:550px;color:#61635c;font-size:14px;line-height:1.7;margin:0}
 .pro-access,.pro-honest,.pro-fit,.pro-status,.pro-faq,.pro-apply{padding:130px max(32px,calc((100% - 1280px)/2));border-top:1px solid var(--line)}
 .pro-access h2,.pro-honest h2,.pro-fit h2,.pro-status h2,.pro-faq h2,.pro-apply h2{font:500 clamp(44px,5vw,72px)/.87 var(--serif);letter-spacing:-.075em;margin:0 0 45px}
+/* Иллюстрации раздела — app/pro/illustrations.tsx. Базовый класс задаёт
+   только гибкую ширину: у SVG нет пиксельных width/height, размер целиком
+   решает разметка вокруг (см. .pro-access-flow-wrap, .pro-access-art,
+   .pro-fit-art ниже). */
+.pro-art{display:block;width:100%;height:auto}
+.pro-access-flow-wrap{margin:0 0 46px}
+@media(max-width:850px){.pro-access-flow-wrap{overflow-x:auto}.pro-art-flow{min-width:560px}}
 .pro-access-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:30px;margin-bottom:20px}
 .pro-step h3{margin:0 0 12px;font:500 21px var(--serif);letter-spacing:-.04em}
 .pro-step p{margin:0;font-size:14px;line-height:1.65;color:#5c5e57}
+/* Врезки со схемами внутри сетки шагов: полная ширина ряда, чтобы разбить
+   монотонность одинаковых карточек текста. */
+/* Врезка центрирует иллюстрацию, а не прижимает её к левому краю: схема
+   узкая, а блок во всю ширину сетки, и без центрирования половина рамки
+   оставалась пустой — это читалось как незаконченная вёрстка. */
+.pro-access-art{grid-column:1/-1;display:flex;justify-content:center;padding:26px;background:var(--paper);border:1px solid var(--line)}
+.pro-access-art .pro-art{max-width:330px}
 .pro-honest-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:26px}
+.pro-glyph{display:block;width:28px;height:28px;margin:0 0 14px}
 .pro-honest-item h3{margin:0 0 8px;font:500 20px var(--serif);letter-spacing:-.03em}
 .pro-honest-item p{margin:0;font-size:13px;line-height:1.6;color:#666860}
-.pro-fit{display:grid;grid-template-columns:1fr 1fr;gap:80px}
+.pro-fit{display:grid;grid-template-columns:1fr 200px 1fr;gap:50px;align-items:center}
+.pro-fit-art .pro-art{max-width:100%}
 .pro-fit-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
 .pro-fit-list li{font-size:14px;line-height:1.6;color:#3d3f3a;padding-left:20px;position:relative}
 .pro-fit-list li:before{content:"";position:absolute;left:0;top:6px;width:8px;height:8px;background:var(--coral);border-radius:50%}
@@ -45,8 +61,10 @@
   .pro-access,.pro-honest,.pro-fit,.pro-status,.pro-faq,.pro-apply{padding:80px 20px;border-top:1px solid var(--line)}
   .pro-access h2,.pro-honest h2,.pro-fit h2,.pro-status h2,.pro-faq h2,.pro-apply h2{font-size:clamp(32px,6vw,44px);margin-bottom:32px}
   .pro-access-steps{grid-template-columns:1fr;gap:20px}
+  .pro-access-art{padding:20px}
   .pro-fit{grid-template-columns:1fr;gap:50px}
   .pro-fit h2:not(:first-child){margin-top:30px}
+  .pro-fit-art .pro-art{max-width:220px;margin:0 auto}
 }
 
 /* ===== Живой предпросмотр плана в онбординге =====

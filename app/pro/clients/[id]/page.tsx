@@ -8,7 +8,7 @@ import { getDaySummary, getDiaryDayRows } from "@/lib/meals";
 import { buildWeekReview } from "@/lib/review";
 import { listRecentWeights } from "@/lib/weight";
 import { grantedScopes, SCOPE_LABELS, type AccessScope } from "@/lib/pro/access";
-import { getActiveLink, requireApprovedSpecialist, withClientScope } from "@/lib/pro/guard";
+import { getLink, requireApprovedSpecialist, withClientScope } from "@/lib/pro/guard";
 import { findClientRow } from "@/lib/pro/store";
 
 export const metadata: Metadata = {
@@ -116,7 +116,7 @@ export default async function ClientDetailPage({
   const clientRow = await findClientRow(specialist.userId, clientUserId);
   if (!clientRow) notFound();
 
-  const link = await getActiveLink(specialist.userId, clientUserId);
+  const link = await getLink(specialist.userId, clientUserId);
   const now = new Date();
   const scopes = grantedScopes(link, now);
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ProApplyForm } from "./apply-form";
+import { ArtAccessFlow, ArtAccessLog, ArtClientList, ArtConsent, ProGlyph } from "./illustrations";
 
 export const metadata: Metadata = {
   title: "Живое Тело Pro — кабинет для нутрициологов и диетологов",
@@ -26,6 +27,9 @@ export default function ProPage() {
 
       <section className="pro-access">
         <h2>Как устроен доступ</h2>
+        <div className="pro-access-flow-wrap">
+          <ArtAccessFlow />
+        </div>
         <div className="pro-access-steps">
           <div className="pro-step">
             <h3>Вы называете клиенту код</h3>
@@ -34,6 +38,9 @@ export default function ProPage() {
           <div className="pro-step">
             <h3>Клиент выбирает, что показать</h3>
             <p>Три галочки по отдельности: итоги недели, дневник питания, вес и тренд. Ни одна не стоит заранее. Вы видите ровно то, что клиент отметил, и ничего сверх этого.</p>
+          </div>
+          <div className="pro-access-art">
+            <ArtConsent />
           </div>
           <div className="pro-step">
             <h3>Доступ только на чтение</h3>
@@ -47,6 +54,9 @@ export default function ProPage() {
             <h3>Каждый просмотр записывается</h3>
             <p>Кто открыл, когда и что именно — журнал показывается клиенту, а не вам. Это то, что превращает обещание «данные ваши» в проверяемое утверждение.</p>
           </div>
+          <div className="pro-access-art">
+            <ArtAccessLog />
+          </div>
         </div>
       </section>
 
@@ -54,14 +64,17 @@ export default function ProPage() {
         <h2>Чего мы не делаем</h2>
         <div className="pro-honest-list">
           <div className="pro-honest-item">
+            <ProGlyph name="form" />
             <h3>Не ставим диагнозы</h3>
             <p>Сервис считает съеденное и показывает цифры. Диагноз ставит врач.</p>
           </div>
           <div className="pro-honest-item">
+            <ProGlyph name="pill" />
             <h3>Не назначаем лечение</h3>
             <p>Подсказка «что съесть сейчас» — это не назначение. Лечение назначает врач.</p>
           </div>
           <div className="pro-honest-item">
+            <ProGlyph name="talk" />
             <h3>Не заменяем консультацию</h3>
             <p>Цифры показывают закономерности. Решения принимаете вы — из своего опыта и разговора с человеком.</p>
           </div>
@@ -77,6 +90,9 @@ export default function ProPage() {
             <li>Клиентам удобно вести дневник в Telegram</li>
             <li>Вам нужно видеть закономерности, а не управлять рационом</li>
           </ul>
+        </div>
+        <div className="pro-fit-art">
+          <ArtClientList />
         </div>
         <div>
           <h2>Кому не подходит</h2>
