@@ -1,0 +1,108 @@
+/* ===== Кабинет специалиста: список клиентов, приглашение, экран клиента =====
+   Отдельный файл, а не дополнение pro.css: та страница — витрина для тех,
+   кто ещё не внутри, эта — рабочий инструмент для тех, кто уже одобрен.
+   У них разная плотность контента, и общий файл распух бы правилами,
+   которые нужны только одной стороне. Ширина колонки уже, чем у витрины
+   (960px против 1280px): это список карточек и таблицы, а не заголовки
+   на весь экран. */
+.pro-cab,.pro-cab-detail,.pro-cab-gate{padding:56px max(20px,calc((100% - 960px)/2)) 100px}
+
+/* Экран отказа в доступе (не вошёл / нет профиля / заявка на рассмотрении).
+   Один и тот же вид для всех веток — see app/pro/clients/page.tsx: разница
+   только в тексте, а не в оформлении. */
+.pro-cab-gate{max-width:640px}
+.pro-cab-gate h1{margin:0 0 14px;font:500 clamp(32px,5vw,44px)/1 var(--serif);letter-spacing:-.03em}
+.pro-cab-gate p{margin:0 0 22px;color:#5c5e57;font-size:14px;line-height:1.65}
+
+.pro-cab-head{margin-bottom:36px}
+.pro-cab-head h1{margin:0 0 10px;font:500 clamp(34px,5vw,46px)/1 var(--serif);letter-spacing:-.03em}
+.pro-cab-head p{margin:0;max-width:560px;color:var(--muted);font-size:14px;line-height:1.65}
+
+/* Панель приглашения — карточка сверху, всегда видна, а не только когда
+   список клиентов пуст: код может понадобиться и в разгар работы. */
+.pro-cab-invite{display:flex;flex-wrap:wrap;justify-content:space-between;gap:24px;align-items:flex-start;background:var(--white);border:1px solid var(--line);padding:24px;margin-bottom:40px}
+.pro-cab-invite h2{margin:0 0 8px;font:500 22px var(--serif);letter-spacing:-.03em}
+.pro-cab-invite-text p{margin:0;max-width:420px;color:var(--muted);font-size:13px;line-height:1.6}
+.pro-cab-invite-form{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+/* Код набран моноширинным шрифтом и разбит на две группы по 4 — так его
+   удобнее продиктовать по телефону, не сбиваясь на середине. */
+.pro-cab-code{padding:14px 20px;background:var(--paper);border:1px solid var(--line)}
+.pro-cab-code-value{font:700 30px/1 var(--sans);letter-spacing:.14em;white-space:nowrap}
+.pro-cab-invite-form .black-button{align-self:flex-end}
+
+.pro-cab-empty{background:var(--white);border:1px solid var(--line);padding:32px;max-width:560px}
+.pro-cab-empty p{margin:0;color:var(--muted);font-size:14px;line-height:1.65}
+
+.pro-cab-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.pro-cab-card{display:block;background:var(--white);border:1px solid var(--line);padding:20px;transition:border-color .15s}
+.pro-cab-card:hover{border-color:var(--coral)}
+.pro-cab-card h2{margin:0 0 12px;font:500 22px var(--serif);letter-spacing:-.03em}
+.pro-cab-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.pro-cab-chip{padding:5px 9px;background:var(--lime);color:#43502f;font-size:11px;font-weight:700}
+.pro-cab-chip-muted{background:var(--paper);color:var(--muted)}
+.pro-cab-meta{margin:0;color:var(--muted);font-size:12px}
+
+/* ----- Экран одного клиента ----- */
+.pro-cab-back{display:inline-block;margin-bottom:18px;font-size:12px;font-weight:700;color:var(--muted)}
+.pro-cab-back:hover{color:var(--coral)}
+.pro-cab-detail-head h1{margin:0 0 14px;font:500 clamp(32px,5vw,44px)/1 var(--serif);letter-spacing:-.03em}
+
+/* Напоминание, что просмотр не анонимен. Не тревожный баннер — это часть
+   правил, о которой специалист просто должен знать, — а спокойная строка
+   рядом с заголовком, куда взгляд попадает без усилия. */
+.pro-cab-notice{display:flex;gap:10px;align-items:flex-start;max-width:640px;margin:0 0 32px;padding:14px 16px;background:var(--paper);border:1px solid var(--line);color:#5c5e57;font-size:13px;line-height:1.6}
+.pro-cab-notice i{flex:none;width:6px;height:6px;margin-top:6px;border-radius:50%;background:var(--coral)}
+
+.pro-cab-tabs{display:flex;gap:8px;margin-bottom:28px;border-bottom:1px solid var(--line)}
+.pro-cab-tabs a{padding:10px 4px;margin-right:22px;font-size:13px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;transform:translateY(1px)}
+.pro-cab-tabs a.pro-cab-tab-active{color:var(--black);border-bottom-color:var(--coral)}
+
+.pro-cab-closed{background:var(--white);border:1px solid var(--line);padding:28px;max-width:560px;color:var(--muted);font-size:14px;line-height:1.65}
+/* Отказ withClientScope (доступ отозвали между заходами, объём не тот) —
+   тот же спокойный вид, что и для «клиент ничего не открыл», но со ссылкой
+   назад: показывать здесь причину отказа специалисту незачем, это не его
+   решение и не его дело чинить. */
+.pro-cab-denied{background:var(--white);border:1px solid var(--line);padding:28px;max-width:560px}
+.pro-cab-denied p{margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.65}
+
+.pro-cab-stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px}
+.pro-cab-stats div{flex:1;min-width:120px;background:var(--white);border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:2px}
+.pro-cab-stats strong{font:600 26px var(--serif)}
+.pro-cab-stats span{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+
+.pro-cab-review{display:flex;flex-direction:column;gap:12px;margin-bottom:32px}
+.pro-cab-review article{max-width:640px;background:var(--white);border:1px solid var(--line);padding:18px 20px}
+.pro-cab-review h3{margin:0 0 8px;font:500 18px var(--serif)}
+.pro-cab-review p{margin:0;font-size:13px;line-height:1.6;color:#3d3f3a}
+
+/* Семь ячеек недели: закрашенная — был приём пищи, пустая — записи не было.
+   Пропуски специалисту важнее самих цифр, поэтому ряд идёт первым. */
+.pro-cab-week{display:flex;gap:6px;margin-bottom:28px}
+.pro-cab-week div{flex:1;padding:10px 6px;text-align:center;background:var(--paper);border:1px solid var(--line);font-size:11px;color:var(--muted)}
+.pro-cab-week div.pro-cab-week-logged{background:var(--lime);color:#43502f;border-color:var(--lime)}
+.pro-cab-week div b{display:block;margin-top:2px;font:600 13px var(--sans);color:inherit}
+
+.pro-cab-days{display:flex;flex-direction:column;gap:20px}
+.pro-cab-day{background:var(--white);border:1px solid var(--line);padding:18px 20px}
+.pro-cab-day h3{margin:0 0 12px;font:500 18px var(--serif);letter-spacing:-.02em}
+.pro-cab-day-empty{margin:0;color:var(--muted);font-size:13px}
+.pro-cab-meal{display:flex;gap:14px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line)}
+.pro-cab-meal:first-child{border-top:0}
+.pro-cab-meal time{flex:none;width:42px;font-size:12px;font-weight:700;color:var(--muted)}
+.pro-cab-meal b{font-size:13px;font-weight:700}
+.pro-cab-meal span{flex:1;min-width:0;color:var(--muted);font-size:12px}
+.pro-cab-meal em{flex:none;font-style:normal;font-size:12px;color:var(--muted)}
+
+.pro-cab-weight-table{width:100%;border-collapse:collapse;max-width:400px;background:var(--white);border:1px solid var(--line);font-size:14px}
+.pro-cab-weight-table th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pro-cab-weight-table th,.pro-cab-weight-table td{padding:10px 14px;border-bottom:1px solid var(--line)}
+
+@media(max-width:850px){
+  .pro-cab,.pro-cab-detail,.pro-cab-gate{padding:40px 20px 70px}
+  .pro-cab-invite{flex-direction:column;align-items:stretch}
+  .pro-cab-invite-form{align-items:stretch}
+  .pro-cab-invite-form .black-button{align-self:stretch;text-align:center}
+  .pro-cab-code{text-align:center}
+  .pro-cab-week{flex-wrap:wrap}
+  .pro-cab-week div{min-width:calc(100%/4 - 5px)}
+}
