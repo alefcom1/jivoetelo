@@ -13,7 +13,6 @@ import {
   checkResetToken,
   createResetToken,
   hashResetToken,
-  MIN_PASSWORD_LENGTH,
   resetEmail,
 } from "@/lib/password-reset";
 import { absoluteUrl } from "@/lib/site";
@@ -123,4 +122,3 @@ export async function applyReset(_prev: ApplyResetState, formData: FormData): Pr
   redirect("/app");
 }
 
-export { MIN_PASSWORD_LENGTH };
