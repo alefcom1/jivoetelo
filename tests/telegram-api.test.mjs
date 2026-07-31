@@ -193,3 +193,67 @@ test("нечитаемый ответ не выдаётся за успешны�
   const client = createTelegramClient("token", async () => new Response("<html>502</html>", { status: 502 }));
   await assert.rejects(() => client.sendMessage(1, "текст"), /unparsable/);
 });
+
+test("картинка байтами уходит как multipart, а не как JSON", async () => {
+  // Проверять тут стоит именно форму запроса: попадёт ли multipart через
+  // наш прокси — выяснится только на боевом сервере, и если запрос собран
+  // неверно, отличить одно от другого по логу будет невозможно.
+  let captured;
+  const client = createTelegramClient("token", async (url, init) => {
+    captured = { url, init };
+    return jsonResponse({ ok: true, result: { photo: [{ file_id: "small" }, { file_id: "large" }] } });
+  });
+
+  const fileId = await client.sendPhoto(
+    77,
+    { bytes: Buffer.from("jpegbytes"), filename: "welcome.jpg", mime: "image/jpeg" },
+    "<b>Привет</b>",
+    { parseMode: "HTML", replyMarkup: { inline_keyboard: [[{ text: "Открыть", url: "https://jivoetelo.ru" }]] } },
+  );
+
+  assert.match(captured.url, /\/bottoken\/sendPhoto$/);
+  assert.ok(captured.init.body instanceof FormData);
+  // Content-Type задаёт fetch вместе с границей; свой заголовок эту границу
+  // потерял бы, и Telegram не разобрал бы тело.
+  assert.equal(captured.init.headers?.["content-type"], undefined);
+
+  const form = captured.init.body;
+  assert.equal(form.get("chat_id"), "77");
+  assert.equal(form.get("caption"), "<b>Привет</b>");
+  assert.equal(form.get("parse_mode"), "HTML");
+  assert.equal(JSON.parse(form.get("reply_markup")).inline_keyboard[0][0].text, "Открыть");
+  assert.equal(form.get("photo").name, "welcome.jpg");
+  assert.equal(form.get("photo").type, "image/jpeg");
+
+  // Возвращаем самый крупный размер: его file_id годится для повторной отправки.
+  assert.equal(fileId, "large");
+});
+
+test("повторная отправка по file_id идёт обычным JSON", async () => {
+  let captured;
+  const client = createTelegramClient("token", async (url, init) => {
+    captured = init;
+    return jsonResponse({ ok: true, result: { photo: [{ file_id: "again" }] } });
+  });
+
+  await client.sendPhoto(77, { fileId: "known" }, "подпись", { parseMode: "HTML" });
+
+  assert.equal(captured.headers["content-type"], "application/json");
+  assert.deepEqual(JSON.parse(captured.body), {
+    chat_id: "77",
+    caption: "подпись",
+    parse_mode: "HTML",
+    photo: "known",
+  });
+});
+
+test("отказ sendPhoto доходит до вызывающего ошибкой, а не молча", async () => {
+  const client = createTelegramClient("token", async () =>
+    jsonResponse({ ok: false, error_code: 400, description: "unsupported content type" }),
+  );
+
+  await assert.rejects(
+    () => client.sendPhoto(1, { fileId: "x" }, "подпись"),
+    (error) => error instanceof TelegramApiError && error.errorCode === 400,
+  );
+});

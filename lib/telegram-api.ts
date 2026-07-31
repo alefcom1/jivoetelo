@@ -61,7 +61,33 @@ export type SendMessageOptions = {
   replyMarkup?: { inline_keyboard: InlineKeyboardButton[][] };
   /** Telegram по умолчанию разворачивает ссылки — в напоминаниях это лишний шум. */
   disablePreview?: boolean;
+  /**
+   * Разметка сообщения. Включается по месту, а не глобально: под разметкой
+   * любой подставленный текст нужно экранировать (`escapeHtml` из
+   * lib/bot/markup.ts), и лучше, чтобы это решение принималось осознанно для
+   * каждого сообщения. HTML, а не MarkdownV2 — последний требует
+   * экранировать полтора десятка знаков, включая точку, дефис и скобки,
+   * которых в русских текстах полно.
+   */
+  parseMode?: "HTML";
 };
+
+/**
+ * Откуда брать картинку для `sendPhoto`.
+ *
+ * Ссылкой отправить нельзя, хотя Bot API это умеет: по ссылке картинку качает
+ * сам Telegram, а до jivoetelo.ru он не дотягивается — ровно та причина, по
+ * которой бот работает опросом, а не вебхуком (lib/bot/transport.ts).
+ * Остаётся загрузка байтами, она идёт наружу через наш прокси.
+ *
+ * `fileId` — то, что Telegram вернул после первой загрузки. Повторная
+ * отправка по нему бесплатна и мгновенна, поэтому файл заливается один раз
+ * за жизнь процесса (lib/bot/media.ts).
+ */
+export type PhotoSource = { fileId: string } | { bytes: Buffer; filename: string; mime: string };
+
+/** Размер фото в ответе Telegram — нужен, чтобы запомнить file_id. */
+type SentPhoto = { photo?: TelegramFile[] };
 
 export type TelegramFile = { file_id: string; file_unique_id: string; file_size?: number };
 
@@ -112,6 +138,13 @@ export function isBotConfigured(): boolean {
 export type TelegramClient = {
   call<T>(method: string, payload: Record<string, unknown>): Promise<T>;
   sendMessage(chatId: number | string, text: string, options?: SendMessageOptions): Promise<void>;
+  /** Возвращает file_id отправленной картинки — его стоит запомнить. */
+  sendPhoto(
+    chatId: number | string,
+    photo: PhotoSource,
+    caption: string,
+    options?: SendMessageOptions,
+  ): Promise<string | null>;
   answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void>;
   downloadFile(fileId: string, maxBytes: number): Promise<{ data: Buffer; mime: string }>;
 };
@@ -121,14 +154,11 @@ export type TelegramClient = {
  * зависели ни от окружения, ни от сети.
  */
 export function createTelegramClient(token: string, fetchImpl: FetchLike = fetch): TelegramClient {
-  async function call<T>(method: string, payload: Record<string, unknown>): Promise<T> {
+  /** Один запрос к Bot API. Тело собирает вызывающий: JSON или multipart. */
+  async function request<T>(method: string, init: RequestInit): Promise<T> {
     let response: Response;
     try {
-      response = await fetchImpl(`${apiRoot()}/bot${token}/${method}`, {
-        method: "POST",
-        headers: { "content-type": "application/json", ...proxyHeaders() },
-        body: JSON.stringify(payload),
-      });
+      response = await fetchImpl(`${apiRoot()}/bot${token}/${method}`, { method: "POST", ...init });
     } catch (error) {
       throw new TelegramApiError(method, error instanceof Error ? error.message : "network error", null);
     }
@@ -146,6 +176,13 @@ export function createTelegramClient(token: string, fetchImpl: FetchLike = fetch
     return body.result as T;
   }
 
+  async function call<T>(method: string, payload: Record<string, unknown>): Promise<T> {
+    return request<T>(method, {
+      headers: { "content-type": "application/json", ...proxyHeaders() },
+      body: JSON.stringify(payload),
+    });
+  }
+
   return {
     call,
 
@@ -155,7 +192,38 @@ export function createTelegramClient(token: string, fetchImpl: FetchLike = fetch
         text,
         ...(options.replyMarkup ? { reply_markup: options.replyMarkup } : {}),
         ...(options.disablePreview ? { link_preview_options: { is_disabled: true } } : {}),
+        ...(options.parseMode ? { parse_mode: options.parseMode } : {}),
       });
+    },
+
+    async sendPhoto(chatId, photo, caption, options = {}) {
+      const common = {
+        chat_id: String(chatId),
+        caption,
+        ...(options.parseMode ? { parse_mode: options.parseMode } : {}),
+      };
+
+      let sent: SentPhoto;
+      if ("fileId" in photo) {
+        sent = await call<SentPhoto>("sendPhoto", {
+          ...common,
+          photo: photo.fileId,
+          ...(options.replyMarkup ? { reply_markup: options.replyMarkup } : {}),
+        });
+      } else {
+        // Загрузка файлом — multipart. Content-Type здесь не ставим: fetch
+        // выведет его из FormData вместе с границей, а заданный вручную
+        // заголовок эту границу потеряет и запрос развалится.
+        const form = new FormData();
+        for (const [key, value] of Object.entries(common)) form.append(key, String(value));
+        if (options.replyMarkup) form.append("reply_markup", JSON.stringify(options.replyMarkup));
+        form.append("photo", new Blob([new Uint8Array(photo.bytes)], { type: photo.mime }), photo.filename);
+        sent = await request<SentPhoto>("sendPhoto", { headers: proxyHeaders(), body: form });
+      }
+
+      // Telegram отдаёт лестницу превью; file_id есть у каждого и годится
+      // для повторной отправки любой из них. Берём последний — самый крупный.
+      return sent?.photo?.at(-1)?.file_id ?? null;
     },
 
     async answerCallbackQuery(callbackQueryId, text) {

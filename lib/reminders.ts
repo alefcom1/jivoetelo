@@ -57,14 +57,21 @@ export type ReminderContext = {
 const PHOTO_FORMS = ["фото", "фото", "фото"] as const;
 const WAITING_FORMS = ["ждёт", "ждут", "ждут"] as const;
 
+/**
+ * Оба текста уходят с `parse_mode: HTML` — как и всё остальное, что говорит
+ * бот (lib/bot/markup.ts). Значок здесь один и означает время суток:
+ * напоминание приходит вечером, и по первому символу это видно раньше, чем
+ * прочитана строка.
+ */
 export function photoDigestText(pendingPhotos: number): string {
   const photos = withPluralRu(pendingPhotos, PHOTO_FORMS);
   const wait = pluralRu(pendingPhotos, WAITING_FORMS);
-  return `Собрали ваш день: ${photos} ${wait} разбора. Пара уточнений — и день закрыт.`;
+  return `🌙 <b>Собрали ваш день.</b>\n\n${photos} ${wait} разбора. Пара уточнений — и день закрыт.`;
 }
 
 export const GENTLE_NUDGE_TEXT =
-  "Как прошёл день? Если было не до записей — просто пришлите фото, остальное соберём сами.";
+  "🌙 <b>Как прошёл день?</b>\n\n" +
+  "Если было не до записей — просто пришлите фото, остальное соберём сами.";
 
 /**
  * Решает, что отправить пользователю прямо сейчас, и отправлять ли вообще.

@@ -213,6 +213,8 @@ export async function dispatchDueReminders(now: Date, limit = REMINDER_BATCH): P
       const ok = await trySend(client, row.telegram_user_id, plan.text, {
         replyMarkup: digestKeyboard(links),
         disablePreview: true,
+        // Тексты напоминаний размечены так же, как остальные ответы бота.
+        parseMode: "HTML",
       });
       if (ok) sent += 1;
       else failed += 1;

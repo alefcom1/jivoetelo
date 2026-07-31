@@ -94,7 +94,7 @@ test("фото важнее мягкого напоминания: показы�
 });
 
 test("текст дайджеста согласуется с числом фото", () => {
-  assert.match(photoDigestText(1), /^Собрали ваш день: 1 фото ждёт разбора\./);
+  assert.match(photoDigestText(1), /1 фото ждёт разбора\./);
   assert.match(photoDigestText(2), /2 фото ждут разбора/);
   assert.match(photoDigestText(5), /5 фото ждут разбора/);
   assert.match(photoDigestText(11), /11 фото ждут разбора/);

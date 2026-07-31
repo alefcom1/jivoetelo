@@ -12,7 +12,8 @@
 import { localMoment } from "../dates.ts";
 import { snoozeUntil } from "../reminders.ts";
 import { foodCategory } from "../food-category.ts";
-import { inboxButton, type BotLinks } from "./links.ts";
+import { inboxButton, openAppButton, type BotLinks } from "./links.ts";
+import { sendWelcome } from "./media.ts";
 import {
   ANSWERS,
   answerForQuestion,
@@ -28,9 +29,25 @@ import {
   TelegramApiError,
   trySend,
   type InlineKeyboardButton,
+  type SendMessageOptions,
   type TelegramClient,
   type TelegramUpdate,
 } from "../telegram-api.ts";
+
+/**
+ * Все тексты бота размечены HTML (lib/bot/texts.ts), поэтому отправка идёт
+ * через одну обёртку, а не через `trySend` напрямую: забытый `parseMode`
+ * означал бы, что человек видит `<b>` глазами, и заметить это можно только
+ * вручную открыв бот.
+ */
+function say(
+  client: TelegramClient,
+  chatId: number | string,
+  text: string,
+  extra?: Omit<SendMessageOptions, "parseMode">,
+): Promise<boolean> {
+  return trySend(client, chatId, text, { parseMode: "HTML", ...extra });
+}
 
 /** Больше этого за день фото в инбокс не принимаем — защита от заливки альбома. */
 export const MAX_INBOX_PHOTOS_PER_DAY = 30;
@@ -161,7 +178,7 @@ async function handleCallback(update: TelegramUpdate, deps: BotDeps): Promise<vo
     await deps.store.snoozeReminders(user.id, snoozeUntil(deps.now));
     await deps.client.answerCallbackQuery(query.id).catch(() => {});
     const chatId = query.message?.chat?.id ?? telegramUserId;
-    await trySend(deps.client, chatId, TEXTS.snoozed);
+    await say(deps.client, chatId, TEXTS.snoozed);
     return;
   }
 
@@ -180,7 +197,7 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
   // Фото — основной сценарий, поэтому проверяется первым.
   const photo = pickPhotoSize(message.photo, MAX_BOT_PHOTO_BYTES);
   if (message.photo?.length && !photo) {
-    await trySend(deps.client, chatId, TEXTS.photoTooLarge);
+    await say(deps.client, chatId, TEXTS.photoTooLarge);
     return;
   }
   if (photo) {
@@ -193,7 +210,7 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
   const document = message.document;
   if (document?.file_id && document.mime_type?.startsWith("image/")) {
     if ((document.file_size ?? 0) > MAX_BOT_PHOTO_BYTES) {
-      await trySend(deps.client, chatId, TEXTS.photoTooLarge);
+      await say(deps.client, chatId, TEXTS.photoTooLarge);
       return;
     }
     await savePhotoToInbox(document.file_id, message.caption ?? null, tgId, chatId, deps, message.media_group_id);
@@ -204,24 +221,24 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
   // отдельности: человек прислал не мусор, а попытку записать еду, и «голос
   // не расшифровываю» полезнее, чем «присылайте фото».
   if (message.voice || message.audio) {
-    await trySend(deps.client, chatId, UNSUPPORTED.voice);
+    await say(deps.client, chatId, UNSUPPORTED.voice);
     return;
   }
   if (message.video || message.video_note) {
-    await trySend(deps.client, chatId, UNSUPPORTED.video);
+    await say(deps.client, chatId, UNSUPPORTED.video);
     return;
   }
   if (message.sticker || message.animation) {
-    await trySend(deps.client, chatId, UNSUPPORTED.sticker);
+    await say(deps.client, chatId, UNSUPPORTED.sticker);
     return;
   }
   if (message.location || message.contact || message.poll) {
-    await trySend(deps.client, chatId, UNSUPPORTED.other);
+    await say(deps.client, chatId, UNSUPPORTED.other);
     return;
   }
   // Документ дошёл сюда, только если он не картинка: изображения перехвачены выше.
   if (document?.file_id) {
-    await trySend(deps.client, chatId, UNSUPPORTED.fileNotImage);
+    await say(deps.client, chatId, UNSUPPORTED.fileNotImage);
     return;
   }
 
@@ -231,17 +248,17 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     if (LINK_CODE_RE.test(payload)) return await tryLink(payload, tgId, chatId, deps);
 
     const linked = await deps.store.findUserByTelegram(tgId);
-    await trySend(deps.client, chatId, linked ? GREETING.linked : GREETING.unlinked);
+    await greet(deps, chatId, linked ? GREETING.linked : GREETING.unlinked);
     return;
   }
 
   if (text === "/help") {
-    await trySend(deps.client, chatId, ANSWERS.help);
+    await say(deps.client, chatId, ANSWERS.help);
     return;
   }
 
   if (text === "/app") {
-    await trySend(deps.client, chatId, ANSWERS.openApp, { replyMarkup: inboxKeyboard(deps.links) });
+    await say(deps.client, chatId, ANSWERS.openApp, { replyMarkup: inboxKeyboard(deps.links) });
     return;
   }
 
@@ -249,11 +266,11 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     const user = await deps.store.findUserByTelegram(tgId);
     // Без аккаунта выключать нечего — и говорить «выключено» было бы неправдой.
     if (!user) {
-      await trySend(deps.client, chatId, ANSWERS.remindersOffNoAccount);
+      await say(deps.client, chatId, ANSWERS.remindersOffNoAccount);
       return;
     }
     await deps.store.setRemindersEnabled(user.id, false);
-    await trySend(deps.client, chatId, ANSWERS.remindersOff);
+    await say(deps.client, chatId, ANSWERS.remindersOff);
     return;
   }
 
@@ -267,21 +284,39 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
   // описание ужина содержит слово «тариф», но вопрос конкретнее.
   const answer = answerForQuestion(text);
   if (answer) {
-    await trySend(deps.client, chatId, answer);
+    await say(deps.client, chatId, answer);
     return;
   }
 
   if (looksLikeFood(text, (word) => foodCategory(word) !== "other")) {
-    await trySend(deps.client, chatId, TEXT_LOOKS_LIKE_FOOD, { replyMarkup: inboxKeyboard(deps.links) });
+    await say(deps.client, chatId, TEXT_LOOKS_LIKE_FOOD, { replyMarkup: inboxKeyboard(deps.links) });
     return;
   }
 
-  await trySend(deps.client, chatId, ANSWERS.help);
+  await say(deps.client, chatId, ANSWERS.help);
+}
+
+/**
+ * Приветствие — единственное сообщение с картинкой. Она показывает экран
+ * «Сегодня», то есть отвечает на вопрос «что я получу», который на первом
+ * шаге и стоит. Остальные сообщения бот шлёт текстом: подтверждение к
+ * только что присланному фото или отказ «не умею видео» картинкой не
+ * улучшить, а лента из карточек читается хуже, чем короткая строка.
+ *
+ * Если картинка не уходит, sendWelcome сам присылает тот же текст, поэтому
+ * отдельной ветки «а вдруг не получилось» здесь нет.
+ */
+function greet(deps: BotDeps, chatId: number, text: string): Promise<void> {
+  return sendWelcome(deps.client, chatId, text, {
+    parseMode: "HTML",
+    replyMarkup: { inline_keyboard: [[openAppButton(deps.links)]] },
+  });
 }
 
 async function tryLink(code: string, tgId: string, chatId: number, deps: BotDeps): Promise<void> {
   const user = await deps.store.linkByCode(code, tgId);
-  await trySend(deps.client, chatId, user ? TEXTS.greetingLinked : TEXTS.linkFailed);
+  if (user) return await greet(deps, chatId, TEXTS.greetingLinked);
+  await say(deps.client, chatId, TEXTS.linkFailed);
 }
 
 async function savePhotoToInbox(
@@ -294,7 +329,7 @@ async function savePhotoToInbox(
 ): Promise<void> {
   const user = await deps.store.findUserByTelegram(tgId);
   if (!user) {
-    await trySend(deps.client, chatId, TEXTS.needLinkForPhoto);
+    await say(deps.client, chatId, TEXTS.needLinkForPhoto);
     return;
   }
 
@@ -303,7 +338,7 @@ async function savePhotoToInbox(
   const moment = localMoment(deps.now, deps.timeZone);
   const already = await deps.store.countInboxToday(user.id, moment.day);
   if (already >= MAX_INBOX_PHOTOS_PER_DAY) {
-    await trySend(deps.client, chatId, TEXTS.dailyLimit);
+    await say(deps.client, chatId, TEXTS.dailyLimit);
     return;
   }
 
@@ -313,11 +348,11 @@ async function savePhotoToInbox(
     photoKey = await deps.store.savePhoto(user.id, file.data, file.mime);
   } catch (error) {
     if (error instanceof TelegramApiError && /too large/.test(error.message)) {
-      await trySend(deps.client, chatId, TEXTS.photoTooLarge);
+      await say(deps.client, chatId, TEXTS.photoTooLarge);
       return;
     }
     console.error("bot photo download failed", error);
-    await trySend(deps.client, chatId, TEXTS.photoFailed);
+    await say(deps.client, chatId, TEXTS.photoFailed);
     return;
   }
 
@@ -332,7 +367,7 @@ async function savePhotoToInbox(
   // Снимок сохранён в любом случае; подтверждение — одно на альбом.
   if (!shouldConfirmAlbum(mediaGroupId, deps.now.getTime())) return;
 
-  await trySend(deps.client, chatId, photoSavedText(already + 1), {
+  await say(deps.client, chatId, photoSavedText(already + 1), {
     replyMarkup: inboxKeyboard(deps.links),
     disablePreview: true,
   });

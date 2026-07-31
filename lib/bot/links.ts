@@ -30,3 +30,13 @@ export function inboxButton(links: BotLinks): InlineKeyboardButton {
     ? { text: "Разобрать", web_app: { url: links.miniAppUrl } }
     : { text: "Разобрать", url: links.inboxUrl };
 }
+
+/**
+ * То же место, но под приветствием: разбирать там ещё нечего, а «Разобрать»
+ * на пустом инбоксе обещает работу, которой нет.
+ */
+export function openAppButton(links: BotLinks): InlineKeyboardButton {
+  return links.miniAppUrl
+    ? { text: "Открыть дневник", web_app: { url: links.miniAppUrl } }
+    : { text: "Открыть дневник", url: links.inboxUrl };
+}

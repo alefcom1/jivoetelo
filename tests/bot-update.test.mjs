@@ -6,6 +6,7 @@ import {
   handleUpdate,
   photoSavedText,
 } from "../lib/bot/handle-update.ts";
+import { resetWelcomeCard } from "../lib/bot/media.ts";
 
 const NOW = new Date("2026-07-28T15:40:00Z"); // 18:40 в Москве
 
@@ -15,10 +16,15 @@ const NOW = new Date("2026-07-28T15:40:00Z"); // 18:40 в Москве
  */
 function makeDeps(overrides = {}) {
   const sent = [];
+  const photos = [];
   const answered = [];
   const saved = [];
   const inbox = [];
   const prefs = [];
+
+  // Кэш file_id и счётчик отказов в lib/bot/media.ts живут в модуле, а не в
+  // клиенте: без сброса тесты начинали бы зависеть от порядка запуска.
+  resetWelcomeCard();
 
   const store = {
     users: new Map([["100", { id: 7 }]]),
@@ -55,6 +61,15 @@ function makeDeps(overrides = {}) {
     async sendMessage(chatId, text, options) {
       sent.push({ chatId, text, options });
     },
+    async sendPhoto(chatId, source, caption, options) {
+      if (overrides.photoFails) throw new Error("multipart не прошёл");
+      photos.push({ chatId, source, caption, options });
+      // Приветствие с картинкой — то же сообщение, просто с подписью.
+      // Складываем в общий список, чтобы проверки текста не зависели от
+      // того, каким методом оно ушло.
+      sent.push({ chatId, text: caption, options, asPhoto: true });
+      return "file-1";
+    },
     async answerCallbackQuery(id, text) {
       answered.push({ id, text });
     },
@@ -73,6 +88,7 @@ function makeDeps(overrides = {}) {
       links: { inboxUrl: "https://jivoetelo.ru/app/inbox", miniAppUrl: overrides.miniAppUrl ?? null },
     },
     sent,
+    photos,
     answered,
     saved,
     inbox,
@@ -233,7 +249,7 @@ test("пустой и битый апдейт не приводят к паде�
 });
 
 test("подтверждение сохранения считает накопленное за день", () => {
-  assert.match(photoSavedText(1), /^Сохранил\./);
+  assert.match(photoSavedText(1), /Сохранил\.<\/b>/);
   assert.match(photoSavedText(3), /в инбоксе 3/);
 });
 
@@ -386,4 +402,63 @@ test("ни один ответ бота не оценивает еду", () => {
     if (typeof text !== "string") continue;
     assert.doesNotMatch(text, forbidden, `оценочная формулировка в TEXTS.${key}`);
   }
+});
+
+test("каждый ответ уходит с разметкой", () => {
+  // Забытый parse_mode виден только глазами в переписке: человек читает
+  // «<b>Сохранил.</b>» вместо жирной строки, а в логах при этом чисто.
+  const cases = [
+    { message: { from: { id: 100 }, chat: { id: 100 }, text: "/start" } },
+    { message: { from: { id: 100 }, chat: { id: 100 }, text: "/help" } },
+    { message: { from: { id: 100 }, chat: { id: 100 }, text: "/app" } },
+    { message: { from: { id: 100 }, chat: { id: 100 }, text: "/stop" } },
+    { message: { from: { id: 100 }, chat: { id: 100 }, text: "сколько стоит подписка" } },
+    { message: { from: { id: 100 }, chat: { id: 100 }, text: "два сырника и кофе" } },
+    { message: { from: { id: 100 }, chat: { id: 100 }, voice: {} } },
+    { message: { from: { id: 100 }, chat: { id: 100 }, sticker: {} } },
+    { message: { from: { id: 555 }, chat: { id: 555 }, text: "FFFFFFFF" } },
+    photoUpdate(),
+  ];
+
+  return Promise.all(
+    cases.map(async (update) => {
+      const { deps, sent } = makeDeps();
+      await handleUpdate(update, deps);
+      assert.equal(sent.length, 1, JSON.stringify(update));
+      assert.equal(sent[0].options?.parseMode, "HTML", JSON.stringify(update));
+    }),
+  );
+});
+
+test("приветствие уходит картинкой с кнопкой входа", async () => {
+  const { deps, photos } = makeDeps();
+  await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text: "/start" } }, deps);
+
+  assert.equal(photos.length, 1);
+  assert.equal(photos[0].caption, TEXTS.greetingUnlinked);
+  const button = photos[0].options.replyMarkup.inline_keyboard.flat()[0];
+  assert.equal(button.text, "Открыть дневник");
+});
+
+test("успешная привязка тоже показывает картинку, неудачная — нет", async () => {
+  const ok = makeDeps();
+  await handleUpdate({ message: { from: { id: 555 }, chat: { id: 555 }, text: "A1B2C3D4" } }, ok.deps);
+  assert.equal(ok.photos.length, 1);
+
+  const bad = makeDeps();
+  await handleUpdate({ message: { from: { id: 555 }, chat: { id: 555 }, text: "FFFFFFFF" } }, bad.deps);
+  assert.equal(bad.photos.length, 0, "на «код не подошёл» картинка не нужна");
+  assert.equal(bad.sent[0].text, TEXTS.linkFailed);
+});
+
+test("отказ картинки не оставляет человека без приветствия", async () => {
+  // Ровно тот случай, ради которого написан запасной путь: если прокси не
+  // пропустит multipart, бот должен вести себя как до этой правки.
+  const { deps, sent, photos } = makeDeps({ photoFails: true });
+  await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text: "/start" } }, deps);
+
+  assert.equal(photos.length, 0);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].text, TEXTS.greetingUnlinked);
+  assert.equal(sent[0].options.parseMode, "HTML");
 });
