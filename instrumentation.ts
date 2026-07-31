@@ -14,4 +14,12 @@ export async function register() {
 
   const { startScheduler } = await import("./lib/scheduler.ts");
   startScheduler();
+
+  // Вебхук бота приводим в порядок при каждом старте. Это была ручная
+  // команда на сервере, о которой забывали навсегда: код выкатывается сам, а
+  // Telegram по-прежнему не знает, куда слать сообщения, и бот молчит.
+  // Не ждём результата: приложение должно подняться независимо от того,
+  // доступен ли сейчас Bot API.
+  const { ensureWebhook } = await import("./lib/bot/ensure-webhook.ts");
+  void ensureWebhook();
 }
