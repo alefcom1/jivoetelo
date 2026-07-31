@@ -79,6 +79,19 @@ export type Fan = {
    * останавливается: расход сравнялся с едой. Считается по средней линии.
    */
   plateauKg: number;
+  /**
+   * То же для медленного края. Отдельно, потому что именно его надо называть,
+   * объясняя «если формула завысила ваш расход»: подставлять туда среднее
+   * плато — значит приписывать одному сценарию число из другого.
+   */
+  plateauSlowKg: number;
+  /**
+   * Растёт ли вес по медленному краю. Такое бывает, и это важно сказать: если
+   * формула завысила расход, план с «дефицитом» на деле оказывается
+   * профицитом, и вес медленно идёт вверх. Ни одна воронка конкурентов такого
+   * не показывает — их линия всегда идёт вниз.
+   */
+  slowRises: boolean;
 };
 
 /**
@@ -175,6 +188,8 @@ export function buildFan(input: FanInput): Fan {
         ? null
         : { fast: fast.weeksToTarget, slow: slow.weeksToTarget },
     plateauKg: plateauWeight(input, 1),
+    plateauSlowKg: plateauWeight(input, 1 - TDEE_ERROR),
+    slowRises: slow.points[slow.points.length - 1] > slow.points[0] + 0.1,
   };
 }
 

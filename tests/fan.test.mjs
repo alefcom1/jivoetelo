@@ -124,3 +124,26 @@ test("горизонт расчёта ограничен и не растёт б
   const fan = buildFan({ ...MAN, intakeKcal: 2100, weeks: 500 });
   assert.ok(fan.mid.points.length <= 79, `слишком длинный прогноз: ${fan.mid.points.length} точек`);
 });
+
+test("плато медленного края считается отдельно от среднего", () => {
+  // Подпись «если формула завысила ваш расход, вес остановится около N кг»
+  // обязана называть плато именно медленного края. Первая версия брала
+  // среднее — то есть приписывала одному сценарию число из другого.
+  const fan = fanFor({ intakeKcal: 2100, targetWeightKg: undefined });
+  assert.ok(
+    fan.plateauSlowKg > fan.plateauKg,
+    `медленный край останавливается выше среднего, а получилось ${fan.plateauSlowKg} против ${fan.plateauKg}`,
+  );
+});
+
+test("рост веса по медленному краю замечается и называется", () => {
+  // Сидячий образ жизни, «дефицитный» план: если формула завысила расход на
+  // 15%, дефицита нет вовсе и вес медленно идёт вверх. Это надо сказать, а не
+  // рисовать веер, у которого верхний край молча уползает вверх.
+  const rising = buildFan({ ...MAN, activity: "sedentary", intakeKcal: 2010, targetWeightKg: 88 });
+  assert.equal(rising.slowRises, true);
+  assert.ok(rising.slow.points[30] > rising.slow.points[0], "верхний край действительно растёт");
+
+  const falling = fanFor({ intakeKcal: 1900 });
+  assert.equal(falling.slowRises, false);
+});

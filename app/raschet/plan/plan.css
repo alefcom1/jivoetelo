@@ -1,0 +1,284 @@
+/* Пошаговый расчёт плана: вопросы безопасности, возрастной стоп и честный
+   экран результата с коридором вместо обещанной цифры. Наследует переменные
+   и базовые классы из app/globals.css и ../raschet.css (radio-row,
+   radio-card, black-button, link-button, field-note, usage-track,
+   onboarding-numbers, pace-row, pace-card, raschet-form, kicker) — здесь
+   только то, чего в них ещё нет. */
+
+.plan-privacy-note {
+  max-width: 640px;
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--coral);
+  background: var(--paper);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.plan-flow {
+  margin-top: 8px;
+}
+
+/* Экран-развилка: смягчение цели или возрастной стоп. Не форма — просто
+   объяснение, оформленное заметнее обычного текста, но без интонации
+   отказа. */
+.plan-branch {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 640px;
+  padding: 26px 24px;
+  background: var(--white);
+  border-left: 4px solid var(--coral);
+}
+
+.plan-branch-title {
+  margin: 0;
+  font: 500 24px var(--serif);
+  letter-spacing: -0.03em;
+}
+
+.plan-branch p {
+  margin: 0;
+  color: #3d3f3a;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* ===== Экран результата ===== */
+
+.plan-result {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  max-width: 720px;
+}
+
+.plan-result-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plan-result-title {
+  margin: 12px 0 0;
+  font: 500 clamp(32px, 5vw, 50px) / 0.98 var(--serif);
+  letter-spacing: -0.045em;
+}
+
+.plan-result-sub {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 16px;
+  font-style: italic;
+}
+
+/* Карточка коридора энергии — крупный диапазон вместо одной цифры и вместо
+   кольца прогресса: на этом экране ещё ничего не съедено, и пустое кольцо
+   читалось бы как поражение. */
+.plan-corridor-card {
+  padding: 30px 26px;
+  background: var(--white);
+  border: 1px solid var(--line);
+}
+
+.plan-corridor-range {
+  margin: 0 0 20px;
+  font: 500 clamp(30px, 7vw, 46px) / 1 var(--serif);
+  letter-spacing: -0.03em;
+}
+
+.plan-corridor-range span {
+  margin-left: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: normal;
+}
+
+.plan-scale {
+  position: relative;
+  height: 16px;
+  margin-bottom: 4px;
+}
+
+.plan-scale-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.plan-scale-dot {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: var(--coral);
+  box-shadow: 0 0 0 3px var(--white);
+}
+
+.plan-scale-caption {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.plan-corridor-line {
+  margin: 18px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+
+/* Карточка графика веера */
+.plan-chart-card {
+  padding: 26px;
+  background: var(--white);
+  border: 1px solid var(--line);
+}
+
+.plan-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.plan-chart-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.plan-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.plan-chart-area {
+  fill: var(--coral);
+  fill-opacity: 0.18;
+  stroke: none;
+}
+
+.plan-chart-mid {
+  fill: none;
+  stroke: var(--black);
+  stroke-width: 1.5;
+}
+
+.plan-chart-target {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.plan-chart-target-label {
+  font: 700 10px var(--sans);
+  fill: var(--muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.plan-chart-today {
+  fill: var(--coral);
+  stroke: var(--white);
+  stroke-width: 2;
+}
+
+.plan-chart-axis {
+  font: 700 10px var(--sans);
+  fill: var(--muted);
+}
+
+.plan-chart-caption {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.plan-chart-note {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--coral);
+  background: var(--paper);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Три числа в ряд: энергия, белок, клетчатка. Воду и макросы сознательно не
+   считаем — см. описание задачи. */
+.plan-numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.plan-numbers > div {
+  padding: 18px 20px;
+  background: var(--white);
+}
+
+.plan-number {
+  margin: 0 0 4px;
+  font: 600 26px var(--serif);
+  letter-spacing: -0.02em;
+}
+
+.plan-numbers span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.plan-principle {
+  padding: 24px 26px;
+  background: var(--lime);
+}
+
+.plan-principle p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.plan-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.plan-quiet {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .plan-branch,
+  .plan-corridor-card,
+  .plan-chart-card {
+    padding: 20px;
+  }
+}
