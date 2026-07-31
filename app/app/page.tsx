@@ -10,6 +10,7 @@ import type { PaceKey } from "@/lib/pace";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
 import { getLatestWeightKg } from "@/lib/weight";
 import { AppInvite } from "../app-invite";
+import { EnergyRing, MacroBar } from "./day-visuals";
 import { GoalReporter } from "./goal-reporter";
 
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ date?: string; saved?: string }> }) {
@@ -65,15 +66,20 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       <Link className="black-button" href="/app/onboarding">Настроить план <b>↗</b></Link>
     </section>}
 
-    <section className="day-totals">
-      {user.showCalories && <div>
-        <strong>{dayTotals.kcal}</strong>
-        <span>ккал{targets ? ` из ~${targets.kcalTarget}` : ""}</span>
-      </div>}
-      <div><strong>{dayTotals.protein}</strong><span>белок, г{targets ? ` из ~${targets.proteinTarget}` : ""}</span></div>
-      <div><strong>{dayTotals.fiber}</strong><span>клетчатка, г{targets ? ` из ~${targets.fiberTarget}` : ""}</span></div>
-      <div><strong>{dayTotals.fat}</strong><span>жиры, г</span></div>
-      <div><strong>{dayTotals.carbs}</strong><span>углеводы, г</span></div>
+    {/* Те же пять чисел, что и раньше, — но кольцом и полосами, а не пятью
+        одинаковыми прямоугольниками с рамкой. В Mini App итоги дня так
+        выглядели с самого начала; веб-кабинет отставал, и это стало видно,
+        как только на главную встал настоящий снимок вместо макета. */}
+    <section className="day-summary">
+      {user.showCalories && <EnergyRing value={dayTotals.kcal} target={targets?.kcalTarget ?? null} />}
+      <div className="day-bars">
+        <MacroBar label="Белок" value={dayTotals.protein} target={targets?.proteinTarget ?? null} unit="г" macro="protein" />
+        <MacroBar label="Клетчатка" value={dayTotals.fiber} target={targets?.fiberTarget ?? null} unit="г" macro="fiber" />
+        {/* Жирам и углеводам цели не назначаем — полоса без дорожки честно
+            показывает съеденное, не выдумывая «из скольки». */}
+        <MacroBar label="Жиры" value={dayTotals.fat} target={null} unit="г" macro="fat" />
+        <MacroBar label="Углеводы" value={dayTotals.carbs} target={null} unit="г" macro="carbs" />
+      </div>
     </section>
 
     {targets && <Link className="next-card" href="/app/next">

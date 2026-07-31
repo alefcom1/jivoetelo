@@ -130,8 +130,8 @@ export default function Home() {
         Раньше страница отвечала на это словами «фото, голос или текст» и ни
         одним шагом. Кадры — из docs/illustrations, пересобрать:
         node scripts/site-art.mjs */}
-    <section className="day"><div className="section-top"><p className="kicker">За один день <i /></p><div><h2>Как проходит<br /><em>обычный день.</em></h2><p>Три коротких движения. Ни одного экрана, который нужно изучать.</p></div></div>
-      <div className="day-steps">
+    <section className="oneday"><div className="section-top"><p className="kicker">За один день <i /></p><div><h2>Как проходит<br /><em>обычный день.</em></h2><p>Три коротких движения. Ни одного экрана, который нужно изучать.</p></div></div>
+      <div className="oneday-steps">
         {DAY.map((step) => (
           <figure key={step.src}>
             <Image src={step.src} alt={step.alt} width={640} height={800} sizes="(max-width: 850px) 100vw, 400px" />
@@ -140,7 +140,7 @@ export default function Home() {
           </figure>
         ))}
       </div>
-      <p className="day-note">
+      <p className="oneday-note">
         Записывать можно и текстом, и голосом, и руками из справочника.
         Фотография — самый быстрый способ, но не единственный.
       </p>
