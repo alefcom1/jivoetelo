@@ -139,3 +139,36 @@ test("reachGoal молчит там, где счётчика нет", async () =
   const { reachGoal, GOAL_MEAL_SAVED } = await import("../lib/goals.ts");
   assert.doesNotThrow(() => reachGoal(GOAL_MEAL_SAVED));
 });
+
+test("в счётчик уходит ровно тот вызов, который просит Метрика", async () => {
+  // Метрика при создании цели показывает готовую строку вида
+  //   ym(111149990,'reachGoal','plan_done')
+  // и предлагает вставить её в код. Вставлять ничего не нужно: reachGoal
+  // собирает такой вызов сам. Тест это фиксирует, чтобы «а точно ли шлётся»
+  // не приходилось выяснять заново.
+  const saved = globalThis.window;
+  const calls = [];
+  globalThis.window = { ym: (...args) => calls.push(args), __ymCounterId: 111149990 };
+  try {
+    const { reachGoal, GOAL_PLAN_DONE } = await import("../lib/goals.ts");
+    reachGoal(GOAL_PLAN_DONE);
+    assert.deepEqual(calls, [[111149990, "reachGoal", "plan_done"]]);
+  } finally {
+    if (saved === undefined) delete globalThis.window;
+    else globalThis.window = saved;
+  }
+});
+
+test("номер счётчика в коде целей и в самом счётчике — один", async () => {
+  // reachGoal берёт номер из window.__ymCounterId, а его выставляет сниппет
+  // в app/metrika.tsx. Если однажды кто-то поменяет счётчик, поменять надо
+  // будет ровно одно место — тест следит, чтобы второго не завелось.
+  const { readFile } = await import("node:fs/promises");
+  const metrika = await readFile(new URL("../app/metrika.tsx", import.meta.url), "utf8");
+  const declared = metrika.match(/const COUNTER_ID = (\d+);/)?.[1];
+  assert.ok(declared, "номер счётчика должен объявляться константой");
+  assert.match(metrika, /window\.__ymCounterId = \$\{COUNTER_ID\};/, "номер должен передаваться из той же константы");
+
+  const goals = await readFile(new URL("../lib/goals.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(goals, /\d{6,}/, "в lib/goals.ts номера счётчика быть не должно — только чтение из окна");
+});
