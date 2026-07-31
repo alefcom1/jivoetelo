@@ -6,6 +6,7 @@ import { MEAL_TYPE_LABELS } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
 import { scaleGrams } from "@/lib/portions";
 import { analyzeMeal, saveMeal } from "../meal-actions";
+import { CameraCapture } from "./camera-capture";
 
 type DraftItem = {
   name: string;
@@ -83,6 +84,9 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
   const [text, setText] = useState("");
   const [note, setNote] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
+  // Снимок хранится состоянием, а не читается из input при отправке: он может
+  // прийти и с камеры, где никакого input нет.
+  const [photo, setPhoto] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -93,6 +97,17 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
   const [time, setTime] = useState(inbox?.takenTime ?? now.toTimeString().slice(0, 5));
   const fileRef = useRef<HTMLInputElement>(null);
 
+  /** Один путь для кадра с камеры и для выбранного файла. */
+  function takePhoto(file: File | null) {
+    setPhoto(file);
+    // Прежний objectURL освобождаем: браузер держит его до перезагрузки
+    // страницы, а человек может перебрать десяток снимков.
+    setPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  }
+
   async function handleAnalyze() {
     setError(null);
     const formData = new FormData();
@@ -100,9 +115,8 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
     if (inbox) {
       formData.set("inboxId", String(inbox.id));
     } else if (mode === "photo") {
-      const file = fileRef.current?.files?.[0];
-      if (!file) { setError("Выберите фото."); return; }
-      formData.set("photo", file);
+      if (!photo) { setError("Снимите кадр или выберите фото."); return; }
+      formData.set("photo", photo);
       formData.set("note", note);
     } else {
       if (text.trim().length < 3) { setError("Опишите еду хотя бы парой слов."); return; }
@@ -221,11 +235,25 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
         ? <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3}
             placeholder="Например: два сырника, ложка сметаны и капучино без сахара" autoFocus />
         : <div className="addflow-photo">
-            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                setPreview((old) => { if (old) URL.revokeObjectURL(old); return file ? URL.createObjectURL(file) : null; });
-              }} />
+            {/* Камера первой: человек с ноутбуком чаще хочет снять тарелку
+                сейчас, а не искать готовый файл. Кнопки нет вовсе, если
+                браузер не умеет getUserMedia. */}
+            <CameraCapture onCapture={takePhoto} />
+            {/* Список типов явный, а не image/*: сервер принимает четыре
+                формата (ALLOWED_PHOTO_TYPES), и лучше не дать выбрать HEIC в
+                диалоге, чем показать ошибку после загрузки. Камеру на телефоне
+                системный выбор всё равно предложит — ему хватает того, что в
+                списке есть картинки. */}
+            {/* Свой ярлык вместо системной кнопки: браузер рисует «Choose
+                File / No file chosen» на языке интерфейса ОС, и посреди
+                русской страницы это выглядит чужим. Сам input остаётся в
+                разметке и в фокусе — прячем его размером, а не display:none,
+                иначе до него не добраться с клавиатуры. */}
+            <label className="camera-file">
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={(e) => takePhoto(e.target.files?.[0] ?? null)} />
+              <span>Выбрать готовый снимок</span>
+            </label>
             {preview && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={preview} alt="Предпросмотр фото еды" />
