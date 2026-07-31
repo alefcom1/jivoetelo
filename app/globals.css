@@ -115,11 +115,13 @@ a.header-cta{display:inline-flex;align-items:center}
 .onboarding-form legend{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 .field-note{font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5}
 .radio-row{display:flex;gap:8px;flex-wrap:wrap}
-.radio-card{cursor:pointer}
-.radio-card input{position:absolute;opacity:0}
-.radio-card span{display:inline-block;border:1px solid var(--line);background:var(--white);padding:10px 16px;font-size:14px;font-weight:600}
-.radio-card input:checked+span{background:var(--black);color:white;border-color:var(--black)}
-.radio-card input:focus-visible+span{outline:2px solid var(--coral)}
+/* Вариант ответа — кнопка, а не радиокнопка: выбор сразу ведёт к следующему
+   вопросу, а навигация стрелками внутри радиогруппы этому мешала бы
+   (объяснение в app/raschet/choice.tsx). */
+.radio-card{border:1px solid var(--line);background:var(--white);padding:10px 16px;font-size:14px;font-weight:600;text-align:left;cursor:pointer;color:inherit}
+.radio-card:hover{border-color:var(--black)}
+.radio-card[aria-pressed="true"]{background:var(--black);color:white;border-color:var(--black)}
+.radio-card:focus-visible{outline:2px solid var(--coral);outline-offset:1px}
 .onboarding-numbers{display:flex;gap:14px;flex-wrap:wrap}
 .onboarding-numbers label,.weight-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
 .onboarding-numbers input,.weight-form input{padding:11px;border:1px solid var(--line);background:white;font-size:14px;width:130px}
@@ -196,6 +198,8 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
 
 /* ===== Блок «дневник живёт в телефоне» ===== */
 .invite{padding:64px max(24px,calc((100% - 900px)/2));background:var(--paper);border-top:1px solid var(--line)}
+.invite{margin-top:56px}
+.invite-wide{margin-top:0}
 .invite-head h2{margin:0 0 12px;font:500 clamp(30px,4vw,44px)/.92 var(--serif);letter-spacing:-.05em}
 .invite-head p{max-width:520px;margin:0 0 36px;color:#5c5e57;font-size:14px;line-height:1.65}
 .invite-wide{padding-left:max(32px,calc((100% - 1280px)/2));padding-right:max(32px,calc((100% - 1280px)/2))}

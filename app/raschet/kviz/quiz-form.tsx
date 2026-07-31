@@ -1,5 +1,7 @@
 "use client";
 
+import { Choice } from "../choice";
+
 import { useEffect, useMemo, useState } from "react";
 import { evaluateQuiz, type QuizAnswers } from "@/lib/quiz";
 import EmailCapture from "../email-capture";
@@ -147,16 +149,9 @@ export default function QuizForm() {
       <legend>Что вами движет сейчас?</legend>
       <div className="radio-row">
         {(Object.keys(MOTIVATION_LABELS) as QuizAnswers["motivation"][]).map((option) =>
-          <label className="radio-card" key={option}>
-            <input
-              type="radio"
-              name="motivation"
-              value={option}
-              checked={values.motivation === option}
-              onChange={() => updateField("motivation", option)}
-            />
+          <Choice key={option} selected={values.motivation === option} onChoose={() => updateField("motivation", option)}>
             <span>{MOTIVATION_LABELS[option]}</span>
-          </label>)}
+          </Choice>)}
       </div>
     </fieldset>
 
@@ -164,16 +159,9 @@ export default function QuizForm() {
       <legend>Как часто вы садились на диету за последний год?</legend>
       <div className="radio-row">
         {(Object.keys(RECENT_DIETING_LABELS) as QuizAnswers["recentDieting"][]).map((option) =>
-          <label className="radio-card" key={option}>
-            <input
-              type="radio"
-              name="recentDieting"
-              value={option}
-              checked={values.recentDieting === option}
-              onChange={() => updateField("recentDieting", option)}
-            />
+          <Choice key={option} selected={values.recentDieting === option} onChoose={() => updateField("recentDieting", option)}>
             <span>{RECENT_DIETING_LABELS[option]}</span>
-          </label>)}
+          </Choice>)}
       </div>
     </fieldset>
 
@@ -181,16 +169,9 @@ export default function QuizForm() {
       <legend>Как вы сейчас относитесь к еде?</legend>
       <div className="radio-row">
         {(Object.keys(RELATIONSHIP_LABELS) as QuizAnswers["relationship"][]).map((option) =>
-          <label className="radio-card" key={option}>
-            <input
-              type="radio"
-              name="relationship"
-              value={option}
-              checked={values.relationship === option}
-              onChange={() => updateField("relationship", option)}
-            />
+          <Choice key={option} selected={values.relationship === option} onChoose={() => updateField("relationship", option)}>
             <span>{RELATIONSHIP_LABELS[option]}</span>
-          </label>)}
+          </Choice>)}
       </div>
     </fieldset>
 
@@ -198,16 +179,9 @@ export default function QuizForm() {
       <legend>Как вы спите последний месяц?</legend>
       <div className="radio-row">
         {(Object.keys(SLEEP_LABELS) as QuizAnswers["sleep"][]).map((option) =>
-          <label className="radio-card" key={option}>
-            <input
-              type="radio"
-              name="sleep"
-              value={option}
-              checked={values.sleep === option}
-              onChange={() => updateField("sleep", option)}
-            />
+          <Choice key={option} selected={values.sleep === option} onChoose={() => updateField("sleep", option)}>
             <span>{SLEEP_LABELS[option]}</span>
-          </label>)}
+          </Choice>)}
       </div>
     </fieldset>
 
@@ -215,16 +189,9 @@ export default function QuizForm() {
       <legend>Что сейчас происходит в жизни?</legend>
       <div className="radio-row">
         {(Object.keys(LIFE_LOAD_LABELS) as QuizAnswers["lifeLoad"][]).map((option) =>
-          <label className="radio-card" key={option}>
-            <input
-              type="radio"
-              name="lifeLoad"
-              value={option}
-              checked={values.lifeLoad === option}
-              onChange={() => updateField("lifeLoad", option)}
-            />
+          <Choice key={option} selected={values.lifeLoad === option} onChoose={() => updateField("lifeLoad", option)}>
             <span>{LIFE_LOAD_LABELS[option]}</span>
-          </label>)}
+          </Choice>)}
       </div>
     </fieldset>
 

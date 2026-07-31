@@ -426,13 +426,15 @@
   gap: 8px;
 }
 
+/* Карточка темпа тоже стала кнопкой — по той же причине, что и остальные
+   варианты: выбор ведёт к следующему шагу (app/raschet/choice.tsx). */
 .pace-card {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  color: inherit;
   cursor: pointer;
-}
-
-.pace-card input {
-  position: absolute;
-  opacity: 0;
 }
 
 .pace-card > span {
@@ -456,18 +458,23 @@
   color: var(--muted);
 }
 
-.pace-card input:checked + span {
+.pace-card[aria-pressed="true"] > span {
   background: var(--black);
   border-color: var(--black);
   color: white;
 }
 
-.pace-card input:checked + span span {
+.pace-card[aria-pressed="true"] span span {
   color: #c9cbc4;
 }
 
-.pace-card input:focus-visible + span {
+.pace-card:focus-visible > span {
   outline: 2px solid var(--coral);
+  outline-offset: 1px;
+}
+
+.pace-card:hover > span {
+  border-color: var(--black);
 }
 
 /* Вердикт про мышцы — не украшение: это единственное место, где видно, чем

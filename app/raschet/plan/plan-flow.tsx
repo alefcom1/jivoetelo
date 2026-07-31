@@ -1,5 +1,7 @@
 "use client";
 
+import { Choice } from "../choice";
+
 /**
  * Пошаговый расчёт плана — публичная замена воронке конкурентов вида
  * «-14 кг за 98 дней». Мы вместо даты показываем коридор (lib/fan.ts), а
@@ -220,6 +222,25 @@ function resolveCurrentStep(step: StepId, steps: StepId[]): StepId {
   return steps[0];
 }
 
+/**
+ * Причина смягчить цель по пяти вопросам безопасности. Признак «minor» сюда
+ * сознательно не входит: год рождения на этих шагах ещё не спрошен, и у него
+ * отдельный, более жёсткий стоп.
+ */
+function safetyReasonOf(answers: Answers): SofteningReason | null {
+  const { motivation, recentDieting, relationship, sleep, lifeLoad } = answers;
+  if (motivation === undefined || recentDieting === undefined || relationship === undefined
+      || sleep === undefined || lifeLoad === undefined) {
+    return null;
+  }
+  return softeningReason({ motivation, recentDieting, relationship, sleep, lifeLoad });
+}
+
+/** Шаги, где ответ — один выбор из списка: на них «Далее» не показываем. */
+const CHOICE_STEPS = new Set<StepId>([
+  "motivation", "recentDieting", "relationship", "sleep", "lifeLoad", "sex", "activity", "pace",
+]);
+
 function nextStepOf(step: StepId, steps: StepId[]): StepId | null {
   const idx = steps.indexOf(step);
   return idx >= 0 && idx < steps.length - 1 ? steps[idx + 1] : null;
@@ -246,13 +267,7 @@ export default function PlanFlow({ currentYear }: { currentYear: number }) {
   // ровно тем, что уже отвечены к этому моменту потока. Признак «minor» сюда
   // сознательно не входит: год рождения на этом шаге ещё не спрошен, и у
   // него — отдельный, более жёсткий стоп чуть ниже.
-  const { motivation, recentDieting, relationship, sleep, lifeLoad } = answers;
-  const reason = useMemo(() => {
-    if (motivation === undefined || recentDieting === undefined || relationship === undefined || sleep === undefined || lifeLoad === undefined) {
-      return null;
-    }
-    return softeningReason({ motivation, recentDieting, relationship, sleep, lifeLoad });
-  }, [motivation, recentDieting, relationship, sleep, lifeLoad]);
+  const reason = useMemo(() => safetyReasonOf(answers), [answers]);
 
   const minor = answers.birthYear !== undefined && isMinorYear(answers.birthYear, currentYear);
   const tooYoung = answers.birthYear !== undefined && isTooYoung(answers.birthYear, currentYear);
@@ -271,6 +286,25 @@ export default function PlanFlow({ currentYear }: { currentYear: number }) {
 
   function set<K extends keyof Answers>(key: K, value: Answers[K]) {
     setAnswers((prev) => ({ ...prev, [key]: value }));
+  }
+
+  /**
+   * Выбрать вариант и сразу перейти дальше.
+   *
+   * Список шагов пересчитывается по новым ответам, а не по текущим: ответ про
+   * еду или сон может вставить шаг «softening», и переход по старому списку
+   * его бы перескочил — человек не увидел бы объяснения, ради которого шаг и
+   * заведён.
+   */
+  function choose<K extends keyof Answers>(key: K, value: Answers[K]) {
+    const nextAnswers = { ...answers, [key]: value };
+    setAnswers(nextAnswers);
+
+    const nextReason = safetyReasonOf(nextAnswers);
+    const nextMinor = nextAnswers.birthYear !== undefined && isMinorYear(nextAnswers.birthYear, currentYear);
+    const nextTooYoung = nextAnswers.birthYear !== undefined && isTooYoung(nextAnswers.birthYear, currentYear);
+    const target = nextStepOf(step, buildSteps(nextAnswers, nextReason, nextMinor, nextTooYoung));
+    if (target) setRawStep(target);
   }
 
   function goNext() {
@@ -339,10 +373,10 @@ export default function PlanFlow({ currentYear }: { currentYear: number }) {
             <legend>Что вами движет сейчас</legend>
             <div className="radio-row">
               {(Object.keys(MOTIVATION_LABELS) as Motivation[]).map((option) =>
-                <label className="radio-card" key={option}>
-                  <input type="radio" name="motivation" value={option} checked={answers.motivation === option} onChange={() => set("motivation", option)} />
+                <Choice key={option} selected={answers.motivation === option}
+                  onChoose={() => choose("motivation", option)}>
                   <span>{MOTIVATION_LABELS[option]}</span>
-                </label>)}
+                </Choice>)}
             </div>
           </fieldset>}
 
@@ -351,10 +385,10 @@ export default function PlanFlow({ currentYear }: { currentYear: number }) {
             <legend>Как часто вы садились на диету за последний год</legend>
             <div className="radio-row">
               {(Object.keys(RECENT_DIETING_LABELS) as RecentDieting[]).map((option) =>
-                <label className="radio-card" key={option}>
-                  <input type="radio" name="recentDieting" value={option} checked={answers.recentDieting === option} onChange={() => set("recentDieting", option)} />
+                <Choice key={option} selected={answers.recentDieting === option}
+                  onChoose={() => choose("recentDieting", option)}>
                   <span>{RECENT_DIETING_LABELS[option]}</span>
-                </label>)}
+                </Choice>)}
             </div>
           </fieldset>}
 
@@ -363,10 +397,10 @@ export default function PlanFlow({ currentYear }: { currentYear: number }) {
             <legend>Как вы сейчас относитесь к еде</legend>
             <div className="radio-row">
               {(Object.keys(RELATIONSHIP_LABELS) as Relationship[]).map((option) =>
-                <label className="radio-card" key={option}>
-                  <input type="radio" name="relationship" value={option} checked={answers.relationship === option} onChange={() => set("relationship", option)} />
+                <Choice key={option} selected={answers.relationship === option}
+                  onChoose={() => choose("relationship", option)}>
                   <span>{RELATIONSHIP_LABELS[option]}</span>
-                </label>)}
+                </Choice>)}
             </div>
           </fieldset>}
 
@@ -375,10 +409,10 @@ export default function PlanFlow({ currentYear }: { currentYear: number }) {
             <legend>Как вы спите последний месяц</legend>
             <div className="radio-row">
               {(Object.keys(SLEEP_LABELS) as Sleep[]).map((option) =>
-                <label className="radio-card" key={option}>
-                  <input type="radio" name="sleep" value={option} checked={answers.sleep === option} onChange={() => set("sleep", option)} />
+                <Choice key={option} selected={answers.sleep === option}
+                  onChoose={() => choose("sleep", option)}>
                   <span>{SLEEP_LABELS[option]}</span>
-                </label>)}
+                </Choice>)}
             </div>
           </fieldset>}
 
@@ -387,10 +421,10 @@ export default function PlanFlow({ currentYear }: { currentYear: number }) {
             <legend>Что сейчас происходит в жизни</legend>
             <div className="radio-row">
               {(Object.keys(LIFE_LOAD_LABELS) as LifeLoad[]).map((option) =>
-                <label className="radio-card" key={option}>
-                  <input type="radio" name="lifeLoad" value={option} checked={answers.lifeLoad === option} onChange={() => set("lifeLoad", option)} />
+                <Choice key={option} selected={answers.lifeLoad === option}
+                  onChoose={() => choose("lifeLoad", option)}>
                   <span>{LIFE_LOAD_LABELS[option]}</span>
-                </label>)}
+                </Choice>)}
             </div>
           </fieldset>}
 
@@ -448,14 +482,12 @@ export default function PlanFlow({ currentYear }: { currentYear: number }) {
               весу и возрасту она считать не умеет.
             </p>
             <div className="radio-row">
-              <label className="radio-card">
-                <input type="radio" name="sexForFormula" value="female" checked={answers.sexForFormula === "female"} onChange={() => set("sexForFormula", "female")} />
+              <Choice selected={answers.sexForFormula === "female"} onChoose={() => choose("sexForFormula", "female")}>
                 <span>Женский</span>
-              </label>
-              <label className="radio-card">
-                <input type="radio" name="sexForFormula" value="male" checked={answers.sexForFormula === "male"} onChange={() => set("sexForFormula", "male")} />
+              </Choice>
+              <Choice selected={answers.sexForFormula === "male"} onChoose={() => choose("sexForFormula", "male")}>
                 <span>Мужской</span>
-              </label>
+              </Choice>
             </div>
           </fieldset>}
 
@@ -510,10 +542,10 @@ export default function PlanFlow({ currentYear }: { currentYear: number }) {
             <legend>Обычная активность</legend>
             <div className="radio-row">
               {(Object.keys(ACTIVITY_LABELS) as Activity[]).map((option) =>
-                <label className="radio-card" key={option}>
-                  <input type="radio" name="activity" value={option} checked={answers.activity === option} onChange={() => set("activity", option)} />
+                <Choice key={option} selected={answers.activity === option}
+                  onChoose={() => choose("activity", option)}>
                   <span>{ACTIVITY_LABELS[option]}</span>
-                </label>)}
+                </Choice>)}
             </div>
           </fieldset>}
 
@@ -522,17 +554,22 @@ export default function PlanFlow({ currentYear }: { currentYear: number }) {
             <legend>Какой темп вам подходит</legend>
             <div className="pace-row">
               {PACE_OPTIONS.map((option) =>
-                <label className="pace-card" key={option.key}>
-                  <input type="radio" name="pace" value={option.key} checked={answers.pace === option.key} onChange={() => set("pace", option.key)} />
+                <button type="button" className="pace-card" key={option.key} aria-pressed={answers.pace === option.key}
+                  onClick={() => choose("pace", option.key)}>
                   <span><b>{option.label}</b><span>{option.note}</span></span>
-                </label>)}
+                </button>)}
             </div>
           </fieldset>}
 
         {step !== "ageStop" &&
           <div className="button-row">
             <button type="button" className="link-button" onClick={goBack} disabled={!previous}>Назад</button>
-            <button type="button" className="black-button" onClick={goNext} disabled={!complete}>Далее</button>
+            {/* На шагах с вариантами «Далее» не нужна: выбор сам ведёт дальше,
+                и лишняя кнопка стоила бы второго действия одиннадцать раз
+                подряд. Там, где ответ не один клик — год, рост с весом,
+                желаемый вес — и на объясняющих шагах кнопка остаётся. */}
+            {!CHOICE_STEPS.has(step) &&
+              <button type="button" className="black-button" onClick={goNext} disabled={!complete}>Далее</button>}
           </div>}
       </div>}
 
