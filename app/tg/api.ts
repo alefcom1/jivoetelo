@@ -83,6 +83,21 @@ export async function linkAccount(code: string): Promise<{ ok: true; email: stri
   return handle<{ ok: true; email: string }>(response);
 }
 
+/**
+ * Заводит аккаунт по подписи Telegram — без почты и пароля.
+ *
+ * `consent` уходит на сервер и проверяется там же: галочка в интерфейсе
+ * защищает от случайного нажатия, но не от запроса, посланного мимо него.
+ */
+export async function registerByTelegram(consent: boolean): Promise<{ ok: true; created: boolean }> {
+  const response = await fetch("/api/tg/register", {
+    method: "POST",
+    headers: { ...initDataHeader(), "Content-Type": "application/json" },
+    body: JSON.stringify({ consent }),
+  });
+  return handle<{ ok: true; created: boolean }>(response);
+}
+
 export async function analyzeMeal(formData: FormData): Promise<{
   analysis: { mealType: string; items: AnalysisItemDto[]; clarifications: ClarificationDto[] };
   photoKey: string | null;

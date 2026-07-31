@@ -249,7 +249,8 @@ export async function listApplications(limit = 200) {
 
 export type SpecialistAdminRow = {
   userId: number;
-  email: string;
+  /** null у аккаунта из Mini App — специалисту почта не обязательна. */
+  email: string | null;
   displayName: string;
   specialization: string | null;
   city: string | null;

@@ -10,7 +10,8 @@ const SESSION_DAYS = 30;
 
 export type CurrentUser = {
   id: number;
-  email: string;
+  /** null у аккаунта из Mini App: там почты нет и не требуется. */
+  email: string | null;
   showCalories: boolean;
   /** Тариф. Сейчас у всех "free" — все функции доступны бесплатно. */
   plan: Plan;

@@ -64,7 +64,11 @@ export async function exportAccount(userId: number): Promise<AccountExport> {
     db.select().from(weightEntries).where(eq(weightEntries.userId, userId)).orderBy(asc(weightEntries.onDate)),
     db.select().from(userConsents).where(eq(userConsents.userId, userId)).orderBy(asc(userConsents.acceptedAt)),
     db.select().from(aiUsage).where(eq(aiUsage.userId, userId)).orderBy(asc(aiUsage.createdAt)),
-    db.select().from(waitlistSubscribers).where(eq(waitlistSubscribers.email, account.email)),
+    // Список ожидания ищем по адресу, а его у аккаунта может не быть:
+    // из Mini App человек приходит без почты. Тогда искать нечего.
+    account.email
+      ? db.select().from(waitlistSubscribers).where(eq(waitlistSubscribers.email, account.email))
+      : Promise.resolve([]),
     db.select().from(photoInbox).where(eq(photoInbox.userId, userId)).orderBy(asc(photoInbox.createdAt)),
   ]);
 

@@ -41,7 +41,7 @@ export default async function SettingsPage() {
     <h1>Настройки</h1>
     <section className="settings-block">
       <p className="settings-label">Аккаунт</p>
-      <p>{user.email}</p>
+      <p>{user.email ?? "Вход через Telegram — почта не указана"}</p>
       <p className="field-note">Тариф: бесплатный — доступны все возможности сервиса.</p>
     </section>
     <section className="settings-block">

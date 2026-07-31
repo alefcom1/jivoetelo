@@ -73,7 +73,11 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
       .where(eq(users.email, email))
       .limit(1);
     const user = rows[0];
-    if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    // Пароля может не быть вовсе — так у аккаунтов, заведённых в Mini App.
+    // Тогда вход по паролю невозможен, и это не «неверный пароль», а
+    // «этим способом сюда не входят». Сообщение при этом одно и то же:
+    // разное подсказывало бы, каким способом заведён чужой аккаунт.
+    if (!user?.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
       return { status: "wrong_credentials", email: typedEmail };
     }
     await createSession(user.id);

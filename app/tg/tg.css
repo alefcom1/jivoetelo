@@ -638,3 +638,8 @@
 .tg-diag dt { color: var(--tg-hint); }
 .tg-diag dd { margin: 0; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
 .tg-diag-result { margin: 6px 0 10px; font: 500 22px var(--brand-serif); overflow-wrap: anywhere; }
+/* Согласие на первом экране. Отдельный блок, а не строка под кнопкой:
+   человек должен заметить, что ставит галочку, а не проскочить её взглядом. */
+.tg-consent{display:flex;gap:10px;align-items:flex-start;text-align:left;margin:4px 0 18px;font-size:13px;line-height:1.5;color:var(--tg-hint)}
+.tg-consent input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--brand-coral)}
+.tg-consent a{color:inherit;text-decoration:underline;text-underline-offset:2px}

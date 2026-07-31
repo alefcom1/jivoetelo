@@ -73,6 +73,9 @@ export async function requireAdmin(): Promise<{ id: number; email: string } | nu
   const { getCurrentUser } = await import("./auth.ts");
   const user: CurrentUser | null = await getCurrentUser();
   if (!user) return null;
-  if (!isAdminEmail(user.email, process.env.ADMIN_EMAILS)) return null;
+  // Без почты админом стать нельзя: список задаётся адресами, а у аккаунта
+  // из Mini App адреса нет. Пустая строка не совпадёт ни с чем — пустые
+  // куски `parseAdminEmails` выбрасывает.
+  if (!user.email || !isAdminEmail(user.email, process.env.ADMIN_EMAILS)) return null;
   return { id: user.id, email: user.email };
 }

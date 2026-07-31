@@ -22,7 +22,8 @@ export type ProfileGoals = {
 };
 
 export type ProfileData = {
-  email: string;
+  /** null у аккаунта из Mini App — почты там нет и не требуется. */
+  email: string | null;
   telegramLinked: boolean;
   goals: ProfileGoals | null;
   latestWeightKg: number | null;
@@ -91,7 +92,10 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
   }
 
   return {
-    email: user?.email ?? "",
+    // Не подменяем отсутствие адреса пустой строкой: интерфейс должен уметь
+    // сказать «вход через Telegram», а не показывать пустое место там, где
+    // человек ждёт увидеть почту.
+    email: user?.email ?? null,
     telegramLinked: !!user?.telegramUserId,
     goals,
     latestWeightKg,

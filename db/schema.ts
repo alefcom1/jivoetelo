@@ -32,8 +32,23 @@ export const userConsents = pgTable(
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  /**
+   * Почта и пароль необязательны: у аккаунта, заведённого прямо в Telegram
+   * Mini App, их нет вовсе. Личность там подтверждает подпись initData,
+   * которую ставит сам Telegram, — этого достаточно, чтобы понять, чей это
+   * дневник.
+   *
+   * Соблазн подставить что-нибудь вроде `tg-12345@telegram.local` был, и он
+   * ошибочный: такой адрес выглядит как адрес. Он попадёт в выгрузку, кто-то
+   * однажды отправит на него письмо, а форма входа примет его как логин.
+   * Пустое поле честнее и ничего из этого не позволяет.
+   *
+   * Уникальность сохраняется: PostgreSQL не считает NULL повтором, поэтому
+   * безадресных аккаунтов может быть сколько угодно, а один адрес — по-прежнему
+   * у одного человека.
+   */
+  email: text("email").unique(),
+  passwordHash: text("password_hash"),
   // Привязка Telegram-аккаунта для Mini App (раздел 17 спеки).
   telegramUserId: text("telegram_user_id").unique(),
   // Тариф. Сейчас все функции бесплатны и все пользователи на "free";

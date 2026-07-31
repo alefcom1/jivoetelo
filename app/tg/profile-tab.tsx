@@ -29,12 +29,13 @@ const DIGEST_HOURS = Array.from({ length: MAX_DIGEST_HOUR - MIN_DIGEST_HOUR + 1 
  * из самого адреса почты, дают то же узнавание без единого запроса наружу и
  * при этом у каждого человека свои.
  */
-function Monogram({ email }: { email: string }) {
-  const letter = (email.trim()[0] ?? "Ж").toUpperCase();
+function Monogram({ email }: { email: string | null }) {
+  const source = email ?? "";
+  const letter = (source.trim()[0] ?? "Ж").toUpperCase();
   // Простая устойчивая свёртка: одна и та же почта — всегда один и тот же
   // цвет, на любом устройстве и после любой перезагрузки.
   let sum = 0;
-  for (const char of email) sum = (sum + char.charCodeAt(0) * 31) % 360;
+  for (const char of source) sum = (sum + char.charCodeAt(0) * 31) % 360;
   return <span className="tg-profile-avatar" style={{ "--food-hue": sum } as React.CSSProperties} aria-hidden>
     {letter}
   </span>;
@@ -321,7 +322,9 @@ export function ProfileTab({ onUnlinked }: { onUnlinked?: () => void }) {
       <Monogram email={data.email} />
       <div className="tg-profile-head-body">
         <h1>Профиль</h1>
-        <p>{data.email}</p>
+        {/* Аккаунт из Mini App живёт без почты. Показываем это прямо, а не
+            пустой строкой: пустое место читается как ошибка загрузки. */}
+        <p>{data.email ?? "Вход через Telegram"}</p>
         <span className="tg-badge">Бесплатный тариф</span>
       </div>
     </section>
