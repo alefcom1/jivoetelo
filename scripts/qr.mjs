@@ -35,6 +35,7 @@ const TARGETS = [
   { file: "bot.svg", url: botLink() },
   { file: "bot-plan.svg", url: botLink(START_PAYLOADS.plan) },
   { file: "bot-web.svg", url: botLink(START_PAYLOADS.web) },
+  { file: "bot-site.svg", url: botLink(START_PAYLOADS.site) },
 ];
 
 await mkdir(outDir, { recursive: true });

@@ -17,8 +17,11 @@ async function decode(file) {
 
 test("QR ведут туда, куда написано", async () => {
   assert.equal(await decode("bot.svg"), botLink());
-  assert.equal(await decode("bot-plan.svg"), botLink(START_PAYLOADS.plan));
-  assert.equal(await decode("bot-web.svg"), botLink(START_PAYLOADS.web));
+  // Перебором по меткам, а не списком файлов: иначе новая метка без своего
+  // QR никого бы не побеспокоила, а блок на странице показывал бы чужой код.
+  for (const payload of Object.values(START_PAYLOADS)) {
+    assert.equal(await decode(`bot-${payload}.svg`), botLink(payload), payload);
+  }
 });
 
 test("ссылка собирается на настоящего бота", () => {

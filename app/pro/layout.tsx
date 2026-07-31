@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./pro.css";
 import { Logo } from "../logo";
+import { SiteFooter } from "../site-footer";
 
 /**
  * Оболочка раздела для специалистов. Своя, а не общая с `/raschet`, по той же
@@ -20,5 +21,6 @@ export default function ProLayout({ children }: { children: React.ReactNode }) {
       <Link className="header-cta" href="/pro#apply">Заявка в пилот</Link>
     </header>
     {children}
+    <SiteFooter />
   </div>;
 }

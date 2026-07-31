@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { LEGAL_VERSION } from "../../lib/legal.ts";
 import { launchBrowser } from "./browser.mjs";
 
 // Сквозная проверка юридического блока: документы, согласия, выгрузка и
@@ -11,7 +12,6 @@ const BASE = process.env.E2E_BASE ?? "http://127.0.0.1:3111";
 const UPLOADS = process.env.UPLOADS_DIR ?? path.resolve("data/uploads");
 const stamp = Date.now();
 const email = `e2e-legal-${stamp}@example.com`;
-const waitlistEmail = `e2e-waitlist-${stamp}@example.com`;
 const password = "correct-horse-42";
 
 function step(name) { console.log(`--- ${name}`); }
@@ -50,30 +50,12 @@ try {
     throw new Error("Ожидали честную пометку о незаполненных реквизитах");
   }
 
-  step("3. Лист ожидания без согласия ничего не сохраняет");
-  await page.goto(`${BASE}/`);
-  await page.click(".intro-actions .black-button");
-  await page.waitForSelector('.notice input[name="email"]');
-  await page.fill('.notice input[name="email"]', waitlistEmail);
-  // Снимаем required, чтобы дойти до серверной проверки: браузерную валидацию
-  // злоумышленник обойдёт так же легко.
-  await page.evaluate(() => document.querySelector('input[name="consent"]').removeAttribute("required"));
-  await page.click('.notice form button[type="submit"]');
-  await page.waitForSelector(".form-error");
-  const waitlistError = await page.textContent(".form-error");
-  if (!waitlistError.includes("согласия")) throw new Error(`Непонятная ошибка: ${waitlistError}`);
-  if (sql(`SELECT count(*) FROM waitlist_subscribers WHERE email = '${waitlistEmail}'`) !== "0") {
-    throw new Error("Адрес сохранён без согласия");
-  }
+  // Шаги про лист ожидания убраны вместе с самой формой: продукт открыт, и
+  // главная больше не зовёт в закрытый запуск. Проверка «без согласия ничего
+  // не сохраняется» никуда не делась — она ниже, на регистрации, где сейчас
+  // и собираются согласия.
 
-  step("4. С согласием адрес сохраняется вместе с редакцией документа");
-  await page.check('input[name="consent"]');
-  await page.click('.notice form button[type="submit"]');
-  await page.waitForSelector(".notice h2:has-text('Вы в списке')", { timeout: 15000 });
-  const consentVersion = sql(`SELECT consent_version FROM waitlist_subscribers WHERE email = '${waitlistEmail}'`);
-  if (!consentVersion) throw new Error("Редакция согласия не записана");
-
-  step("5. Регистрация без согласий отклоняется на сервере");
+  step("3. Регистрация без согласий отклоняется на сервере");
   await page.goto(`${BASE}/register`);
   await page.fill('input[name="email"]', email);
   await page.fill('input[name="password"]', password);
@@ -90,7 +72,7 @@ try {
     throw new Error("Аккаунт создан без согласий");
   }
 
-  step("6. Адрес после ошибки не потерялся, пароль — вводится заново");
+  step("4. Адрес после ошибки не потерялся, пароль — вводится заново");
   if ((await page.inputValue('input[name="email"]')) !== email) {
     throw new Error("После ошибки форма потеряла введённый адрес");
   }
@@ -98,7 +80,7 @@ try {
     throw new Error("Пароль не должен возвращаться с сервера");
   }
 
-  step("7. С согласиями аккаунт создаётся, согласия фиксируются");
+  step("5. С согласиями аккаунт создаётся, согласия фиксируются");
   await page.fill('input[name="password"]', password);
   await page.check('input[name="consent_terms"]');
   await page.check('input[name="consent_ai"]');
@@ -107,10 +89,13 @@ try {
   const userId = sql(`SELECT id FROM users WHERE email = '${email}'`);
   const kinds = sql(`SELECT kind FROM user_consents WHERE user_id = ${userId} ORDER BY kind`).split("\n");
   if (kinds.join(",") !== "ai_processing,terms") throw new Error(`Записаны согласия: ${kinds}`);
+  // Редакция сверяется с константой, а не с соседней записью: по 152-ФЗ
+  // оператор обязан показать, под какой именно версией стоит подпись, —
+  // значит в базе должна оказаться сегодняшняя, а не «какая-то одна».
   const versions = sql(`SELECT DISTINCT version FROM user_consents WHERE user_id = ${userId}`);
-  if (versions !== consentVersion) throw new Error(`Разные редакции: ${versions} и ${consentVersion}`);
+  if (versions !== LEGAL_VERSION) throw new Error(`Записана редакция ${versions}, а документы — ${LEGAL_VERSION}`);
 
-  step("8. В настройках видно, на что человек согласился");
+  step("6. В настройках видно, на что человек согласился");
   await page.goto(`${BASE}/app/settings`);
   const settingsText = await page.textContent(".settings");
   if (!settingsText.includes("Пользовательское соглашение и Политика")) {
@@ -118,7 +103,7 @@ try {
   }
   if (!settingsText.includes("Скачать мои данные")) throw new Error("Нет кнопки выгрузки");
 
-  step("9. Подкладываем приём пищи с фотографией");
+  step("7. Подкладываем приём пищи с фотографией");
   const photoKey = `${userId}/e2e-legal.jpg`;
   const photoPath = path.join(UPLOADS, photoKey);
   mkdirSync(path.dirname(photoPath), { recursive: true });
@@ -129,7 +114,7 @@ try {
   sql(`INSERT INTO meal_items (meal_id, name, grams, kcal_per_100, protein_per_100, fat_per_100, carbs_per_100, fiber_per_100, confidence)
        VALUES (${mealId}, 'Гречка', 200, 110, 4.2, 1.1, 21.3, 3.7, 'high')`);
 
-  step("10. Выгрузка отдаёт всё и не отдаёт лишнего");
+  step("8. Выгрузка отдаёт всё и не отдаёт лишнего");
   const cookies = await page.context().cookies();
   const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join("; ");
   const exportResponse = await fetch(`${BASE}/api/account/export`, { headers: { cookie: cookieHeader } });
@@ -151,11 +136,11 @@ try {
     throw new Error("В выгрузке оказался хеш пароля");
   }
 
-  step("11. Выгрузка недоступна без сессии");
+  step("9. Выгрузка недоступна без сессии");
   const anonymous = await fetch(`${BASE}/api/account/export`);
   if (anonymous.status !== 401) throw new Error(`Аноним получил ${anonymous.status}`);
 
-  step("12. Удаление требует явного подтверждения");
+  step("10. Удаление требует явного подтверждения");
   await page.goto(`${BASE}/app/settings`);
   await page.click('button:has-text("Удалить аккаунт")');
   await page.fill('input[name="confirmation"]', "удалить пожалуйста");
@@ -165,7 +150,7 @@ try {
     throw new Error("Аккаунт удалён без подтверждения");
   }
 
-  step("13. Правильное подтверждение стирает всё");
+  step("11. Правильное подтверждение стирает всё");
   await page.fill('input[name="confirmation"]', "УДАЛИТЬ");
   await page.click('button:has-text("Удалить аккаунт навсегда")');
   await page.waitForURL("**/?deleted=1", { timeout: 15000 });
@@ -182,7 +167,7 @@ try {
   }
   if (existsSync(photoPath)) throw new Error("Фотография осталась на диске после удаления аккаунта");
 
-  step("14. После удаления доступ закрыт");
+  step("12. После удаления доступ закрыт");
   await page.goto(`${BASE}/app`);
   await page.waitForURL("**/login", { timeout: 15000 });
 

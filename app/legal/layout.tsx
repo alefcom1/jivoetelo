@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "../logo";
+import { SiteFooter } from "../site-footer";
 import "./legal.css";
 
 export const metadata: Metadata = {
@@ -15,5 +16,6 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       <Link className="back" href="/">На главную →</Link>
     </header>
     {children}
+    <SiteFooter />
   </div>;
 }

@@ -39,14 +39,22 @@ export function AppInvite({
   lead,
   start,
   qr,
+  wide,
 }: {
   title: string;
   lead: string;
   start: StartPayload;
   /** Файл QR под эту метку — генерируется scripts/qr.mjs. */
   qr: string;
+  /**
+   * Поля как у главной (1280px), а не как у статьи (900px). Ширина колонки
+   * с текстом — свойство страницы, а не блока: на главной блок между
+   * секциями шириной в 1280 выглядел бы случайно съехавшим внутрь.
+   * Ширину самих снимков это не меняет — она ограничена в CSS.
+   */
+  wide?: boolean;
 }) {
-  return <section className="invite">
+  return <section className={wide ? "invite invite-wide" : "invite"}>
     <div className="invite-head">
       <h2>{title}</h2>
       <p>{lead}</p>

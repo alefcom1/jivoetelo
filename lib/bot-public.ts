@@ -32,6 +32,8 @@ export const START_PAYLOADS = {
   plan: "plan",
   /** Пришёл из пустого дневника в вебе — аккаунт уже есть. */
   web: "web",
+  /** Пришёл с главной страницы — про сервис уже прочитал. */
+  site: "site",
 } as const;
 
 export type StartPayload = (typeof START_PAYLOADS)[keyof typeof START_PAYLOADS];

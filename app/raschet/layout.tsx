@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./raschet.css";
 import { Logo } from "../logo";
+import { SiteFooter } from "../site-footer";
 
 export const metadata: Metadata = {
   title: "Расчёты — Живое Тело",
@@ -14,5 +15,6 @@ export default function RaschetLayout({ children }: { children: React.ReactNode 
       <Link className="header-cta" href="/register">Начать бесплатно</Link>
     </header>
     {children}
+    <SiteFooter />
   </div>;
 }

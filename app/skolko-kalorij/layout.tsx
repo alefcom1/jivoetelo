@@ -5,6 +5,7 @@ import Link from "next/link";
 // с остальным сайтом ради одного каталога.
 import "../raschet/raschet.css";
 import { Logo } from "../logo";
+import { SiteFooter } from "../site-footer";
 
 export const metadata: Metadata = {
   title: "Калорийность блюд — Живое Тело",
@@ -17,5 +18,6 @@ export default function DishesLayout({ children }: { children: React.ReactNode }
       <Link className="header-cta" href="/register">Начать бесплатно</Link>
     </header>
     {children}
+    <SiteFooter />
   </div>;
 }
