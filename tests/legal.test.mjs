@@ -88,3 +88,36 @@ test("реквизиты из окружения подставляются ка
     process.env = saved;
   }
 });
+
+test("документы и расчёт сходятся в возрасте", async () => {
+  // Пока документы требовали 18+, а расчёт работал с 14 лет и имел отдельную
+  // ветку для подростков, продукт публично обещал одно, а делал другое. Это
+  // нашёл разбор рисков, и это ровно тот класс расхождений, который сам себя
+  // не проявляет: обе стороны по отдельности выглядят разумно.
+  const { readFile } = await import("node:fs/promises");
+  const { MIN_AGE, ADULT_AGE } = await import("../lib/onboarding.ts");
+
+  assert.equal(MIN_AGE, 14, "нижняя граница расчёта");
+  assert.equal(ADULT_AGE, 18, "граница, ниже которой дефицит не считаем");
+
+  for (const page of ["terms", "privacy", "consent"]) {
+    const text = await readFile(new URL(`../app/legal/${page}/page.tsx`, import.meta.url), "utf8");
+    assert.match(text, new RegExp(`${MIN_AGE} лет`), `${page}: нижняя граница возраста не названа`);
+    assert.doesNotMatch(
+      text,
+      /(старше|достигшим возраста) 18 лет/,
+      `${page}: документ всё ещё требует 18 лет, хотя расчёт работает с ${MIN_AGE}`,
+    );
+  }
+});
+
+test("подросток не получает дефицит ни при каких ответах", async () => {
+  // То же ограничение, но проверенное со стороны кода, а не текста: документы
+  // теперь это обещают, и обещание должно быть исполнимым.
+  const { effectiveGoal } = await import("../lib/onboarding.ts");
+  for (const relationship of ["calm", "tense", "hard"]) {
+    const goal = effectiveGoal({ goal: "lose", birthYear: 2010, relationship }, 2026);
+    assert.equal(goal, "maintain", `16 лет, отношения «${relationship}» — дефицит просочился`);
+  }
+  assert.equal(effectiveGoal({ goal: "lose", birthYear: 2007, relationship: "calm" }, 2026), "lose");
+});

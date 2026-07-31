@@ -95,9 +95,16 @@ export const MAX_HEIGHT_CM = 230;
 export const MIN_WEIGHT_KG = 30;
 export const MAX_WEIGHT_KG = 300;
 export const MAX_TARGET_LOSS_KG = 80;
-const ADULT_AGE = 18;
+/**
+ * Возрастные границы. Экспортируются, потому что на них ссылаются не только
+ * формы, но и тест согласованности с юридическими документами: пока
+ * соглашение требовало 18 лет, а расчёт работал с 14, продукт публично
+ * обещал одно, а делал другое.
+ */
+export const ADULT_AGE = 18;
+export const MIN_AGE = 14;
 const MAX_AGE = 100;
-const MIN_AGE_FOR_FORM = 14; // младше формула не считает, см. computeTdee
+const MIN_AGE_FOR_FORM = MIN_AGE; // младше формула не считает, см. computeTdee
 
 export function minBirthYear(currentYear: number): number {
   return currentYear - MAX_AGE;

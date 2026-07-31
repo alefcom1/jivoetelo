@@ -32,7 +32,7 @@ export default function RegisterPage() {
             питании и весе — разные вещи, и вторая требует явного действия. */}
         <label className="consent">
           <input name="consent_terms" type="checkbox" defaultChecked={state.consentTerms ?? false} required />
-          <span>Принимаю <Link href="/legal/terms" target="_blank">Пользовательское соглашение</Link> и <Link href="/legal/privacy" target="_blank">Политику конфиденциальности</Link>. Мне есть 18 лет.</span>
+          <span>Принимаю <Link href="/legal/terms" target="_blank">Пользовательское соглашение</Link> и <Link href="/legal/privacy" target="_blank">Политику конфиденциальности</Link>. Мне есть 14 лет; если меньше 18 — с согласия родителей.</span>
         </label>
         <label className="consent">
           <input name="consent_ai" type="checkbox" defaultChecked={state.consentAi ?? false} required />
