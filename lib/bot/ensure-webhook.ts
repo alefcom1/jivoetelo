@@ -14,9 +14,10 @@
  * приложению. Единственное место, где гарантированно есть и Node, и токен,
  * и адрес сайта, и настройки прокси к Bot API, — само приложение.
  *
- * Идемпотентно: сначала спрашиваем Telegram, что у него записано, и молчим,
- * если адрес уже верный. Так перезапуск контейнера не превращается в поток
- * лишних запросов.
+ * Идемпотентно, но безусловно: регистрируем при каждом старте, даже если
+ * адрес не менялся. `getWebhookInfo` не возвращает секрет, и «пропустить,
+ * раз адрес тот же» означало бы не заметить разошедшийся секрет — а это
+ * отказ без единой строки в логе.
  */
 
 import { botLinks } from "./links.ts";
@@ -30,7 +31,21 @@ const COMMANDS = [
   { command: "stop", description: "Выключить напоминания" },
 ];
 
-type WebhookInfo = { url?: string };
+type WebhookInfo = { url?: string; last_error_message?: string; pending_update_count?: number };
+
+/**
+ * Ответ Telegram на неудачную доставку — одна строка, и по ней почти всегда
+ * видно, что чинить. Пересказываем её действием, а не кодом. Те же правила,
+ * что в scripts/webhook.mjs: держим рядом с местом, где строка появляется.
+ */
+function explainDeliveryError(message: string): string {
+  if (/503/.test(message)) return "маршрут вебхука отвечает 503 — на сервере пуст TELEGRAM_WEBHOOK_SECRET.";
+  if (/403/.test(message)) return "секрет вебхука и секрет приложения разные — эта регистрация их снова сведёт.";
+  if (/404/.test(message)) return "приложение не отдаёт /api/tg/webhook — проверьте, что за SITE_URL стоит именно оно.";
+  if (/[Ss][Ss][Ll]|certificate/.test(message)) return "проблема с сертификатом домена, Telegram требует валидный TLS.";
+  if (/[Tt]imeout|unreachable|[Cc]onnection/.test(message)) return "Telegram не достучался до сайта: домен не резолвится снаружи или приложение лежало.";
+  return "разберите текст ошибки выше — Telegram пишет причину прямым текстом.";
+}
 
 /**
  * Приводит настройки бота в Telegram к тому, что описано в коде.
@@ -57,22 +72,36 @@ export async function ensureWebhook(): Promise<void> {
   const client = createTelegramClient(token);
 
   try {
-    // Вебхук перерегистрируем, только если адрес разошёлся: setWebhook с тем
-    // же адресом безвреден, но лишний запрос при каждом перезапуске не нужен.
+    // Что Telegram думает о прошлой доставке — самая полезная строка при
+    // разборе «бот молчит», и она уже есть в этом ответе. Пишем её в лог до
+    // того, как что-то менять.
     const info = await client.call<WebhookInfo>("getWebhookInfo", {});
-    if (info?.url === webhookUrl) {
-      console.log("[bot] вебхук уже на месте");
-    } else {
-      await client.call("setWebhook", {
-        url: webhookUrl,
-        secret_token: secret,
-        allowed_updates: ["message", "callback_query"],
-        // Накопившееся за время простоя не разбираем: это чаще всего дубли
-        // того, что человек уже прислал заново.
-        drop_pending_updates: true,
-      });
-      console.log(`[bot] вебхук зарегистрирован: ${webhookUrl}`);
+    if (info?.last_error_message) {
+      console.warn(`[bot] последняя ошибка доставки: ${info.last_error_message}`);
+      console.warn(`[bot] ${explainDeliveryError(info.last_error_message)}`);
     }
+    if ((info?.pending_update_count ?? 0) > 0) {
+      console.warn(`[bot] в очереди Telegram ${info.pending_update_count} недоставленных сообщений`);
+    }
+
+    // Регистрируем всегда, даже если адрес тот же.
+    //
+    // Соблазн пропустить при совпадении адреса выглядит разумно, но создаёт
+    // ловушку без выхода: getWebhookInfo **не возвращает секрет**. Если
+    // TELEGRAM_WEBHOOK_SECRET в .env разошёлся с тем, что зарегистрировано,
+    // адрес совпадает, перерегистрацию мы пропускаем, Telegram продолжает
+    // слать старый секрет, приложение отвечает 403 — и бот молчит навсегда,
+    // причём в логе приложения при этом пусто. Один лишний запрос на старте
+    // стоит дешевле, чем этот класс отказов.
+    await client.call("setWebhook", {
+      url: webhookUrl,
+      secret_token: secret,
+      allowed_updates: ["message", "callback_query"],
+      // Накопившееся за время простоя не разбираем: это чаще всего дубли
+      // того, что человек уже прислал заново.
+      drop_pending_updates: true,
+    });
+    console.log(`[bot] вебхук зарегистрирован: ${webhookUrl}`);
 
     // Команды и кнопку выставляем всегда, а не только вместе с вебхуком.
     // Иначе получается ловушка: домен привязали в BotFather уже после первой
