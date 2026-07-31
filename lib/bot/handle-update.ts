@@ -12,6 +12,7 @@
 import { localMoment } from "../dates.ts";
 import { snoozeUntil } from "../reminders.ts";
 import { foodCategory } from "../food-category.ts";
+import { isStartPayload } from "../bot-public.ts";
 import { inboxButton, openAppButton, planButton, type BotLinks } from "./links.ts";
 import { sendWelcome } from "./media.ts";
 import {
@@ -118,6 +119,7 @@ export type BotDeps = {
 export const TEXTS = {
   greetingLinked: GREETING.linked,
   greetingUnlinked: GREETING.unlinked,
+  greetingFromSite: GREETING.fromSite,
   linkFailed: GREETING.linkFailed,
   needLinkForPhoto: PHOTO.needLink,
   photoTooLarge: PHOTO.tooLarge,
@@ -248,7 +250,12 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     if (LINK_CODE_RE.test(payload)) return await tryLink(payload, tgId, chatId, deps);
 
     const linked = await deps.store.findUserByTelegram(tgId);
-    await greet(deps, chatId, linked ? GREETING.linked : GREETING.unlinked, Boolean(linked));
+    // Метка из ссылки на сайте: человек пришёл с экрана результата расчёта
+    // или из пустого дневника. Предлагать ему посчитать норму заново — значит
+    // не заметить, зачем он нажал кнопку.
+    const fromSite = payload.length > 0 && isStartPayload(payload.toLowerCase());
+    const greeting = linked ? GREETING.linked : fromSite ? GREETING.fromSite : GREETING.unlinked;
+    await greet(deps, chatId, greeting, Boolean(linked));
     return;
   }
 

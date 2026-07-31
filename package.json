@@ -37,6 +37,8 @@
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "^16.2.12",
+    "jsqr": "^1.4.0",
+    "qrcode": "^1.5.4",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3"
   },

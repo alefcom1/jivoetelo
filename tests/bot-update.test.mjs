@@ -476,3 +476,23 @@ test("отказ картинки не оставляет человека бе�
   assert.equal(sent[0].text, TEXTS.greetingUnlinked);
   assert.equal(sent[0].options.parseMode, "HTML");
 });
+
+test("пришедшему с сайта по метке не предлагают считать норму заново", async () => {
+  // Метка ставится в ссылке на экране результата расчёта и в пустом дневнике.
+  // Человек только что посчитал норму и нажал кнопку не за тем, чтобы ему
+  // предложили посчитать её ещё раз.
+  const { deps, sent } = makeDeps();
+  await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text: "/start plan" } }, deps);
+  assert.equal(sent[0].text, TEXTS.greetingFromSite);
+  assert.notEqual(sent[0].text, TEXTS.greetingUnlinked);
+});
+
+test("посторонняя метка не считается своей", () => {
+  // Метка приходит из адреса, то есть от пользователя. Незнакомую нельзя
+  // молча принять за свою — иначе приветствие меняется по чужой команде.
+  return Promise.all(["/start чужое", "/start plan_", "/start ../plan"].map(async (text) => {
+    const { deps, sent } = makeDeps();
+    await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text } }, deps);
+    assert.equal(sent[0].text, TEXTS.greetingUnlinked, text);
+  }));
+});

@@ -9,6 +9,7 @@ import { sumTotals } from "@/lib/nutrition";
 import type { PaceKey } from "@/lib/pace";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
 import { getLatestWeightKg } from "@/lib/weight";
+import { AppInvite } from "../app-invite";
 import { GoalReporter } from "./goal-reporter";
 
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ date?: string; saved?: string }> }) {
@@ -81,10 +82,23 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     </Link>}
 
     {dayMeals.length === 0
-      ? <section className="day-empty">
-          <p>Пока пусто. Добавьте первый приём пищи — текстом или фото, это займёт меньше минуты.</p>
-          <Link className="black-button" href="/app/add">Добавить еду <b>↗</b></Link>
-        </section>
+      ? <>
+          <section className="day-empty">
+            <p>Пока пусто. Добавьте первый приём пищи — текстом или фото, это займёт меньше минуты.</p>
+            <Link className="black-button" href="/app/add">Добавить еду <b>↗</b></Link>
+          </section>
+          {/* Только в пустом дневнике. У человека, который уже ведёт записи,
+              этот блок занимал бы место каждый день и ничего не сообщал. */}
+          <AppInvite
+            start="web"
+            qr="/qr/bot-web.svg"
+            title="Удобнее — с телефона"
+            lead={
+              "Еду фотографируют там же, где едят. Откройте бота — записи из браузера " +
+              "и из Telegram лежат в одном дневнике."
+            }
+          />
+        </>
       : <section className="day-meals">
           {dayMeals.map((meal) => {
             const mealItemList = itemsByMeal.get(meal.id) ?? [];

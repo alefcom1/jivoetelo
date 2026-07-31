@@ -195,3 +195,26 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
 .footer-disclaimer a{text-decoration:underline;text-underline-offset:2px;white-space:nowrap}
 .footer-disclaimer a:hover,.auth-note a:hover{color:var(--coral)}
 .auth-note a{text-decoration:underline;text-underline-offset:2px}
+
+/* ===== Блок «дневник живёт в телефоне» ===== */
+.invite{padding:64px max(24px,calc((100% - 900px)/2));background:var(--paper);border-top:1px solid var(--line)}
+.invite-head h2{margin:0 0 12px;font:500 clamp(30px,4vw,44px)/.92 var(--serif);letter-spacing:-.05em}
+.invite-head p{max-width:520px;margin:0 0 36px;color:#5c5e57;font-size:14px;line-height:1.65}
+.invite-shots{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:40px}
+.invite-shots figure{margin:0}
+.invite-shots img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:var(--white)}
+.invite-shots figcaption{margin-top:12px;font-size:12px;line-height:1.5;color:#66675f}
+.invite-enter{display:flex;align-items:center;gap:24px}
+.invite-qr{display:flex;align-items:center;gap:16px}
+.invite-qr img{display:block;width:132px;height:132px;border:1px solid var(--line);border-radius:8px}
+.invite-qr p{max-width:190px;margin:0;font-size:13px;line-height:1.5;color:#5c5e57}
+/* Кнопка — запасной вход для широкого экрана: там ведущий способ QR. */
+.invite-enter .invite-button{display:none}
+/* На узком экране всё наоборот: свой экран камерой не отсканируешь. */
+@media(max-width:850px){
+  .invite{padding:48px 20px}
+  .invite-shots{grid-template-columns:1fr 1fr;gap:14px}
+  .invite-shots figure:nth-child(3){display:none}
+  .invite-qr{display:none}
+  .invite-enter .invite-button{display:inline-flex;align-items:center;gap:14px;width:100%;justify-content:center}
+}

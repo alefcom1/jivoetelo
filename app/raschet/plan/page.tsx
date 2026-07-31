@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AppInvite } from "../../app-invite";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import "./plan.css";
 import PlanFlow from "./plan-flow";
@@ -28,5 +29,17 @@ export default function PlanPage() {
         его на клиенте, разметка после гидратации разойдётся с HTML (тот же
         приём, что в app/raschet/energiya/page.tsx). */}
     <PlanFlow currentYear={new Date().getFullYear()} />
+
+    {/* Блок стоит после расчёта, а не до: человеку, который ещё не увидел
+        своих цифр, предлагать поставить приложение рано. */}
+    <AppInvite
+      start="plan"
+      qr="/qr/bot-plan.svg"
+      title="Дальше — в телефоне"
+      lead={
+        "Дневник ведут там, где едят: сфотографировали тарелку, и состав посчитан. " +
+        "В Telegram ни почты, ни пароля не нужно — нажали «Начать», и всё."
+      }
+    />
   </article>;
 }
