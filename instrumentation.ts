@@ -15,11 +15,23 @@ export async function register() {
   const { startScheduler } = await import("./lib/scheduler.ts");
   startScheduler();
 
-  // Вебхук бота приводим в порядок при каждом старте. Это была ручная
-  // команда на сервере, о которой забывали навсегда: код выкатывается сам, а
-  // Telegram по-прежнему не знает, куда слать сообщения, и бот молчит.
-  // Не ждём результата: приложение должно подняться независимо от того,
-  // доступен ли сейчас Bot API.
-  const { ensureWebhook } = await import("./lib/bot/ensure-webhook.ts");
-  void ensureWebhook();
+  // Бот. Настройку в Telegram приводим в порядок при каждом старте — это
+  // была ручная команда на сервере, о которой забывали навсегда. Не ждём
+  // результата: приложение должно подняться независимо от того, доступен ли
+  // сейчас Bot API.
+  //
+  // Транспорт выбирается сам (lib/bot/transport.ts): за прокси Telegram до
+  // нас не достучится, и сообщения приходится забирать самим.
+  const { botTransport } = await import("./lib/bot/transport.ts");
+  if (botTransport() === "polling") {
+    const { startPolling } = await import("./lib/bot/polling.ts");
+    startPolling();
+    // Команды и кнопку Mini App выставить всё равно нужно — вебхук при этом
+    // не регистрируется, его снимает сам опрос.
+    const { ensureBotProfile } = await import("./lib/bot/ensure-webhook.ts");
+    void ensureBotProfile();
+  } else {
+    const { ensureWebhook } = await import("./lib/bot/ensure-webhook.ts");
+    void ensureWebhook();
+  }
 }

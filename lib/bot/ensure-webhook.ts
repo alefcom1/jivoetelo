@@ -103,28 +103,45 @@ export async function ensureWebhook(): Promise<void> {
     });
     console.log(`[bot] вебхук зарегистрирован: ${webhookUrl}`);
 
-    // Команды и кнопку выставляем всегда, а не только вместе с вебхуком.
-    // Иначе получается ловушка: домен привязали в BotFather уже после первой
-    // выкатки, приложение перезапустили — а кнопка не появилась, потому что
-    // вебхук к тому моменту был на месте и код выходил раньше. Оба вызова
-    // идемпотентны и стоят одного запроса.
-    await client.call("setMyCommands", { commands: COMMANDS });
-
-    // Синяя кнопка «Дневник» рядом со строкой ввода. Telegram отклоняет
-    // web_app с непривязанным доменом — это отдельная настройка в BotFather
-    // (/setdomain), и её отсутствие не повод считать выкатку неудачной.
-    const miniAppUrl = botLinks().miniAppUrl ?? absoluteUrl("/tg");
-    try {
-      await client.call("setChatMenuButton", {
-        menu_button: { type: "web_app", text: "Дневник", web_app: { url: miniAppUrl } },
-      });
-    } catch (error) {
-      console.warn(
-        `[bot] кнопку Mini App поставить не удалось (${error instanceof Error ? error.message : error}). ` +
-          "Обычно это значит, что домен не привязан к боту: @BotFather → /setdomain.",
-      );
-    }
+    await ensureBotProfile();
   } catch (error) {
     console.error("[bot] не удалось настроить вебхук — бот отвечать не будет:", error);
+  }
+}
+
+/**
+ * Команды и кнопка Mini App — то, что нужно выставить независимо от
+ * транспорта. При опросе вебхука нет вовсе, но меню бота всё равно должно
+ * быть настроено.
+ *
+ * Выставляем при каждом старте, а не только вместе с вебхуком. Иначе
+ * получается ловушка: домен привязали в BotFather уже после первой выкатки,
+ * приложение перезапустили — а кнопка не появилась. Оба вызова идемпотентны
+ * и стоят одного запроса.
+ */
+export async function ensureBotProfile(): Promise<void> {
+  const token = botToken();
+  if (!token) return;
+  const client = createTelegramClient(token);
+
+  try {
+    await client.call("setMyCommands", { commands: COMMANDS });
+  } catch (error) {
+    console.warn("[bot] команды задать не удалось:", error instanceof Error ? error.message : error);
+  }
+
+  // Telegram отклоняет web_app с непривязанным доменом — это отдельная
+  // настройка в BotFather (/setdomain), и её отсутствие не повод считать
+  // выкатку неудачной.
+  const miniAppUrl = botLinks().miniAppUrl ?? absoluteUrl("/tg");
+  try {
+    await client.call("setChatMenuButton", {
+      menu_button: { type: "web_app", text: "Дневник", web_app: { url: miniAppUrl } },
+    });
+  } catch (error) {
+    console.warn(
+      `[bot] кнопку Mini App поставить не удалось (${error instanceof Error ? error.message : error}). ` +
+        "Обычно это значит, что домен не привязан к боту: @BotFather → /setdomain.",
+    );
   }
 }
