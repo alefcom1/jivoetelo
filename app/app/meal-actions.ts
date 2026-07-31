@@ -176,7 +176,7 @@ export async function saveMeal(input: SaveMealInput): Promise<{ ok: false; error
     console.error("saveMeal failed", error);
     return { ok: false, error: "Не получилось сохранить. Попробуйте ещё раз." };
   }
-  redirect(`/app?date=${eatenOn}`);
+  redirect(`/app?date=${eatenOn}&saved=meal`);
 }
 
 export async function deleteMeal(mealId: number): Promise<void> {

@@ -121,3 +121,21 @@ test("подросток не получает дефицит ни при как
   }
   assert.equal(effectiveGoal({ goal: "lose", birthYear: 2007, relationship: "calm" }, 2026), "lose");
 });
+
+test("в Метрику не уходит ничего, кроме имени цели", async () => {
+  // Мы обещали не передавать сведения о питании и теле третьим лицам.
+  // reachGoal принимает только идентификатор из закрытого списка, и это
+  // единственное, что физически может уехать в счётчик.
+  const { ALL_GOALS } = await import("../lib/goals.ts");
+  for (const goal of ALL_GOALS) {
+    assert.match(goal, /^[a-z_]+$/, `${goal}: идентификатор цели должен быть простым именем`);
+  }
+  assert.equal(new Set(ALL_GOALS).size, ALL_GOALS.length, "повторов среди целей быть не должно");
+});
+
+test("reachGoal молчит там, где счётчика нет", async () => {
+  // Mini App, разработка и e2e-прогоны идут без счётчика. Аналитика не тот
+  // повод, ради которого стоит уронить экран.
+  const { reachGoal, GOAL_MEAL_SAVED } = await import("../lib/goals.ts");
+  assert.doesNotThrow(() => reachGoal(GOAL_MEAL_SAVED));
+});

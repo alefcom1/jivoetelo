@@ -26,6 +26,10 @@ const SNIPPET = `
 })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=${COUNTER_ID}', 'ym');
 
 ym(${COUNTER_ID}, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+
+// Номер счётчика для reachGoal (lib/goals.ts). Иначе его пришлось бы
+// дублировать константой в другом файле — и однажды они разойдутся.
+window.__ymCounterId = ${COUNTER_ID};
 `;
 
 export function YandexMetrika() {

@@ -9,12 +9,13 @@ import { sumTotals } from "@/lib/nutrition";
 import type { PaceKey } from "@/lib/pace";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
 import { getLatestWeightKg } from "@/lib/weight";
+import { GoalReporter } from "./goal-reporter";
 
-export default async function TodayPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+export default async function TodayPage({ searchParams }: { searchParams: Promise<{ date?: string; saved?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { date } = await searchParams;
+  const { date, saved } = await searchParams;
   const day = isValidDay(date) ? date : localToday();
 
   const db = getDb();
@@ -51,6 +52,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   }
 
   return <main className="day">
+    <GoalReporter saved={saved} />
     <div className="day-nav">
       <Link href={`/app?date=${shiftDay(day, -1)}`} aria-label="Предыдущий день">←</Link>
       <h1>{formatDayRu(day)}</h1>

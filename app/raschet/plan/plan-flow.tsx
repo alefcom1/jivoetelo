@@ -21,8 +21,9 @@
  */
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buildFan, type Fan } from "@/lib/fan";
+import { GOAL_PLAN_DONE, reachGoal } from "@/lib/goals";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import { MAX_HEIGHT_CM, MAX_WEIGHT_KG, MIN_HEIGHT_CM, MIN_WEIGHT_KG } from "@/lib/onboarding";
 import { PACE_OPTIONS, type PaceKey } from "@/lib/pace";
@@ -555,6 +556,11 @@ function PlanResult({ goal, reason, minor, targets, fan, protein, targetWeightKg
   protein: ProteinRange;
   targetWeightKg?: number;
 }) {
+  // Цель отправляется здесь, а не по нажатию «Далее» на последнем шаге:
+  // считается доведённым до конца тот расчёт, чей результат человек увидел.
+  // Пустой массив зависимостей — экран результата монтируется один раз.
+  useEffect(() => { reachGoal(GOAL_PLAN_DONE); }, []);
+
   const range = targets.kcalMax - targets.kcalMin;
   const scalePercent = range > 0
     ? Math.min(100, Math.max(0, ((targets.kcalTarget - targets.kcalMin) / range) * 100))

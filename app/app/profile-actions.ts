@@ -55,7 +55,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     console.error("saveProfile failed", error);
     return { status: "error" };
   }
-  redirect("/app");
+  redirect("/app?saved=plan");
 }
 
 export type WeightState = { status: "idle" | "invalid" | "error" | "saved" };
