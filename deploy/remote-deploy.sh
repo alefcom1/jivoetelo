@@ -7,12 +7,11 @@
 #
 # Переменные окружения (workflow подставляет их сам):
 #   DEPLOY_PATH  — каталог с кодом на сервере (по умолчанию /root/jivoetelo)
-#   HEALTH_URL   — адрес проверки живости (по умолчанию локальный порт)
+#   HEALTH_URL   — адрес проверки живости (по умолчанию берётся из .env)
 set -euo pipefail
 
 TARGET_SHA="${1:-}"
 DEPLOY_PATH="${DEPLOY_PATH:-/root/jivoetelo}"
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:3000/api/health}"
 
 if [ -z "$TARGET_SHA" ]; then
   echo "Не передан коммит для выкатки." >&2
@@ -39,6 +38,19 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
+# Порт берём из .env, а не из константы.
+#
+# На этом сервере рядом живёт другое приложение, и 3000 занято им; наш
+# контейнер публикуется на APP_HOST_PORT (см. docker-compose.yml). Проверка
+# живости, прибитая к 3000, стучалась бы к соседу — и это худший вид ошибки:
+# сосед отвечает, выкатка рапортует «приложение живо», а живо не наше.
+#
+# tail -n1, а не первое совпадение: при повторе строки docker compose берёт
+# последнюю, и проверка должна смотреть туда же, куда смотрит compose.
+APP_HOST_PORT="$(sed -n 's/^APP_HOST_PORT=//p' .env | tail -n1 | tr -d "\"' \r")"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${APP_HOST_PORT:-3000}/api/health}"
+echo "▶ Проверять живость будем по $HEALTH_URL"
+
 # Проверка окружения не обязательна, но если Node на сервере есть — она
 # ловит забытый токен прокси до того, как это заметят пользователи.
 if command -v node > /dev/null 2>&1; then
@@ -57,7 +69,9 @@ bash deploy/migrate.sh
 
 echo "▶ Ждём, пока приложение ответит"
 for attempt in $(seq 1 30); do
-  if curl -fsS --max-time 5 "$HEALTH_URL" > /dev/null 2>&1; then
+  # Мало получить 200 — важно получить его от нашего приложения. Ответ
+  # проверяем по телу: чужой сервис на том же порту тоже умеет отвечать 200.
+  if curl -fsS --max-time 5 "$HEALTH_URL" 2>/dev/null | grep -q '"status":"ok"'; then
     echo "✔ Приложение отвечает (попытка $attempt)"
     echo "▶ Убираем старые образы"
     docker image prune -f > /dev/null 2>&1 || true

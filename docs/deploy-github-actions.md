@@ -93,7 +93,7 @@ node scripts/preflight.mjs
 cd /root/jivoetelo
 docker compose up -d --build     # первая сборка идёт несколько минут
 ./deploy/migrate.sh
-curl -s http://127.0.0.1:3000/api/health
+curl -s "http://127.0.0.1:$(sed -n 's/^APP_HOST_PORT=//p' .env | tail -n1)/api/health"
 ```
 
 Ожидаемый ответ: `{"status":"ok"}`.

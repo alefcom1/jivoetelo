@@ -132,7 +132,7 @@ docker compose up -d --build
 ### 5. Проверить, что приложение живо
 
 ```bash
-curl -s http://127.0.0.1:3000/api/health     # {"status":"ok"}
+curl -s "http://127.0.0.1:$(sed -n 's/^APP_HOST_PORT=//p' .env | tail -n1)/api/health"   # {"status":"ok"}
 docker compose ps                             # app должен быть healthy
 ```
 
@@ -411,7 +411,7 @@ cd /root/jivoetelo
 git pull
 docker compose up -d --build
 ./deploy/migrate.sh
-curl -s http://127.0.0.1:3000/api/health
+curl -s "http://127.0.0.1:$(sed -n 's/^APP_HOST_PORT=//p' .env | tail -n1)/api/health"
 ```
 
 ## Эксплуатация
