@@ -19,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Link href="/app/weight">Вес</Link>
         <Link href="/app/review">Обзор</Link>
         <Link href="/app/settings">Настройки</Link>
+        <Link href="/app/specialists">Доступ</Link>
       </nav>
       <form action={logout}><button className="link-button" type="submit">Выйти</button></form>
     </header>

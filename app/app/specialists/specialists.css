@@ -1,0 +1,66 @@
+/* ===== Живое Тело Pro: доступ клиента к дневнику =====
+   Раскладка и текст полей — свои (spec-*), карточки и кнопки — общие классы
+   .settings-block/.settings-label/.black-button/.link-button/.danger-button/
+   .form-error/.field-note/.button-row из globals.css: экран лежит в том же
+   разделе кабинета, что и «Настройки», и должен выглядеть их соседом, а не
+   отдельным продуктом. */
+
+.spec-lead{max-width:560px;margin:0 0 20px;color:#5c5e57;font-size:14px;line-height:1.65}
+
+/* Поле «как вас называть» — колонка label/input/подсказка, как .pro-field. */
+.spec-field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+.spec-field label{font-size:12px;font-weight:800;letter-spacing:.02em}
+.spec-field input[type=text]{width:100%;padding:12px;border:1px solid var(--line);background:var(--white);outline-color:var(--coral);font:inherit;font-size:14px}
+.spec-field .field-note{margin:2px 0 0}
+
+.spec-code-form,.spec-consent-form,.spec-scope-form{display:flex;flex-direction:column;max-width:480px}
+.spec-code-form .spec-field,.spec-consent-form>.spec-field{margin-bottom:14px}
+
+.spec-consent-lead{margin:0 0 18px;font-size:15px;line-height:1.6}
+
+/* Три чекбокса объёма. Ни один не отмечен по умолчанию — компонент это
+   обеспечивает состоянием, здесь только раскладка «галочка + название +
+   конкретика построчно», чтобы формулировку из SCOPE_DETAILS нельзя было
+   пропустить взглядом мимо короткого SCOPE_LABELS рядом. */
+.spec-scope-fieldset{border:0;margin:0 0 16px;padding:0;display:flex;flex-direction:column;gap:14px}
+.spec-scope-fieldset legend{padding:0;margin:0 0 4px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.spec-scope-option{display:flex;gap:11px;align-items:flex-start;padding:12px;border:1px solid var(--line);background:var(--paper);cursor:pointer}
+.spec-scope-option input{width:16px;height:16px;margin:2px 0 0;flex:none;accent-color:var(--coral)}
+.spec-scope-option span{display:flex;flex-direction:column;gap:3px}
+.spec-scope-option b{font-size:13px;font-weight:700}
+.spec-scope-option small{font-size:12px;line-height:1.5;color:var(--muted)}
+
+.spec-consent-terms{margin:0 0 16px;padding:12px 14px;background:var(--paper);color:#5c5e57;font-size:12px;line-height:1.6}
+
+.spec-invite-done{max-width:480px;margin:0;padding:14px 16px;background:var(--lime);color:#2a3320;font-size:14px;line-height:1.6}
+
+/* Список действующих доступов. */
+.spec-access-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.spec-access-row{padding:16px;border:1px solid var(--line);background:var(--paper)}
+.spec-access-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.spec-access-head b{font-size:14px;font-weight:700}
+.spec-access-head span{font-size:12px;color:var(--muted);white-space:nowrap}
+.spec-access-scopes{margin:6px 0 12px;font-size:13px;line-height:1.5;color:#3d3f3a}
+.spec-access-row .spec-scope-form{max-width:none;margin-top:4px}
+.spec-access-row .spec-scope-fieldset{gap:10px;margin-bottom:12px}
+
+/* Отозванные доступы — отдельный блок ниже, не скрытый: это история клиента,
+   а не сбой, который прячут за сворачиванием. */
+.spec-revoked{margin-top:22px}
+.spec-revoked-title{margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.spec-access-row-revoked{opacity:.7}
+.spec-access-row-revoked .spec-access-head span{color:#a8503c}
+
+.spec-revoke-confirm{margin-top:6px;padding:14px;border:1px solid #d98a76;background:#fbf2ee}
+.spec-revoke-confirm p{margin:0 0 12px;font-size:13px;line-height:1.55;color:#5c3f37}
+
+/* Журнал доступа — вид как у .consent-list на странице настроек. */
+.spec-log{list-style:none;margin:0;padding:0}
+.spec-log li{padding:10px 0;border-bottom:1px solid var(--line)}
+.spec-log li:last-child{border:0}
+.spec-log b{display:block;font-size:13px;font-weight:700}
+.spec-log span{display:block;margin-top:3px;color:var(--muted);font-size:12px}
+
+@media(max-width:850px){
+  .spec-code-form,.spec-consent-form,.spec-scope-form{max-width:none}
+}
