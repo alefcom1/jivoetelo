@@ -1,0 +1,282 @@
+/*
+ * Админка «Живое Тело Pro».
+ *
+ * Внутренний инструмент, не витрина: плотнее, чем публичные страницы, без
+ * крупных заголовков и воздуха раздела `/pro`. Палитра и шрифты — те же,
+ * что у всего сайта (переменные объявлены в app/globals.css и наследуются
+ * сюда), но масштаб меньше.
+ */
+
+.adm-shell {
+  min-height: 100vh;
+}
+
+.adm-header {
+  height: 60px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.adm-logo {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.adm-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.adm-you {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.adm-main {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 32px 20px 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+
+.adm-section h2 {
+  font: 500 30px var(--serif);
+  letter-spacing: -0.03em;
+  margin: 0 0 8px;
+}
+
+.adm-section-lead {
+  max-width: 680px;
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.adm-empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 12px 0;
+}
+
+.adm-banner {
+  background: var(--lime);
+  padding: 12px 16px;
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.adm-muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Карточки заявок */
+
+.adm-app-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.adm-app-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  padding: 18px 20px;
+  scroll-margin-top: 76px;
+}
+
+.adm-app-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.adm-app-top b {
+  font: 500 20px var(--serif);
+  letter-spacing: -0.02em;
+}
+
+.adm-app-top time {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.adm-app-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.adm-app-meta b {
+  color: var(--black);
+  font-weight: 700;
+}
+
+.adm-app-comment {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  background: var(--paper);
+  font-size: 13px;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.adm-confirm {
+  margin: 16px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.adm-confirm label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.adm-confirm input {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  outline-color: var(--coral);
+  font-size: 13px;
+  min-width: 170px;
+}
+
+/* Таблица специалистов */
+
+.adm-table-wrap {
+  overflow-x: auto;
+  background: var(--white);
+  border: 1px solid var(--line);
+}
+
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.adm-table th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.adm-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.adm-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.adm-status {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.adm-status-pending {
+  background: #efe6c8;
+  color: #7a5c12;
+}
+
+.adm-status-approved {
+  background: var(--lime);
+  color: #43502f;
+}
+
+.adm-status-rejected {
+  background: #f2d1c8;
+  color: #8d4a3b;
+}
+
+.adm-status-suspended {
+  background: #e4e2d8;
+  color: #5a5b54;
+}
+
+.adm-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+}
+
+.adm-status-actions form {
+  display: inline;
+  margin: 0;
+}
+
+/* Последствие приостановки — рядом с кнопкой, а не в отдельной справке,
+   которую никто не откроет перед тем, как нажать. */
+.adm-suspend-note {
+  max-width: 320px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+  .adm-main {
+    padding: 24px 14px 70px;
+    gap: 40px;
+  }
+
+  .adm-app-meta {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .adm-confirm {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .adm-confirm input {
+    min-width: 0;
+  }
+}
