@@ -10,6 +10,7 @@ import { getSuggestionProvider, type MealSuggestion, type SuggestionContext } fr
 import { getCurrentUser } from "@/lib/auth";
 import { isValidDay, localToday } from "@/lib/dates";
 import { parseProfileForm } from "@/lib/onboarding";
+import { getDiaryContext } from "@/lib/suggest-context";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 
 export type ProfileState = { status: "idle" | "invalid" | "error" };
@@ -108,7 +109,23 @@ export async function applyProposedAdjustment(): Promise<void> {
 
 export type SuggestResult = { ok: true; suggestions: MealSuggestion[] } | { ok: false; error: string };
 
-export async function suggestNextMeal(context: SuggestionContext): Promise<SuggestResult> {
+/** Подпись приёма пищи → ключ, которым размечен дневник. */
+const MEAL_TYPE_KEYS: Record<string, string> = {
+  "Завтрак": "breakfast", "Обед": "lunch", "Ужин": "dinner", "Перекус": "snack",
+};
+
+/**
+ * Что серверный экшен принимает от клиента. Намеренно уже, чем
+ * SuggestionContext: названия блюд сюда не входят вовсе — они уходят прямо в
+ * запрос к модели, и принимать их снаружи значило бы дать способ дописать в
+ * запрос что угодно. Дневник читается на сервере.
+ */
+export type SuggestionHints = Pick<
+  SuggestionContext,
+  "remainingKcal" | "remainingProtein" | "remainingFiber" | "mealTypeLabel"
+>;
+
+export async function suggestNextMeal(context: SuggestionHints): Promise<SuggestResult> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -122,6 +139,10 @@ export async function suggestNextMeal(context: SuggestionContext): Promise<Sugge
       ? context.mealTypeLabel
       : "Перекус",
     showCalories: user.showCalories,
+    // Названия блюд читаются из базы, а не берутся из аргумента: это
+    // свободный текст, который уходит прямо в запрос к модели, и принять его
+    // от клиента значило бы дать способ дописать в запрос что угодно.
+    ...(await getDiaryContext(user.id, localToday(), MEAL_TYPE_KEYS[context.mealTypeLabel])),
   };
 
   const decision = await checkQuota(user.id, user.plan, "suggest");

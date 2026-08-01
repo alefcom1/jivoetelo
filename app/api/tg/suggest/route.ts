@@ -3,10 +3,12 @@ import { resolveModel } from "@/lib/ai/client";
 import { getSuggestionProvider } from "@/lib/ai/suggest";
 import { localToday } from "@/lib/dates";
 import { getDaySummary } from "@/lib/meals";
+import { getDiaryContext } from "@/lib/suggest-context";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import { authorize } from "../_auth";
 
-function nextMealLabel(): string {
+/** Вид ближайшего приёма пищи и его подпись — ключ нужен для отбора привычного. */
+function nextMeal(): { type: string; label: string } {
   const hour = Number(
     new Intl.DateTimeFormat("en-GB", {
       hour: "2-digit",
@@ -14,10 +16,10 @@ function nextMealLabel(): string {
       timeZone: process.env.APP_TIMEZONE ?? "Europe/Moscow",
     }).format(new Date()),
   );
-  if (hour < 10) return "Завтрак";
-  if (hour < 15) return "Обед";
-  if (hour < 20) return "Ужин";
-  return "Перекус";
+  if (hour < 10) return { type: "breakfast", label: "Завтрак" };
+  if (hour < 15) return { type: "lunch", label: "Обед" };
+  if (hour < 20) return { type: "dinner", label: "Ужин" };
+  return { type: "snack", label: "Перекус" };
 }
 
 export async function GET(request: Request) {
@@ -30,12 +32,19 @@ export async function GET(request: Request) {
     return Response.json({ needsPlan: true, suggestions: [] });
   }
 
-  const context = {
+  const meal = nextMeal();
+  // Остаток — то, что показывается на экране; дневник — то, что уходит в
+  // запрос к модели. Разделены намеренно: обратно клиенту едет только первое.
+  const remaining = {
     remainingKcal: Math.max(0, summary.targets.kcalTarget - summary.totals.kcal),
     remainingProtein: Math.max(0, summary.targets.proteinTarget - summary.totals.protein),
     remainingFiber: Math.max(0, summary.targets.fiberTarget - summary.totals.fiber),
-    mealTypeLabel: nextMealLabel(),
+    mealTypeLabel: meal.label,
+  };
+  const context = {
+    ...remaining,
     showCalories: auth.user.showCalories,
+    ...(await getDiaryContext(auth.user.id, localToday(), meal.type)),
   };
 
   const decision = await checkQuota(auth.user.id, auth.user.plan, "suggest");
@@ -44,7 +53,7 @@ export async function GET(request: Request) {
   try {
     const result = await getSuggestionProvider().suggest(context);
     await recordUsage(auth.user.id, "suggest", result.usage);
-    return Response.json({ needsPlan: false, context, suggestions: result.suggestions });
+    return Response.json({ needsPlan: false, context: remaining, suggestions: result.suggestions });
   } catch (error) {
     if (error instanceof MealAnalysisError && error.reason === "disabled") {
       return Response.json({ error: SUGGEST_ERRORS.disabled }, { status: 503 });

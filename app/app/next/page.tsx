@@ -61,12 +61,13 @@ export default async function NextMealPage() {
   const items = ids.length > 0 ? await db.select().from(mealItems).where(inArray(mealItems.mealId, ids)) : [];
   const consumed = sumTotals(items);
 
+  // Только то, что нужно показать на экране и передать экшену. Привычные
+  // блюда и съеденное сегодня экшен читает из базы сам — см. SuggestionHints.
   const context = {
     remainingKcal: Math.max(0, targets.kcalTarget - consumed.kcal),
     remainingProtein: Math.max(0, targets.proteinTarget - consumed.protein),
     remainingFiber: Math.max(0, targets.fiberTarget - consumed.fiber),
     mealTypeLabel: nextMealLabel(),
-    showCalories: user.showCalories,
   };
 
   return <main className="next-meal">

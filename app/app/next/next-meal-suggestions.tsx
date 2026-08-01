@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { MealSuggestion, SuggestionContext } from "@/lib/ai/suggest";
-import { suggestNextMeal } from "../profile-actions";
+import type { MealSuggestion } from "@/lib/ai/suggest";
+import { suggestNextMeal, type SuggestionHints } from "../profile-actions";
 
-export function NextMealSuggestions({ context, showCalories }: { context: SuggestionContext; showCalories: boolean }) {
+export function NextMealSuggestions({ context, showCalories }: { context: SuggestionHints; showCalories: boolean }) {
   const [suggestions, setSuggestions] = useState<MealSuggestion[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

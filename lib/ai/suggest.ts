@@ -14,6 +14,14 @@ export type SuggestionContext = {
   remainingFiber: number;
   mealTypeLabel: string;
   showCalories: boolean;
+  /**
+   * Что человек ест обычно — названия частых приёмов пищи из его же дневника
+   * (lib/frequent-meals.ts). Пусто у новичка: пока записей нет, повторять
+   * нечего.
+   */
+  usualMeals: string[];
+  /** Что уже съедено сегодня — чтобы не предлагать это снова. */
+  eatenToday: string[];
 };
 
 export type MealSuggestion = {
@@ -60,7 +68,9 @@ const SYSTEM_PROMPT = `Ты — ассистент сервиса «Живое �
 - Каждый вариант должен разумно вписываться в остаток по калориям и помогать добрать белок и клетчатку, если их не хватает.
 - В поле why — одно предложение без цифр процентов: почему вариант подходит именно сейчас.
 - Язык поддерживающий и нейтральный. Запрещены оценки («плохая еда», «вредно», «слишком много»), призывы «компенсировать» и «отработать».
-- Если остаток по калориям небольшой, предлагай лёгкие варианты — без комментариев о том, что пользователь «превысил» план.`;
+- Если остаток по калориям небольшой, предлагай лёгкие варианты — без комментариев о том, что пользователь «превысил» план.
+- Если известно, что человек ест обычно: два варианта — из его привычного круга или близкие к нему, третий — новый. Только знакомое он и без нас знает; только новое он не купит и не приготовит.
+- Не предлагай то, что уже съедено сегодня.`;
 
 function clamp(value: unknown, min: number, max: number): number {
   const n = Number(value);
@@ -96,11 +106,24 @@ export function validateSuggestions(raw: unknown): MealSuggestion[] {
   return suggestions;
 }
 
-function buildPrompt(context: SuggestionContext): string {
+/**
+ * Сборка запроса. Экспортируется ради тестов: это единственное место, где
+ * дневник человека превращается в текст для модели, и содержимое этого
+ * текста стоит проверять, а не полагаться на живой вызов.
+ */
+export function buildPrompt(context: SuggestionContext): string {
   const lines = [
     `Следующий приём пищи: ${context.mealTypeLabel}.`,
     `Остаток на сегодня: примерно ${Math.max(0, Math.round(context.remainingKcal))} ккал, белка не хватает ${Math.max(0, Math.round(context.remainingProtein))} г, клетчатки ${Math.max(0, Math.round(context.remainingFiber))} г.`,
   ];
+  // Привычное — главное, чего подсказкам не хватало: раньше модель получала
+  // только числа и выдумывала блюда с нуля, не зная человека вовсе.
+  if (context.usualMeals.length > 0) {
+    lines.push(`Человек обычно ест: ${context.usualMeals.join("; ")}.`);
+  }
+  if (context.eatenToday.length > 0) {
+    lines.push(`Сегодня уже съедено: ${context.eatenToday.join(", ")}.`);
+  }
   if (!context.showCalories) {
     lines.push("Пользователь скрыл калории: в поле why не упоминай калории, говори о сытости, белке и овощах.");
   }

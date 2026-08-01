@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateSuggestions } from "../lib/ai/suggest.ts";
+import { buildPrompt, validateSuggestions } from "../lib/ai/suggest.ts";
 import { MealAnalysisError } from "../lib/ai/types.ts";
 
 test("валидные варианты проходят, лишние отбрасываются до трёх", () => {
@@ -29,4 +29,44 @@ test("пустой список — ошибка invalid_output", () => {
     () => validateSuggestions({ suggestions: [] }),
     (error) => error instanceof MealAnalysisError && error.reason === "invalid_output",
   );
+});
+
+/**
+ * Запрос к модели — единственное место, где дневник человека превращается в
+ * текст. Раньше в него уходили только числа остатка, и подсказки выдумывали
+ * блюда с нуля, ничего не зная о том, что человек вообще ест.
+ */
+
+const BASE = {
+  remainingKcal: 800,
+  remainingProtein: 40,
+  remainingFiber: 12,
+  mealTypeLabel: "Ужин",
+  showCalories: true,
+  usualMeals: [],
+  eatenToday: [],
+};
+
+test("привычное и съеденное попадают в запрос", () => {
+  const prompt = buildPrompt({
+    ...BASE,
+    usualMeals: ["Гречка, курица", "Творог, груша"],
+    eatenToday: ["Овсяная каша", "Черника"],
+  });
+  assert.match(prompt, /Гречка, курица; Творог, груша/);
+  assert.match(prompt, /Овсяная каша, Черника/);
+});
+
+test("у новичка запрос не врёт про привычки", () => {
+  // Пустой дневник — не повод писать «человек обычно ест: » с пустым хвостом:
+  // модель приняла бы это за факт и стала бы подстраиваться под пустоту.
+  const prompt = buildPrompt(BASE);
+  assert.ok(!prompt.includes("обычно ест"), prompt);
+  assert.ok(!prompt.includes("уже съедено"), prompt);
+  assert.match(prompt, /Следующий приём пищи: Ужин/);
+});
+
+test("скрытые калории — отдельная строка, и только когда они скрыты", () => {
+  assert.ok(!buildPrompt(BASE).includes("скрыл калории"));
+  assert.match(buildPrompt({ ...BASE, showCalories: false }), /скрыл калории/);
 });
