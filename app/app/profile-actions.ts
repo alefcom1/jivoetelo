@@ -122,7 +122,7 @@ const MEAL_TYPE_KEYS: Record<string, string> = {
  */
 export type SuggestionHints = Pick<
   SuggestionContext,
-  "remainingKcal" | "remainingProtein" | "remainingFiber" | "mealTypeLabel"
+  "remainingKcal" | "remainingProtein" | "remainingFiber" | "mealTypeLabel" | "round"
 >;
 
 export async function suggestNextMeal(context: SuggestionHints): Promise<SuggestResult> {
@@ -138,6 +138,9 @@ export async function suggestNextMeal(context: SuggestionHints): Promise<Suggest
     mealTypeLabel: ["Завтрак", "Обед", "Ужин", "Перекус"].includes(context.mealTypeLabel)
       ? context.mealTypeLabel
       : "Перекус",
+    // Номер захода — число, и им клиент может распоряжаться свободно: он
+    // выбирает лишь одну из заготовленных на сервере формулировок.
+    round: Math.min(99, Math.max(0, Math.round(Number(context.round) || 0))),
     showCalories: user.showCalories,
     // Названия блюд читаются из базы, а не берутся из аргумента: это
     // свободный текст, который уходит прямо в запрос к модели, и принять его

@@ -238,8 +238,13 @@ export type SuggestResponse = {
   suggestions: Array<{ title: string; why: string; approxKcal: number; approxProtein: number; timeMinutes: number }>;
 };
 
-export async function fetchSuggestions(): Promise<SuggestResponse> {
-  return handle<SuggestResponse>(await request("/api/tg/suggest", { headers: initDataHeader(), cache: "no-store" }));
+export async function fetchSuggestions(round = 0): Promise<SuggestResponse> {
+  return handle<SuggestResponse>(
+    await request(`/api/tg/suggest?round=${Math.max(0, Math.floor(round))}`, {
+      headers: initDataHeader(),
+      cache: "no-store",
+    }),
+  );
 }
 
 /**

@@ -1,34 +1,25 @@
-"use client";
+import { botUsername } from "@/lib/telegram";
+import { LoginForm } from "./login-form";
 
-import Link from "next/link";
-import { useActionState } from "react";
-import { login, type AuthState } from "../auth-actions";
-import { Logo } from "../logo";
-
-const errors: Partial<Record<AuthState["status"], string>> = {
-  wrong_credentials: "Не подошли почта или пароль. Проверьте и попробуйте ещё раз.",
-  error: "Не получилось войти. Попробуйте ещё раз через минуту.",
-};
+/**
+ * Серверная обёртка ради одного значения: имени бота для кнопки «Войти через
+ * Telegram». Через NEXT_PUBLIC_* его брать нельзя — такие переменные
+ * впекаются в сборку, а у нас окружение задаётся на сервере при запуске
+ * контейнера, и смена имени бота требовала бы пересборки образа.
+ */
+/**
+ * Страница рисуется на каждый запрос, а не спекается при сборке.
+ *
+ * Без этого Next пререндерил её один раз — в момент `npm run build`, когда
+ * переменных окружения ещё нет: имя бота приезжало пустым, и кнопка «Войти
+ * через Telegram» просто не появлялась, сколько ни правь `.env`. Ловушка
+ * тихая: страница работает, ошибок нет, нет только кнопки.
+ *
+ * Цена — отказ от статической отдачи двух маленьких форм. Это дешевле, чем
+ * пересобирать образ ради строки в окружении.
+ */
+export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
-  const [state, action, pending] = useActionState(login, { status: "idle" } as AuthState);
-
-  return <main className="auth-page">
-    <div className="auth-card">
-      <Link className="logo" href="/"><span><Logo /></span>Живое Тело</Link>
-      <h1>С возвращением.</h1>
-      <form action={action}>
-        {/* Адрес возвращается из состояния: React сбрасывает форму после
-            server action, а перенабирать почту из-за опечатки в пароле — злит. */}
-        <label>E-mail<input name="email" type="email" autoComplete="email" defaultValue={state.email ?? ""} required autoFocus /></label>
-        <label>Пароль<input name="password" type="password" autoComplete="current-password" required /></label>
-        {errors[state.status] && <p className="form-error">{errors[state.status]}</p>}
-        <button className="black-button" type="submit" disabled={pending}>{pending ? "Входим…" : "Войти"}</button>
-      </form>
-      <p className="auth-switch">
-        <Link href="/reset">Забыли пароль?</Link>
-      </p>
-      <p className="auth-switch">Ещё нет аккаунта? <Link href="/register">Создать</Link></p>
-    </div>
-  </main>;
+  return <LoginForm botUsername={botUsername()} />;
 }

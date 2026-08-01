@@ -1,55 +1,26 @@
 import { randomBytes } from "node:crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
-import { validate } from "@telegram-apps/init-data-node";
 import { getDb } from "@/db";
 import { telegramLinkCodes, users } from "@/db/schema";
 import type { CurrentUser } from "./auth.ts";
 import { normalizePlan } from "./quota-policy.ts";
 
-// Проверка initData Telegram (раздел 17 спеки: «не доверять данным клиента
-// без серверной проверки»). Используем официальную библиотеку @telegram-apps:
-// она считает HMAC-SHA256 с ключом WebAppData и проверяет срок жизни подписи.
+// Проверка подписей вынесена в ./telegram-auth.ts: там чистая криптография
+// без базы, и её можно проверять тестами. Здесь — всё, что ходит в БД.
+// Реэкспорт оставлен, чтобы места вызова не переписывать: снаружи модуль
+// по-прежнему выглядит одним целым.
+export {
+  botUsername,
+  TelegramAuthError,
+  verifyInitData,
+  verifyLoginWidget,
+  type TelegramIdentity,
+  type TelegramLoginData,
+} from "./telegram-auth.ts";
 
-const INIT_DATA_TTL_SECONDS = 3600;
+import { TelegramAuthError, verifyInitData } from "./telegram-auth.ts";
+
 const LINK_CODE_TTL_MINUTES = 15;
-
-export type TelegramIdentity = {
-  telegramUserId: string;
-  firstName: string | null;
-};
-
-export class TelegramAuthError extends Error {
-  readonly reason: "not_configured" | "invalid_signature" | "not_linked";
-
-  constructor(reason: "not_configured" | "invalid_signature" | "not_linked", message?: string) {
-    super(message ?? reason);
-    this.reason = reason;
-  }
-}
-
-/** Проверяет подпись initData и возвращает идентичность Telegram-пользователя. */
-export function verifyInitData(initData: string): TelegramIdentity {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) throw new TelegramAuthError("not_configured");
-
-  try {
-    validate(initData, token, { expiresIn: INIT_DATA_TTL_SECONDS });
-  } catch {
-    throw new TelegramAuthError("invalid_signature");
-  }
-
-  // Подлинность уже подтверждена validate(); поле user разбираем сами, чтобы
-  // не зависеть от строгой схемы библиотеки (Telegram добавляет поля со временем).
-  let tgUser: { id?: number; first_name?: string };
-  try {
-    tgUser = JSON.parse(new URLSearchParams(initData).get("user") ?? "{}");
-  } catch {
-    throw new TelegramAuthError("invalid_signature");
-  }
-  if (!tgUser?.id) throw new TelegramAuthError("invalid_signature");
-
-  return { telegramUserId: String(tgUser.id), firstName: tgUser.first_name ?? null };
-}
 
 /** Находит пользователя сервиса по привязанному Telegram-аккаунту. */
 export async function findUserByTelegram(telegramUserId: string): Promise<CurrentUser | null> {

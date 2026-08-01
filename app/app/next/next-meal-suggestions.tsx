@@ -8,12 +8,16 @@ export function NextMealSuggestions({ context, showCalories }: { context: Sugges
   const [suggestions, setSuggestions] = useState<MealSuggestion[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Счётчик заходов: каждое «Показать другие» просит подбор посмотреть на
+  // еду с другой стороны, иначе повторное нажатие даёт то же самое.
+  const [round, setRound] = useState(0);
 
   async function load() {
     setBusy(true);
     setError(null);
     try {
-      const result = await suggestNextMeal(context);
+      const result = await suggestNextMeal({ ...context, round });
+      setRound((current) => current + 1);
       if (result.ok) setSuggestions(result.suggestions);
       else setError(result.error);
     } catch {

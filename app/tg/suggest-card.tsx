@@ -17,12 +17,17 @@ export function SuggestCard({ showCalories }: { showCalories: boolean }) {
   const [data, setData] = useState<SuggestResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Счётчик заходов: каждое «Показать другие» просит подбор посмотреть на
+  // еду с другой стороны. Раньше повторное нажатие давало то же самое —
+  // запрос был тот же, а у одного запроса один самый вероятный ответ.
+  const [round, setRound] = useState(0);
 
   async function load() {
     setBusy(true);
     setError(null);
     try {
-      const result = await fetchSuggestions();
+      const result = await fetchSuggestions(round);
+      setRound((current) => current + 1);
       haptic("tap");
       setData(result);
     } catch (err) {

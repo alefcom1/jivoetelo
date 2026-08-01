@@ -68,6 +68,7 @@ export default async function NextMealPage() {
     remainingProtein: Math.max(0, targets.proteinTarget - consumed.protein),
     remainingFiber: Math.max(0, targets.fiberTarget - consumed.fiber),
     mealTypeLabel: nextMealLabel(),
+    round: 0,
   };
 
   return <main className="next-meal">

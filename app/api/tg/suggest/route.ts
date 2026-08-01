@@ -26,6 +26,11 @@ export async function GET(request: Request) {
   const auth = await authorize(request);
   if ("response" in auth) return auth.response;
 
+  // Какой это по счёту заход: с каждым «Показать другие» подбор смотрит на
+  // еду с другой стороны. Число, и только число, — формулировки живут на
+  // сервере (SUGGEST_ANGLES), снаружи текст в запрос к модели не попадает.
+  const round = Number(new URL(request.url).searchParams.get("round") ?? 0);
+
   // Остаток дня считает сервер по данным из БД — клиент ничего не подсказывает.
   const summary = await getDaySummary(auth.user.id, localToday());
   if (!summary.targets) {
@@ -44,6 +49,7 @@ export async function GET(request: Request) {
   const context = {
     ...remaining,
     showCalories: auth.user.showCalories,
+    round: Number.isFinite(round) ? Math.max(0, Math.min(99, Math.floor(round))) : 0,
     ...(await getDiaryContext(auth.user.id, localToday(), meal.type)),
   };
 
