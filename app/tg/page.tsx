@@ -11,7 +11,7 @@ import { LinkScreen } from "./link-screen";
 import { PlanTab } from "./plan-tab";
 import { ProfileTab } from "./profile-tab";
 import { TodayTab } from "./today-tab";
-import { applyTheme, getWebApp, haptic } from "./telegram";
+import { applyTheme, getWebApp, haptic, useBackButton } from "./telegram";
 
 // Пять вкладок раздела «Пять вкладок» спецификации Mini App v2 (docs/miniapp-v2.md).
 // «Камера» — эволюция прежней «Добавить»: тот же экран, разбор теперь мгновенный.
@@ -49,6 +49,23 @@ export default function MiniApp() {
    * вкладки размонтирует экран, и после «Камеры» человек возвращался бы на
    * сегодня, а не на тот день, с которого уходил. */
   const [diaryDay, setDiaryDay] = useState(() => localToday());
+  /**
+   * Как выйти из черновика разбора. Живёт здесь, а не в «Камере», хотя
+   * состояние черновика там: нативной кнопкой «назад» должен владеть кто-то
+   * один. Будь владельцев двое, они бы затирали друг друга по порядку
+   * эффектов, и стрелка залипала бы на экране, который её не показывал.
+   */
+  const [discardDraft, setDiscardDraft] = useState<(() => void) | null>(null);
+
+  /**
+   * Обёртка обязательна: `setState`, получив функцию, считает её обновителем
+   * и вызывает вместо того, чтобы сохранить. Без `() => discard` нажатие на
+   * «назад» не появлялось бы вовсе, зато черновик сбрасывался бы сам собой
+   * в момент своего появления.
+   */
+  const handleDraft = useCallback((discard: (() => void) | null) => {
+    setDiscardDraft(() => discard);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -121,6 +138,26 @@ export default function MiniApp() {
     void load();
   }
 
+  /**
+   * Куда ведёт нативная кнопка «назад».
+   *
+   * Порядок — от самого глубокого экрана к самому мелкому, и это и есть
+   * стек: черновик разбора → снимок из инбокса → список инбокса → вкладка,
+   * отличная от «Сегодня». На «Сегодня» кнопки нет вовсе, и там крестик
+   * закрывает приложение — так же, как в самом Telegram.
+   *
+   * Вкладки — не история, и обычно панель вкладок стрелку не показывает.
+   * Здесь показывает сознательно: «Сегодня» у нас действительно главный
+   * экран, с которого начинается всё остальное, и возврат к нему одним
+   * нажатием честнее, чем закрытие приложения с «Профиля».
+   */
+  const goBack = discardDraft
+    ?? (inboxItem ? () => { haptic("tap"); setInboxItem(null); setInboxOpen(true); }
+      : inboxOpen ? () => { haptic("tap"); setInboxOpen(false); }
+      : tab !== "today" ? () => { haptic("tap"); setTab("today"); }
+      : null);
+  useBackButton(status === "ready" ? goBack : null);
+
   if (status === "loading") {
     return <div className="tg-center"><div className="tg-spinner" aria-label="Загрузка" /></div>;
   }
@@ -155,6 +192,7 @@ export default function MiniApp() {
             inbox={inboxItem}
             onCancelInbox={() => { setInboxItem(null); setInboxOpen(true); }}
             onSaved={handleCameraSaved}
+            onDraft={handleDraft}
           />
         : inboxOpen
         ? <InboxTab onPick={(item) => { haptic("tap"); setInboxItem(item); }} onBack={() => setInboxOpen(false)} />
@@ -175,6 +213,7 @@ export default function MiniApp() {
               showCalories={today.showCalories}
               forDay={cameraFrom.day}
               onSaved={handleCameraSaved}
+              onDraft={handleDraft}
             />}
             {tab === "plan" && <PlanTab />}
             {tab === "profile" && <ProfileTab />}

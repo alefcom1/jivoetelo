@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 // Тонкая типизированная обёртка над window.Telegram.WebApp. Официальный скрипт
 // telegram-web-app.js подключается в layout; SDK-обёртки не берём — прототипу
 // достаточно нативного API, и он не добавляет вес бандлу.
@@ -80,6 +82,42 @@ export function applyTheme(webApp: TelegramWebApp): void {
   set("--tg-button", p.button_color);
   set("--tg-button-text", p.button_text_color);
   document.documentElement.dataset.tgScheme = webApp.colorScheme;
+}
+
+/**
+ * Нативная кнопка «назад» Telegram.
+ *
+ * Крестик закрытия приложения превращается в стрелку, пока задан обработчик,
+ * и возвращается, когда его нет. То же самое делает системная кнопка «назад»
+ * на Android: пока стрелка показана, она идёт по экранам приложения, а не
+ * закрывает его, — и это, пожалуй, важнее самой стрелки.
+ *
+ * `null` вместо обработчика прячет кнопку. Одно место владеет ею целиком
+ * (app/tg/page.tsx): будь владельцев двое, они бы затирали друг друга в
+ * зависимости от порядка эффектов, и стрелка оставалась бы после ухода с
+ * экрана, который её показал.
+ */
+export function useBackButton(onBack: (() => void) | null): void {
+  const handlerRef = useRef(onBack);
+  useEffect(() => { handlerRef.current = onBack; });
+
+  // Кнопка появляется и исчезает, а её поведение меняется через ref: иначе
+  // подписка пересоздавалась бы на каждую перерисовку родителя.
+  const visible = onBack !== null;
+  useEffect(() => {
+    const button = getWebApp()?.BackButton;
+    if (!button) return;
+    if (!visible) { button.hide(); return; }
+    // Обработчик постоянный, а вызывает он всегда свежий из ref: иначе
+    // переподписка происходила бы на каждую перерисовку родителя.
+    const handle = () => handlerRef.current?.();
+    button.onClick(handle);
+    button.show();
+    return () => {
+      button.offClick(handle);
+      button.hide();
+    };
+  }, [visible]);
 }
 
 /** Управление нативной главной кнопкой Telegram. */

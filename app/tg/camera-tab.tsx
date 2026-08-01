@@ -23,6 +23,8 @@ import { TgPhoto } from "./photo";
 import { useCamera } from "../use-camera";
 import { useCameraPref } from "../camera-prefs";
 import { useFrameWatch } from "../use-frame-watch";
+import { useFoodHint } from "../use-food-hint";
+import { FOOD_THRESHOLD } from "@/lib/food-presence";
 
 type DraftItem = {
   name: string;
@@ -91,6 +93,7 @@ export function CameraTab({
   onSaved,
   inbox,
   onCancelInbox,
+  onDraft,
   forDay,
 }: {
   showCalories: boolean;
@@ -98,6 +101,12 @@ export function CameraTab({
   /** Снимок из фото-инбокса, если разбор начат оттуда. */
   inbox?: InboxItemDto | null;
   onCancelInbox?: () => void;
+  /**
+   * Сообщает наверх, как выйти из черновика разбора, — или `null`, если
+   * черновика нет. Нужно нативной кнопке «назад»: владеть ею должен один
+   * компонент (app/tg/page.tsx), иначе два эффекта затирают друг друга.
+   */
+  onDraft?: (discard: (() => void) | null) => void;
   /**
    * День, за который делается запись (ГГГГ-ММ-ДД). Приходит из «Дневника»,
    * когда там открыт не сегодняшний день: раньше запись всё равно ложилась
@@ -129,6 +138,7 @@ export function CameraTab({
     start: startCamera, stop: stopCamera, switchTo, shoot,
   } = useCamera();
   const [autoShotAllowed] = useCameraPref("autoShot");
+  const [foodHintAllowed] = useCameraPref("foodHint");
   /** Показывать ли список камер: на телефоне их обычно две, на ноутбуке бывает больше. */
   const [pickerOpen, setPickerOpen] = useState(false);
   // «Как обычно?» — частые приёмы пищи из собственного дневника. Грузим
@@ -201,12 +211,22 @@ export function CameraTab({
    * Измеряем только пока видоискатель действительно на экране и свободен —
    * ни поверх черновика, ни во время разбора считать нечего.
    */
+  const viewfinderLive = !inbox && !items && !busy && mode === "camera" && cameraState === "live";
+
   const watch = useFrameWatch({
     videoRef,
-    active: !inbox && !items && !busy && mode === "camera" && cameraState === "live",
+    active: viewfinderLive,
     enabled: autoShotAllowed,
     onFire: () => void handleShoot(),
   });
+
+  /**
+   * Подсказка «вижу еду». Ничего не решает: рамка зеленеет, и только. Ошибка
+   * в любую сторону стоит ноль — снимок делается как обычно, а состав всё
+   * равно определяет модель на сервере, которая видит кадр целиком.
+   */
+  const food = useFoodHint({ videoRef, active: viewfinderLive, enabled: foodHintAllowed });
+  const foodSeen = food.state === "ready" && food.score !== null && food.score >= FOOD_THRESHOLD;
 
   /** Общий путь для кадра и файла: предпросмотр и сразу разбор. */
   function analyzePhoto(file: File) {
@@ -300,6 +320,21 @@ export function CameraTab({
     }
   }
 
+  /** Сброс черновика — то же, что «Начать заново» внизу экрана. */
+  function discardDraft() {
+    haptic("tap");
+    setItems(null);
+    setError(null);
+  }
+
+  // Сообщаем наверх, есть ли откуда возвращаться: пока на экране черновик,
+  // стрелка «назад» Telegram должна вести к видоискателю, а не закрывать
+  // приложение вместе с несохранённым разбором.
+  useEffect(() => {
+    onDraft?.(items ? discardDraft : null);
+    return () => onDraft?.(null);
+  }, [items, onDraft]);
+
   // Нативная кнопка Telegram — основное действие текущего шага. В режиме
   // съёмки это спуск затвора: «Разобрать» там нечего, кадра ещё нет.
   useEffect(() => {
@@ -376,8 +411,9 @@ export function CameraTab({
               {/* Без audio: звук нам не нужен, а разрешение на микрофон пугает. */}
               <video ref={videoRef} playsInline muted />
               {/* Рамка — не украшение: она говорит, куда класть тарелку, и
-                  кадры получаются заметно однообразнее, а значит разбор точнее. */}
-              <span className="tg-viewfinder-frame" aria-hidden="true" />
+                  кадры получаются заметно однообразнее, а значит разбор точнее.
+                  Она же зеленеет, когда в кадре узнана еда. */}
+              <span className="tg-viewfinder-frame" data-food={foodSeen ? "yes" : "no"} aria-hidden="true" />
 
               {/* Отмена — явной кнопкой, а не касанием куда попало: кадр,
                   снятый без предупреждения, ощущается как сбой, и человек
@@ -387,7 +423,11 @@ export function CameraTab({
                     Снимаю… отменить
                   </button>
                 : <span className="tg-viewfinder-tip">
-                    {watch.auto ? "Наведите на тарелку — сниму сам" : "Наведите на тарелку"}
+                    {foodSeen
+                      ? "Еда в кадре"
+                      : watch.auto
+                      ? "Наведите на тарелку — сниму сам"
+                      : "Наведите на тарелку"}
                   </span>}
 
               {/* Переключатель камер: на ноутбуке системное умолчание
@@ -590,6 +630,6 @@ export function CameraTab({
     <button className="tg-button tg-button-block" onClick={() => void handleSave()} disabled={busy}>
       {busy ? "Сохраняем…" : "Сохранить"}
     </button>
-    <button className="tg-link tg-link-block" onClick={() => { setItems(null); setError(null); }}>← Начать заново</button>
+    <button className="tg-link tg-link-block" onClick={discardDraft}>← Начать заново</button>
   </div>;
 }

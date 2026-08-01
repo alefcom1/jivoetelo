@@ -600,12 +600,23 @@
   position: absolute; inset: 12% 10% 22%; pointer-events: none;
   border-radius: 18px;
   box-shadow: 0 0 0 2px color-mix(in srgb, #fff 55%, transparent) inset;
+  transition: box-shadow 220ms ease;
   mask:
     linear-gradient(#000 0 0) top left / 34% 34% no-repeat,
     linear-gradient(#000 0 0) top right / 34% 34% no-repeat,
     linear-gradient(#000 0 0) bottom left / 34% 34% no-repeat,
     linear-gradient(#000 0 0) bottom right / 34% 34% no-repeat;
 }
+/* Еда узнана — рамка зеленеет. Только цвет и ничего больше: подсказка
+   поощряет снимок и не имеет права ни на что влиять.
+
+   Цвет литералом, а не переменной темы: под рамкой всегда видео, а не фон
+   приложения, и --brand-lime в тёмной теме превращается в тёмно-оливковый,
+   который на кадре попросту не виден. */
+.tg-viewfinder-frame[data-food="yes"] {
+  box-shadow: 0 0 0 3px #c3e070 inset;
+}
+
 .tg-viewfinder-tip {
   position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
   padding: 5px 12px; border-radius: 999px; pointer-events: none;
