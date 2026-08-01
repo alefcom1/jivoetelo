@@ -26,6 +26,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="shell-content">{children}</div>
     <footer className="shell-footer">
       <p>{NOT_MEDICAL_DISCLAIMER}</p>
+      {/* Дорога обратно на сайт. Полного меню здесь нет сознательно: в
+          кабинете человек работает со своим дневником, а не выбирает, что
+          почитать, и семь разделов сайта поверх семи разделов кабинета
+          сделали бы навигацию вдвое шумнее. Логотип ведёт на «Сегодня» —
+          домой внутри приложения; сайт живёт здесь, внизу, как и везде. */}
+      <div className="legal-links">
+        <Link href="/">Главная сайта</Link>
+        <Link href="/pro">Живое Тело Pro</Link>
+        <Link href="/skolko-kalorij">Калькуляторы</Link>
+      </div>
       <div className="legal-links">
         <Link href="/legal/health">Границы сервиса</Link>
         <Link href="/legal/terms">Соглашение</Link>

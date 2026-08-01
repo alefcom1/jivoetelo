@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import "./pro.css";
-import { Logo } from "../logo";
 import { SiteFooter } from "../site-footer";
+import { SiteHeader } from "../site-header";
 
 /**
  * Оболочка раздела для специалистов. Своя, а не общая с `/raschet`, по той же
@@ -16,10 +15,10 @@ export const metadata: Metadata = {
 
 export default function ProLayout({ children }: { children: React.ReactNode }) {
   return <div className="pro-shell">
-    <header className="pro-header">
-      <Link className="logo" href="/"><span><Logo /></span>Живое Тело</Link>
-      <Link className="header-cta" href="/pro#apply">Заявка в пилот</Link>
-    </header>
+    {/* Шапка общая с сайтом, призыв к действию — свой: специалист пришёл
+        не заводить дневник, а посмотреть на кабинет. Раньше здесь стоял
+        огрызок из логотипа и кнопки, и попасть в меню сайта было некуда. */}
+    <SiteHeader cta={{ href: "/pro#apply", label: "Заявка в пилот" }} />
     {children}
     <SiteFooter />
   </div>;

@@ -1,13 +1,16 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
 import { AppInvite } from "./app-invite";
 import { Logo } from "./logo";
 import { SiteFooter } from "./site-footer";
+import { SiteHeader } from "./site-header";
 
 /**
+ * Главная — серверный компонент, и это не мелочь. Клиентской она была из-за
+ * одного выпадающего меню в шапке: ради `useState` в браузер уезжала вся
+ * разметка страницы целиком. Шапка переехала в свой компонент
+ * (./site-header.tsx), и здесь не осталось ни состояния, ни обработчиков.
+ *
  * Здесь была форма листа ожидания: «Скоро будет по-настоящему — пригласим в
  * закрытый запуск». Она осталась с того времени, когда продукта ещё не было,
  * и к моменту, когда заработали регистрация, бот и Mini App, стала прямой
@@ -18,7 +21,6 @@ import { SiteFooter } from "./site-footer";
  * оставившие адрес, никуда не делись, и выгрузка данных обязана их показывать.
  */
 
-const navItems = ["Продукт", "Решения", "Журнал", "О нас"];
 
 const DAY = [
   {
@@ -91,38 +93,9 @@ const FAQ = [
 ];
 
 export default function Home() {
-  const [menu, setMenu] = useState(false);
 
   return <main>
-    {/* Меню закрывается, когда курсор уходит со всей шапки: сама выпадающая
-        панель лежит внутри неё, поэтому переход с пункта на панель разрывом
-        не считается. Escape — для тех, кто пришёл с клавиатуры. */}
-    <header
-      className="site-header"
-      onMouseLeave={() => setMenu(false)}
-      onKeyDown={(event) => { if (event.key === "Escape") setMenu(false); }}
-    >
-      <a className="logo" href="#top"><span><Logo /></span>Живое Тело</a>
-      <nav className="main-nav" aria-label="Навигация">
-        {navItems.map((item, index) => index < 2
-          ? <button
-              key={item}
-              aria-expanded={menu}
-              // Наведение — основной способ, но не единственный: на телефоне
-              // его нет вовсе, а с клавиатуры до меню добираются табом.
-              onMouseEnter={() => setMenu(true)}
-              onFocus={() => setMenu(true)}
-              onClick={() => setMenu(!menu)}
-            >{item}<small>⌄</small></button>
-          : <button
-              key={item}
-              onMouseEnter={() => setMenu(false)}
-              onClick={() => document.getElementById(index === 2 ? "journal" : "about")?.scrollIntoView({ behavior: "smooth" })}
-            >{item}</button>)}
-      </nav>
-      <div className="header-actions"><a className="login" href="/login">Войти</a><a className="header-cta" href="/register">Начать <b>↗</b></a></div>
-      {menu && <div className="mega-menu"><div><p>Продукт</p><a href="#experience">Дневник питания <b>→</b></a><a href="#experience">Персональный план <b>→</b></a><a href="#experience">Прогресс и привычки <b>→</b></a></div><div><p>Решения</p><a href="#specialists">Для себя <b>→</b></a><Link href="/pro">Для специалистов <b>→</b></Link><a href="#specialists">Для команд <b>→</b></a></div><aside>Считает по фотографии.<br /><em>Работает в Telegram.</em></aside></div>}
-    </header>
+    <SiteHeader />
 
     <section className="intro" id="top"><div className="intro-grid"><div className="intro-copy"><p className="kicker">Дневник питания по фотографиям <i /></p><h1>Сфотографируйте<br />еду.<br /><em>Остальное посчитаем.</em></h1><p className="intro-lead">Сфотографируйте тарелку — увидите состав. Через неделю записей сервис поймёт вашу норму точнее любой формулы: по тому, как отзывается ваше тело, а не по среднему человеку вашего роста.</p><div className="intro-actions"><Link className="black-button" href="/raschet/plan">Создать свой план <b>↗</b></Link><a href="#experience">Смотреть продукт <span>↓</span></a></div><div className="intro-meta"><span>01 / 04</span><i /><span>Питание в ритме вашего тела</span></div></div><div className="intro-statement"><p>Сначала — увидеть,<br />что происходит.</p><b>Решения<br />потом.</b><span>Живое Тело<br />2026</span></div></div></section>
 
