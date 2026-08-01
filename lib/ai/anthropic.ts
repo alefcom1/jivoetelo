@@ -1,5 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { createAnthropicClient, readUsage, resolveModel, supportsEffort, supportsFallbacks } from "./client.ts";
+import { createAnthropicClient, readUsage, resolveModel, supportsEffort, supportsFallbacks, timeoutFor } from "./client.ts";
 import { compressPhotoForAi } from "./image.ts";
 import { MEAL_ANALYSIS_SCHEMA, validateMealAnalysis } from "./schema.ts";
 import { MealAnalysisError, type MealAnalysisResult, type MealInput, type MealVisionProvider } from "./types.ts";
@@ -47,7 +47,8 @@ export class AnthropicMealProvider implements MealVisionProvider {
       content.push({ type: "text", text: `Разбери описание приёма пищи: ${input.text}` });
     }
 
-    const model = resolveModel(input.kind === "photo" ? "analyze_photo" : "analyze_text");
+    const operation = input.kind === "photo" ? "analyze_photo" : "analyze_text";
+    const model = resolveModel(operation);
 
     // Фолбэк на случай срабатывания классификаторов безопасности:
     // на opus-5/fable-5 запрос перезапускается на рекомендованной модели.
@@ -69,7 +70,10 @@ export class AnthropicMealProvider implements MealVisionProvider {
         },
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content }],
-      });
+        // Предел на запрос, а не на клиента: зрение с раздумьями думает
+        // заметно дольше разбора строки текста, и один общий предел на обе
+        // операции уже обрубал разбор фото посередине.
+      }, { timeout: timeoutFor(operation) });
     } catch (error) {
       console.error("meal analysis request failed", error);
       throw new MealAnalysisError("Anthropic request failed", "provider_error");

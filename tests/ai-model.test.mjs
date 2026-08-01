@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { resolveModel, supportsEffort } from "../lib/ai/client.ts";
+import { resolveModel, supportsEffort, timeoutFor } from "../lib/ai/client.ts";
 
 /**
  * Модель под задачу, а не одна на всё (docs/ai-proxy.md): фото — дороже
@@ -143,4 +143,38 @@ test("умолчания моделей не получают effort по оши
     assert.ok(!supportsEffort(resolveModel("suggest")), "подсказки идут на haiku — effort ему нельзя");
     assert.ok(supportsEffort(resolveModel("analyze_photo")), "фото идёт на sonnet-5 — effort ему можно");
   });
+});
+
+/**
+ * Пределы ожидания. Один общий предел на все операции уже стоил работающего
+ * разбора фото: сорок секунд хватало haiku на текст и обрывали sonnet со
+ * зрением ровно посередине. Снаружи это выглядело как «разбор по фото не
+ * работает» при исправном разборе текста — то есть как поломка не там, где
+ * она была.
+ */
+
+test("у разбора фото времени кратно больше, чем у текста", () => {
+  // Не «больше на сколько-то», а именно кратно: зрение с раздумьями и разбор
+  // строки — задачи разного порядка, и предел, годящийся обеим, не годится
+  // ни одной.
+  assert.ok(
+    timeoutFor("analyze_photo") >= timeoutFor("analyze_text") * 2,
+    `фото ${timeoutFor("analyze_photo")} против текста ${timeoutFor("analyze_text")}`,
+  );
+});
+
+test("ни одна операция не осталась без предела", () => {
+  for (const operation of ["analyze_photo", "analyze_text", "suggest"]) {
+    const value = timeoutFor(operation);
+    assert.ok(Number.isFinite(value) && value > 0, `${operation}: ${value}`);
+    // Полминуты — нижняя граница здравого смысла: меньше обрубает даже
+    // быстрые ответы, а «попробуйте ещё раз» на исправном сервере злит
+    // сильнее, чем ожидание.
+    assert.ok(value >= 30_000, `${operation}: ${value} мс — слишком мало`);
+  }
+});
+
+test("незнакомая операция получает самый щедрый предел, а не ноль", () => {
+  // Забытый вызов должен оказаться медленным, а не сломанным.
+  assert.equal(timeoutFor("что-то новое"), timeoutFor("analyze_photo"));
 });
