@@ -8,6 +8,7 @@ import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
 import { getBotPreferences } from "@/lib/bot/store";
 import { DEFAULT_DIGEST_HOUR } from "@/lib/reminders";
 import { setShowCalories } from "../meal-actions";
+import { CameraSettings } from "../../camera-settings";
 import { BotReminders } from "./bot-reminders";
 import { DangerZone } from "./danger-zone";
 import { TelegramLink } from "./telegram-link";
@@ -76,6 +77,11 @@ export default async function SettingsPage() {
       <form action={toggle}>
         <button className="black-button" type="submit">{user.showCalories ? "Скрыть калории" : "Показывать калории"}</button>
       </form>
+    </section>
+    <section className="settings-block">
+      <p className="settings-label">Камера</p>
+      <p>Настройки этого устройства: на телефоне и на ноутбуке они свои.</p>
+      <CameraSettings />
     </section>
     <section className="settings-block">
       <p className="settings-label">Ваши данные</p>

@@ -19,6 +19,7 @@ import {
   type ProfileResponse,
 } from "./plan-profile-api";
 import { haptic } from "./telegram";
+import { CameraSettings } from "../camera-settings";
 
 const DIGEST_HOURS = Array.from({ length: MAX_DIGEST_HOUR - MIN_DIGEST_HOUR + 1 }, (_, i) => MIN_DIGEST_HOUR + i);
 
@@ -337,6 +338,13 @@ export function ProfileTab({ onUnlinked }: { onUnlinked?: () => void }) {
     <GoalsSection profile={data} onSaved={load} />
     <MeasurementsSection profile={data} onSaved={load} />
     <RemindersSection profile={data} onSaved={load} />
+
+    <section className="tg-section">
+      <h2>Камера</h2>
+      <div className="tg-card tg-camera-settings">
+        <CameraSettings variant="tg" />
+      </div>
+    </section>
 
     {error && <p className="tg-error">{error}</p>}
 

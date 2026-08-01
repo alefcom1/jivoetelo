@@ -21,6 +21,8 @@ import { ArtCamera } from "./illustrations";
 import { haptic, useMainButtonApi } from "./telegram";
 import { TgPhoto } from "./photo";
 import { useCamera } from "../use-camera";
+import { useCameraPref } from "../camera-prefs";
+import { useFrameWatch } from "../use-frame-watch";
 
 type DraftItem = {
   name: string;
@@ -122,7 +124,13 @@ export function CameraTab({
   const [sourceText, setSourceText] = useState<string | null>(null);
   const [mealType, setMealType] = useState(guessMealType());
   const mainButton = useMainButtonApi();
-  const { videoRef, state: cameraState, start: startCamera, stop: stopCamera, shoot } = useCamera();
+  const {
+    videoRef, state: cameraState, devices, deviceId,
+    start: startCamera, stop: stopCamera, switchTo, shoot,
+  } = useCamera();
+  const [autoShotAllowed] = useCameraPref("autoShot");
+  /** Показывать ли список камер: на телефоне их обычно две, на ноутбуке бывает больше. */
+  const [pickerOpen, setPickerOpen] = useState(false);
   // «Как обычно?» — частые приёмы пищи из собственного дневника. Грузим
   // сразу при открытии экрана, в отличие от подсказок «что съесть»: этот
   // запрос не ходит в AI и не тратит квоту, это чтение своих же записей.
@@ -186,6 +194,19 @@ export function CameraTab({
     stopCamera();
     analyzePhoto(file);
   }
+
+  /**
+   * Автоспуск: кадр снимается сам, когда телефон замер и картинка резкая.
+   *
+   * Измеряем только пока видоискатель действительно на экране и свободен —
+   * ни поверх черновика, ни во время разбора считать нечего.
+   */
+  const watch = useFrameWatch({
+    videoRef,
+    active: !inbox && !items && !busy && mode === "camera" && cameraState === "live",
+    enabled: autoShotAllowed,
+    onFire: () => void handleShoot(),
+  });
 
   /** Общий путь для кадра и файла: предпросмотр и сразу разбор. */
   function analyzePhoto(file: File) {
@@ -357,9 +378,44 @@ export function CameraTab({
               {/* Рамка — не украшение: она говорит, куда класть тарелку, и
                   кадры получаются заметно однообразнее, а значит разбор точнее. */}
               <span className="tg-viewfinder-frame" aria-hidden="true" />
-              <span className="tg-viewfinder-tip">Наведите на тарелку</span>
-              <button className="tg-shutter" aria-label="Снять кадр" disabled={busy}
-                onClick={() => void handleShoot()} />
+
+              {/* Отмена — явной кнопкой, а не касанием куда попало: кадр,
+                  снятый без предупреждения, ощущается как сбой, и человек
+                  должен видеть, чем именно это остановить. */}
+              {watch.countdown > 0
+                ? <button className="tg-viewfinder-tip tg-viewfinder-tip--action" onClick={watch.cancelAuto}>
+                    Снимаю… отменить
+                  </button>
+                : <span className="tg-viewfinder-tip">
+                    {watch.auto ? "Наведите на тарелку — сниму сам" : "Наведите на тарелку"}
+                  </span>}
+
+              {/* Переключатель камер: на ноутбуке системное умолчание
+                  регулярно оказывается виртуальной камерой, на телефоне это
+                  ещё и «повернуть на себя». Одну камеру выбирать не из чего. */}
+              {devices.length > 1 && <button className="tg-viewfinder-switch"
+                aria-expanded={pickerOpen} onClick={() => { haptic("tap"); setPickerOpen((open) => !open); }}>
+                Камера
+              </button>}
+              {pickerOpen && <ul className="tg-camera-picker">
+                {devices.map((device) => <li key={device.deviceId}>
+                  <button aria-current={device.deviceId === deviceId}
+                    onClick={() => { haptic("tap"); setPickerOpen(false); void switchTo(device.deviceId); }}>
+                    {device.label}{device.virtual ? " · виртуальная" : ""}
+                  </button>
+                </li>)}
+              </ul>}
+
+              <div className="tg-shutter-wrap">
+                {/* Кольцо заполняется за время отсчёта — оно и есть
+                    предупреждение о том, что сейчас произойдёт. */}
+                {watch.countdown > 0 && <svg className="tg-shutter-ring" viewBox="0 0 100 100" aria-hidden="true">
+                  <circle cx="50" cy="50" r="45" pathLength="100"
+                    strokeDasharray="100" strokeDashoffset={100 - watch.countdown * 100} />
+                </svg>}
+                <button className="tg-shutter" aria-label="Снять кадр" disabled={busy}
+                  onClick={() => void handleShoot()} />
+              </div>
             </>
           : <div className="tg-viewfinder-empty">
               <ArtCamera />

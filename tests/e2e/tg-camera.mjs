@@ -12,6 +12,9 @@
 
 import { execFileSync } from "node:child_process";
 import { createHmac } from "node:crypto";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { chromium } from "/opt/node22/lib/node_modules/playwright/index.mjs";
 
 const BASE = process.env.E2E_BASE ?? "http://127.0.0.1:3111";
@@ -58,11 +61,43 @@ const mealId = one(
 sql(`INSERT INTO meal_items (meal_id, name, grams, kcal_per_100, protein_per_100, fat_per_100, carbs_per_100, fiber_per_100, confidence)
      VALUES (${mealId}, 'Плов с бараниной', 300, 190, 9, 8, 20, 1.2, 'high')`);
 
+/**
+ * Неподвижный видеопоток из одного кадра Y4M.
+ *
+ * Встроенная поддельная камера Chromium не годится: в её картинке крутится
+ * фигура и тикает таймер, движение между кадрами доходит до 0.03 — автоспуск
+ * честно не срабатывает, и проверять было бы нечего. Файл же зацикливается
+ * покадрово, а кадр здесь один: соседние кадры совпадают до байта, движение
+ * ровно ноль. Клетка мелкая — чтобы кадр прошёл и по резкости.
+ */
+function staticVideoFile() {
+  const width = 640;
+  const height = 480;
+  const cell = 16;
+  const luma = Buffer.alloc(width * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const dark = (Math.floor(x / cell) + Math.floor(y / cell)) % 2 === 0;
+      luma[y * width + x] = dark ? 60 : 200;
+    }
+  }
+  // Цветность нейтральная: метрики считаются по яркости, цвет на них не влияет.
+  const chroma = Buffer.alloc((width / 2) * (height / 2), 128);
+  const header = Buffer.from(`YUV4MPEG2 W${width} H${height} F30:1 Ip A1:1 C420mpeg2\nFRAME\n`, "ascii");
+  const file = path.join(mkdtempSync(path.join(tmpdir(), "jt-cam-")), "static.y4m");
+  writeFileSync(file, Buffer.concat([header, luma, chroma, chroma]));
+  return file;
+}
+
 // Браузер запускается не через ./browser.mjs: нужен поддельный видеопоток, а
 // он включается только флагами запуска. Настоящей камеры в среде нет.
 const browser = await chromium.launch({
   executablePath: "/opt/pw-browsers/chromium",
-  args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
+  args: [
+    "--use-fake-device-for-media-stream",
+    "--use-fake-ui-for-media-stream",
+    `--use-file-for-fake-video-capture=${staticVideoFile()}`,
+  ],
 });
 const problems = [];
 try {
@@ -115,8 +150,11 @@ try {
   if (!usual.includes("Плов с бараниной")) problems.push(`в «Повторить» нет вчерашнего ужина: ${usual.slice(0, 200)}`);
   if (!usual.includes("вчера")) problems.push(`разовая запись подписана не днём: ${usual.slice(0, 200)}`);
 
-  console.log("5. Спуск затвора отправляет кадр на разбор");
-  await page.click(".tg-shutter");
+  console.log("5. Автоспуск срабатывает сам на неподвижном резком кадре");
+  // Поддельный поток Chromium неподвижен и резок — ровно то состояние, ради
+  // которого автоспуск и сделан. Кольцо отсчёта должно появиться до снимка:
+  // кадр без предупреждения ощущается как сбой, а не как помощь.
+  await page.waitForSelector(".tg-shutter-ring", { timeout: 15000 });
   await page.waitForSelector(".tg-draft", { timeout: 30000 });
 
   // Камера должна погаснуть на экране черновика, а не гореть поверх правки
@@ -130,7 +168,25 @@ try {
   const saved = one(`SELECT count(*) FROM meals WHERE user_id = ${userId}`);
   if (saved !== "2") problems.push(`ожидали две записи в дневнике, в базе ${saved}`);
 
-  console.log("7. Повтор из «Камеры» кладёт запись без обращения к разбору");
+  console.log("7. С выключенным автоспуском кадр сам не снимается");
+  await page.evaluate(() => window.localStorage.setItem("jt.camera.autoShot", "off"));
+  await page.click('.tg-tabs button:has-text("Камера")');
+  await page.waitForSelector(".tg-viewfinder video", { timeout: 15000 });
+  await page.waitForFunction(() => document.querySelector(".tg-viewfinder video")?.videoWidth > 0, { timeout: 15000 });
+  // Ждём заведомо дольше, чем выдержка автоспуска: если он всё же взведён,
+  // за это время появился бы черновик.
+  await new Promise((resolve) => setTimeout(resolve, 4000));
+  if (await page.$(".tg-draft")) problems.push("автоспуск сработал при выключенной настройке");
+  if (await page.$(".tg-shutter-ring")) problems.push("кольцо отсчёта идёт при выключенной настройке");
+  // Ручной спуск при этом обязан работать: настройка выключает автоматику,
+  // а не съёмку.
+  await page.click(".tg-shutter");
+  await page.waitForSelector(".tg-draft", { timeout: 30000 });
+  await page.click('.tg-button-block:has-text("Сохранить")');
+  await page.waitForSelector(".tg-today, .tg-hero", { timeout: 20000 });
+  await page.evaluate(() => window.localStorage.removeItem("jt.camera.autoShot"));
+
+  console.log("8. Повтор из «Камеры» кладёт запись без обращения к разбору");
   await page.click('.tg-tabs button:has-text("Камера")');
   await page.waitForSelector(".tg-usual-list button", { timeout: 15000 });
   await page.click('.tg-usual-list button:has-text("Плов с бараниной")');
@@ -138,7 +194,7 @@ try {
   await page.click('.tg-button-block:has-text("Сохранить")');
   await page.waitForSelector(".tg-today, .tg-hero", { timeout: 20000 });
   const afterRepeat = one(`SELECT count(*) FROM meals WHERE user_id = ${userId}`);
-  if (afterRepeat !== "3") problems.push(`после повтора ожидали три записи, в базе ${afterRepeat}`);
+  if (afterRepeat !== "4") problems.push(`после повтора ожидали четыре записи, в базе ${afterRepeat}`);
 } finally {
   await browser.close();
 }
