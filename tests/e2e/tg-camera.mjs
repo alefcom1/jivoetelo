@@ -196,7 +196,16 @@ try {
   await page.waitForSelector(".tg-app", { timeout: 20000 });
   await page.click('.tg-tabs button:has-text("Камера")');
 
-  console.log("2. Видоискатель включается сам, без единого нажатия");
+  console.log("2. Первый заход ждёт касания, дальше видоискатель сам");
+  // Окно «разрешить камеру?» Telegram выдаёт на время жизни своего окна, и
+  // при автозапуске оно выскакивало на каждый заход на вкладку — в том числе
+  // когда человек пришёл сюда за «Повторить». Поэтому первый раз ждём
+  // касания, а дальше в этой же сессии разрешение уже живо.
+  await page.waitForSelector(".tg-viewfinder-start", { timeout: 15000 });
+  if (await page.$(".tg-viewfinder video")) {
+    problems.push("видоискатель включился сам на первом заходе — окно разрешения выскочит без спроса");
+  }
+  await page.click(".tg-viewfinder-start");
   await page.waitForSelector(".tg-viewfinder video", { timeout: 15000 });
   await page.waitForFunction(() => {
     const video = document.querySelector(".tg-viewfinder video");
@@ -207,6 +216,15 @@ try {
     return [video.videoWidth, video.videoHeight];
   });
   console.log(`   поток пошёл: ${size.join("×")}`);
+
+  // Возврат на вкладку в той же сессии: касания больше не требуется.
+  await page.click('.tg-tabs button:has-text("Сегодня")');
+  await page.click('.tg-tabs button:has-text("Камера")');
+  await page.waitForSelector(".tg-viewfinder video", { timeout: 15000 })
+    .catch(() => problems.push("на повторном заходе видоискатель не включился сам"));
+  if (await page.$(".tg-viewfinder-start")) {
+    problems.push("на повторном заходе снова просят касание, хотя разрешение уже выдано");
+  }
 
   console.log("3. Прочие способы — кнопками под кадром, а не переключателем");
   const ways = await page.$$eval(".tg-ways .tg-way", (nodes) => nodes.map((n) => n.textContent.trim()));
@@ -287,6 +305,8 @@ try {
   await plainPage.goto(`${BASE}/tg`);
   await plainPage.waitForSelector(".tg-app", { timeout: 20000 });
   await plainPage.click('.tg-tabs button:has-text("Камера")');
+  // Новый контекст — новая сессия, разрешения ещё нет: включаем касанием.
+  await plainPage.click(".tg-viewfinder-start");
   await plainPage.waitForSelector(".tg-viewfinder video", { timeout: 15000 });
   // Ждём дольше, чем отложенный старт загрузки: если бы она была включена,
   // за это время запросы уже ушли бы.

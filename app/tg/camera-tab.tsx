@@ -20,7 +20,7 @@ import { FoodIcon } from "../food-icon";
 import { ArtCamera } from "./illustrations";
 import { haptic, useMainButtonApi } from "./telegram";
 import { TgPhoto } from "./photo";
-import { useCamera } from "../use-camera";
+import { cameraGrantedThisSession, useCamera } from "../use-camera";
 import { useCameraPref } from "../camera-prefs";
 import { useFrameWatch } from "../use-frame-watch";
 import { useFoodHint } from "../use-food-hint";
@@ -194,7 +194,10 @@ export function CameraTab({
    */
   useEffect(() => {
     if (inbox || items || mode !== "camera") { stopCamera(); return; }
-    void startCamera();
+    // Сам — только если разрешение в этом окне уже выдано. До того ждём
+    // касания: иначе окно «разрешить камеру?» выскакивает при каждом заходе
+    // на вкладку, в том числе когда человек пришёл сюда за «Повторить».
+    if (cameraGrantedThisSession()) void startCamera();
   }, [inbox, items, mode, startCamera, stopCamera]);
 
   /** Кадр из потока идёт на разбор тем же путём, что и файл из галереи. */
@@ -464,6 +467,14 @@ export function CameraTab({
                   onClick={() => void handleShoot()} />
               </div>
             </>
+          : cameraState === "idle"
+          // Первый заход в сессии: поток ждёт касания. Дальше в этом же окне
+          // видоискатель включается сам — разрешение уже выдано, и окна
+          // Telegram больше не будет.
+          ? <button className="tg-viewfinder-empty tg-viewfinder-start" onClick={() => { haptic("tap"); void startCamera(); }}>
+              <ArtCamera />
+              <p>Коснитесь, чтобы включить камеру</p>
+            </button>
           : <div className="tg-viewfinder-empty">
               <ArtCamera />
               <p>{cameraState === "starting"
