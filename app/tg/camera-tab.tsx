@@ -501,9 +501,13 @@ export function CameraTab({
           Снять камерой
         </button>}
         <label className="tg-way">
-          {/* capture="environment" оставлен ради запасного пути: если поток не
-              дали, системный выбор на телефоне всё ещё предложит камеру. */}
-          <input type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} />
+          {/* Без `capture`, и это принципиально. С ним телефон открывает
+              объектив сразу, минуя галерею, — то есть кнопка «Из галереи»
+              делала ровно противоположное написанному. Рассуждение «оставим
+              на случай, если поток не дали» было и вовсе неверным: без
+              атрибута iOS показывает выбор «Медиатека / Снять / Файл», где
+              камера никуда не делась, а галерея наконец доступна. */}
+          <input type="file" accept="image/*" onChange={handlePhotoChange} />
           Из галереи
         </label>
         {mode !== "text" && <button className="tg-way" onClick={() => { haptic("tap"); setMode("text"); }}>

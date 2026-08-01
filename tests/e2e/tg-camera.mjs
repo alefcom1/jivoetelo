@@ -212,6 +212,11 @@ try {
   const ways = await page.$$eval(".tg-ways .tg-way", (nodes) => nodes.map((n) => n.textContent.trim()));
   if (!ways.includes("Из галереи")) problems.push(`нет кнопки «Из галереи»: ${ways.join(" / ")}`);
   if (!ways.includes("Описать словами")) problems.push(`нет кнопки «Описать словами»: ${ways.join(" / ")}`);
+  // capture на этом поле открывает объектив в обход галереи — то есть кнопка
+  // «Из галереи» делает противоположное написанному. Проверяется в DOM, а не
+  // в исходнике: важно то, что доехало до браузера.
+  const forcesCamera = await page.$eval(".tg-ways input[type=file]", (input) => input.hasAttribute("capture"));
+  if (forcesCamera) problems.push("«Из галереи» открывает камеру: на поле остался атрибут capture");
 
   console.log("4. Повторить записанное можно в один тап — даже без повторов состава");
   await page.waitForSelector(".tg-usual-list button", { timeout: 15000 });
