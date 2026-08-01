@@ -154,7 +154,9 @@ export type FrequentMealDto = {
   key: string;
   title: string;
   mealType: string;
+  /** Сколько раз этот состав встречался. 1 — просто недавняя запись. */
   count: number;
+  lastEatenOn: string;
   kcal: number;
   protein: number;
   items: Array<{

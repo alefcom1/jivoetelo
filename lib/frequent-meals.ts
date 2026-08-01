@@ -87,7 +87,7 @@ function totals(items: PastMealItem[]): { kcal: number; protein: number } {
  * поправил вес порции или уточнил разбор, повтор должен наследовать
  * исправленное, а не первую попытку.
  */
-export function frequentMeals(meals: PastMeal[], limit = MAX_FREQUENT): FrequentMeal[] {
+function groupByComposition(meals: PastMeal[]): FrequentMeal[] {
   const groups = new Map<string, PastMeal[]>();
   for (const meal of meals) {
     if (meal.items.length === 0) continue;
@@ -99,7 +99,6 @@ export function frequentMeals(meals: PastMeal[], limit = MAX_FREQUENT): Frequent
 
   const result: FrequentMeal[] = [];
   for (const [key, list] of groups) {
-    if (list.length < MIN_OCCURRENCES) continue;
     // Самый свежий из группы: и порции, и тип приёма пищи берём у него.
     const latest = list.reduce((a, b) => (b.eatenOn > a.eatenOn ? b : a));
     const { kcal, protein } = totals(latest.items);
@@ -114,8 +113,49 @@ export function frequentMeals(meals: PastMeal[], limit = MAX_FREQUENT): Frequent
       items: latest.items,
     });
   }
+  return result;
+}
 
-  return result
-    .sort((a, b) => b.count - a.count || (a.lastEatenOn < b.lastEatenOn ? 1 : -1))
+/** Свежее — выше. Вынесено, чтобы порядок «недавнего» был ровно один. */
+function byFreshness(a: FrequentMeal, b: FrequentMeal): number {
+  return a.lastEatenOn < b.lastEatenOn ? 1 : a.lastEatenOn > b.lastEatenOn ? -1 : 0;
+}
+
+export function frequentMeals(meals: PastMeal[], limit = MAX_FREQUENT): FrequentMeal[] {
+  return groupByComposition(meals)
+    .filter((group) => group.count >= MIN_OCCURRENCES)
+    .sort((a, b) => b.count - a.count || byFreshness(a, b))
     .slice(0, limit);
+}
+
+/**
+ * Что можно повторить в один тап: сначала привычное, потом просто недавнее.
+ *
+ * ## Почему одного «как обычно» оказалось мало
+ *
+ * Порог в два повтора выглядел разумно — и на деле почти никогда не
+ * срабатывал. Состав узнаётся по названиям позиций, а названия приходят от
+ * разбора снимка: одна и та же тарелка сегодня «Овсяная каша на молоке», а
+ * завтра «Овсянка с молоком». Ключи разные, повтора нет, блок не появляется —
+ * и человек, который две недели исправно ведёт дневник, не видит на «Камере»
+ * ни одной знакомой строки.
+ *
+ * Смягчать сравнение названий — плохой путь: «куриная грудка» и «куриный
+ * бульон» разойдутся по любому порогу похожести не там, где надо, и повтор
+ * подставит не то блюдо молча. Надёжнее не угадывать, а показать недавнее как
+ * недавнее: строка честно говорит «вчера» вместо «5 раз за два месяца», и
+ * человек сам решает, то это или не то.
+ *
+ * Порядок остаётся осмысленным: привычное всегда выше разового, потому что
+ * повтор — более сильный сигнал, чем свежесть.
+ */
+export function repeatableMeals(meals: PastMeal[], limit = MAX_FREQUENT): FrequentMeal[] {
+  const groups = groupByComposition(meals);
+  const repeated = groups
+    .filter((group) => group.count >= MIN_OCCURRENCES)
+    .sort((a, b) => b.count - a.count || byFreshness(a, b));
+  const once = groups
+    .filter((group) => group.count < MIN_OCCURRENCES)
+    .sort(byFreshness);
+  return [...repeated, ...once].slice(0, limit);
 }

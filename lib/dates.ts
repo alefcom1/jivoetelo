@@ -55,6 +55,20 @@ export function formatDayRu(day: string): string {
   );
 }
 
+/**
+ * Короткая подпись давности для строки списка: «сегодня», «вчера», иначе
+ * «3 июля». Без года и дня недели — в списке повторов важно не когда именно,
+ * а «недавно или давно», и длинная дата там только мешает читать название.
+ */
+export function formatDayAgoRu(day: string, today: string = localToday()): string {
+  if (day === today) return "сегодня";
+  if (day === shiftDay(today, -1)) return "вчера";
+  if (day === shiftDay(today, -2)) return "позавчера";
+  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(
+    new Date(`${day}T12:00:00Z`),
+  );
+}
+
 export const MEAL_TYPE_LABELS: Record<string, string> = {
   breakfast: "Завтрак",
   lunch: "Обед",

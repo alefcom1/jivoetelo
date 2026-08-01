@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { compositionKey, frequentMeals, MIN_OCCURRENCES } from "../lib/frequent-meals.ts";
+import { compositionKey, frequentMeals, MIN_OCCURRENCES, repeatableMeals } from "../lib/frequent-meals.ts";
 
 function item(name, grams, kcalPer100 = 100, proteinPer100 = 10) {
   return { name, grams, kcalPer100, proteinPer100, fatPer100: 0, carbsPer100: 0, fiberPer100: 0, confidence: "high" };
@@ -121,4 +121,52 @@ test("порог повторов вынесен константой и соб�
 
 test("пустой вход — пустой результат", () => {
   assert.deepEqual(frequentMeals([]), []);
+});
+
+/**
+ * «Повторить в один тап» — то же самое, но без порога повторов.
+ *
+ * Порог в два повтора почти никогда не срабатывал: состав узнаётся по
+ * названиям позиций, а названия приходят от разбора снимка, и одна и та же
+ * тарелка сегодня «Овсяная каша на молоке», а завтра «Овсянка с молоком».
+ * Человек две недели вёл дневник и не видел на «Камере» ни одной знакомой
+ * строки.
+ */
+
+test("разовая запись доступна для повтора, хотя привычкой не считается", () => {
+  const once = [meal(1, "2026-07-01", [item("Плов", 300)])];
+  assert.deepEqual(frequentMeals(once), [], "в «как обычно» разовому не место");
+  assert.equal(repeatableMeals(once).length, 1, "а повторить его человек всё равно должен мочь");
+  assert.equal(repeatableMeals(once)[0].count, 1);
+});
+
+test("привычное всегда выше разового, даже если разовое свежее", () => {
+  // Повтор — более сильный сигнал, чем свежесть: разовый вчерашний ужин в
+  // гостях не должен оттеснять завтрак, который человек ест каждый день.
+  const result = repeatableMeals([
+    meal(1, "2026-07-01", [item("Овсянка", 250)]),
+    meal(2, "2026-07-02", [item("Овсянка", 250)]),
+    meal(3, "2026-07-20", [item("Утка по-пекински", 200)]),
+  ]);
+  assert.deepEqual(result.map((r) => r.title), ["Овсянка", "Утка по-пекински"]);
+});
+
+test("среди разовых порядок — по свежести", () => {
+  const result = repeatableMeals([
+    meal(1, "2026-07-01", [item("Суп", 300)]),
+    meal(2, "2026-07-15", [item("Плов", 300)]),
+    meal(3, "2026-07-08", [item("Пельмени", 250)]),
+  ]);
+  assert.deepEqual(result.map((r) => r.title), ["Плов", "Пельмени", "Суп"]);
+});
+
+test("список повторов обрезается тем же лимитом", () => {
+  const meals = Array.from({ length: 10 }, (_, i) => meal(i, `2026-07-${String(i + 1).padStart(2, "0")}`, [item(`Блюдо ${i}`, 100)]));
+  assert.equal(repeatableMeals(meals).length, 6);
+  assert.equal(repeatableMeals(meals, 2).length, 2);
+});
+
+test("пустые приёмы пищи не превращаются в строку повтора", () => {
+  assert.deepEqual(repeatableMeals([meal(1, "2026-07-01", [])]), []);
+  assert.deepEqual(repeatableMeals([]), []);
 });

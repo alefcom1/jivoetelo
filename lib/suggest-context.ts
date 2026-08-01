@@ -1,4 +1,4 @@
-import { frequentMeals, MAX_FREQUENT } from "./frequent-meals.ts";
+import { MAX_FREQUENT, repeatableMeals } from "./frequent-meals.ts";
 import { getDaySummary, getRecentMealsForRepeat } from "./meals.ts";
 
 /**
@@ -22,7 +22,11 @@ import { getDaySummary, getRecentMealsForRepeat } from "./meals.ts";
  */
 
 export type DiaryContext = {
-  /** Что человек ест обычно. Пусто у новичка — повторять ещё нечего. */
+  /**
+   * Что человек ел в последние недели: сначала повторяющееся, потом просто
+   * недавнее (см. repeatableMeals — на снимках точные повторы редки). Пусто у
+   * новичка: дневник ещё ничего о нём не знает.
+   */
   usualMeals: string[];
   /** Что уже съедено сегодня: предлагать это снова незачем. */
   eatenToday: string[];
@@ -49,7 +53,7 @@ export async function getDiaryContext(
     getRecentMealsForRepeat(userId),
   ]);
 
-  const frequent = frequentMeals(recent, MAX_FREQUENT);
+  const frequent = repeatableMeals(recent, MAX_FREQUENT);
   const sameType = mealType ? frequent.filter((meal) => meal.mealType === mealType) : [];
   const ordered = sameType.length >= 2
     ? [...sameType, ...frequent.filter((meal) => meal.mealType !== mealType)]
