@@ -80,11 +80,47 @@ const TIMEOUTS: Record<AiOperation, number> = {
   suggest: 40_000,
 };
 
-/** Одна повторная попытка — ради случайных обрывов на пути к прокси. */
-const MAX_RETRIES = 1;
+/**
+ * Сколько всего может занять операция вместе с повторами.
+ *
+ * ## Почему это считается, а не задаётся на глаз
+ *
+ * Между приложением и человеком стоит nginx со своим `proxy_read_timeout`
+ * (deploy/nginx/jivoetelo-proxy.conf). Если приложение готово ждать модель
+ * дольше, чем nginx готов ждать приложение, то nginx обрывает соединение
+ * ровно в тот момент, когда всё ещё могло получиться, — и обрывает молча,
+ * пятьсот четвёртой, без единой строки в нашем логе.
+ *
+ * Ровно это и вышло с разбором фото: предел 120 секунд плюс одна повторная
+ * попытка — это до 240 секунд работы, при 120 секундах терпения у nginx.
+ * Разбор текста тех же настроек не замечал: haiku отвечает за секунды и до
+ * второй попытки не доходит никогда.
+ *
+ * Отсюда правило: у долгих операций повторов нет. Повтор защищает от
+ * случайного обрыва связи, а двухминутный запрос обрывается не случайно —
+ * чаще всего он просто долгий, и вторая попытка лишь удваивает ожидание.
+ */
+const RETRIES: Record<AiOperation, number> = {
+  analyze_photo: 0,
+  analyze_text: 1,
+  suggest: 1,
+};
 
 export function timeoutFor(operation: AiOperation): number {
   return TIMEOUTS[operation] ?? TIMEOUTS.analyze_photo;
+}
+
+export function retriesFor(operation: AiOperation): number {
+  return RETRIES[operation] ?? 0;
+}
+
+/**
+ * Сколько операция может занять в худшем случае. Это число обязано быть
+ * меньше `proxy_read_timeout` у nginx — проверяется тестом, потому что
+ * увидеть расхождение глазами в двух разных файлах не получилось ни разу.
+ */
+export function worstCaseMs(operation: AiOperation): number {
+  return timeoutFor(operation) * (retriesFor(operation) + 1);
 }
 
 export function createAnthropicClient(): Anthropic {
@@ -94,7 +130,7 @@ export function createAnthropicClient(): Anthropic {
   // Умолчание клиента — самый щедрый предел из всех. Место вызова уточняет
   // его своим (см. timeoutFor): забытый вызов тогда окажется медленным, а не
   // сломанным, и это верная сторона для ошибки.
-  return new Anthropic({ fetch: upstreamFetch, timeout: TIMEOUTS.analyze_photo, maxRetries: MAX_RETRIES });
+  return new Anthropic({ fetch: upstreamFetch, timeout: TIMEOUTS.analyze_photo, maxRetries: 0 });
 }
 
 /** Есть ли у сервера учётные данные для реальных вызовов. */

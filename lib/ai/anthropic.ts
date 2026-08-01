@@ -1,5 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { createAnthropicClient, readUsage, resolveModel, supportsEffort, supportsFallbacks, timeoutFor } from "./client.ts";
+import { createAnthropicClient, readUsage, resolveModel, supportsEffort, retriesFor, supportsFallbacks, timeoutFor } from "./client.ts";
+import { logAiFailure } from "./failure.ts";
 import { compressPhotoForAi } from "./image.ts";
 import { MEAL_ANALYSIS_SCHEMA, validateMealAnalysis } from "./schema.ts";
 import { MealAnalysisError, type MealAnalysisResult, type MealInput, type MealVisionProvider } from "./types.ts";
@@ -73,9 +74,9 @@ export class AnthropicMealProvider implements MealVisionProvider {
         // Предел на запрос, а не на клиента: зрение с раздумьями думает
         // заметно дольше разбора строки текста, и один общий предел на обе
         // операции уже обрубал разбор фото посередине.
-      }, { timeout: timeoutFor(operation) });
+      }, { timeout: timeoutFor(operation), maxRetries: retriesFor(operation) });
     } catch (error) {
-      console.error("meal analysis request failed", error);
+      logAiFailure(operation, model, error);
       throw new MealAnalysisError("Anthropic request failed", "provider_error");
     }
 

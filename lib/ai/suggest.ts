@@ -1,6 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { createAnthropicClient, readUsage, resolveModel, supportsEffort, supportsFallbacks, timeoutFor } from "./client.ts";
+import { createAnthropicClient, readUsage, resolveModel, supportsEffort, retriesFor, supportsFallbacks, timeoutFor } from "./client.ts";
 import { DisabledSuggestionProvider } from "./disabled.ts";
+import { logAiFailure } from "./failure.ts";
 import { resolveAiMode } from "./mode.ts";
 import { MealAnalysisError, type TokenUsage } from "./types.ts";
 
@@ -206,9 +207,9 @@ export class AnthropicSuggestionProvider implements SuggestionProvider {
         },
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: buildPrompt(context) }],
-      }, { timeout: timeoutFor("suggest") });
+      }, { timeout: timeoutFor("suggest"), maxRetries: retriesFor("suggest") });
     } catch (error) {
-      console.error("suggestion request failed", error);
+      logAiFailure("suggest", model, error);
       throw new MealAnalysisError("Anthropic request failed", "provider_error");
     }
     if (response.stop_reason === "refusal") {

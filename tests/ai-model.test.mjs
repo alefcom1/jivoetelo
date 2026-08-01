@@ -178,3 +178,31 @@ test("незнакомая операция получает самый щедр
   // Забытый вызов должен оказаться медленным, а не сломанным.
   assert.equal(timeoutFor("что-то новое"), timeoutFor("analyze_photo"));
 });
+
+test("разбор ошибки различает таймаут, отказ сервера и обрыв связи", async () => {
+  // Три разные починки: на таймаут отвечают временем, на отказ сервера —
+  // исправлением запроса, на обрыв — транспортом. Пока лог печатал объект
+  // ошибки целиком, различить их в проде не получалось.
+  const { describeAiFailure } = await import("../lib/ai/failure.ts");
+
+  const timeout = Object.assign(new Error("Request timed out."), { name: "TimeoutError" });
+  assert.equal(describeAiFailure(timeout).kind, "timeout");
+
+  const http = Object.assign(new Error("400 Bad Request"), {
+    status: 400,
+    error: { error: { message: "This model does not support the effort parameter" } },
+  });
+  const described = describeAiFailure(http);
+  assert.equal(described.kind, "http");
+  assert.equal(described.status, 400);
+  // Текст отказа лежит во вложенном объекте — без него остаётся голый номер.
+  assert.match(described.message, /effort parameter/);
+
+  const network = Object.assign(new Error("Connection error."), {
+    name: "APIConnectionError",
+    cause: new Error("ECONNRESET"),
+  });
+  const net = describeAiFailure(network);
+  assert.equal(net.kind, "network");
+  assert.match(net.message, /ECONNRESET/);
+});
