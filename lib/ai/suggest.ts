@@ -1,5 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { createAnthropicClient, readUsage, resolveModel, supportsFallbacks } from "./client.ts";
+import { createAnthropicClient, readUsage, resolveModel, supportsEffort, supportsFallbacks } from "./client.ts";
 import { DisabledSuggestionProvider } from "./disabled.ts";
 import { resolveAiMode } from "./mode.ts";
 import { MealAnalysisError, type TokenUsage } from "./types.ts";
@@ -126,7 +126,9 @@ export class AnthropicSuggestionProvider implements SuggestionProvider {
           ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
           : {}),
         output_config: {
-          effort: "medium",
+          // effort понимают не все модели: haiku отвечает на него 400 и не
+          // выполняет запрос вовсе (см. supportsEffort в ./client.ts).
+          ...(supportsEffort(model) ? { effort: "medium" as const } : {}),
           format: { type: "json_schema", schema: SUGGESTIONS_SCHEMA },
         },
         system: SYSTEM_PROMPT,

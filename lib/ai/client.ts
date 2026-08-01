@@ -112,6 +112,24 @@ export function supportsFallbacks(model: string): boolean {
   return model.startsWith("claude-opus-5") || model.startsWith("claude-fable");
 }
 
+/**
+ * Параметр `effort` в `output_config` понимают не все модели.
+ *
+ * Haiku 4.5 отвечает на него `400 invalid_request_error: This model does not
+ * support the effort parameter`, и запрос не выполняется вовсе. Мы слали его
+ * всем одинаково — из-за чего молчали и подсказки, и разбор текста.
+ *
+ * Проверка по началу идентификатора, а не по списку: список пришлось бы
+ * дописывать к каждой новой модели, и забытая строка снова означала бы
+ * тихий отказ. Незнакомой модели `effort` не отправляем — потерять качество
+ * ответа не так больно, как получить 400.
+ */
+export function supportsEffort(model: string): boolean {
+  return model.startsWith("claude-opus-5")
+    || model.startsWith("claude-sonnet-5")
+    || model.startsWith("claude-fable-5");
+}
+
 export type TokenUsage = { inputTokens: number; outputTokens: number };
 
 export function readUsage(message: { usage?: { input_tokens?: number; output_tokens?: number } }): TokenUsage {

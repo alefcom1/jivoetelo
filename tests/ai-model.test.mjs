@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { resolveModel } from "../lib/ai/client.ts";
+import { resolveModel, supportsEffort } from "../lib/ai/client.ts";
 
 /**
  * Модель под задачу, а не одна на всё (docs/ai-proxy.md): фото — дороже
@@ -110,5 +110,37 @@ test("идентификаторы моделей — те, что приним�
         assert.match(model, /-\d{8}$/, `${op}: у haiku идентификатор датированный, а получили ${model}`);
       }
     }
+  });
+});
+
+test("effort уходит только тем моделям, которые его понимают", () => {
+  // Haiku отвечает на effort «400 This model does not support the effort
+  // parameter» и не выполняет запрос вовсе. Мы слали его всем одинаково, и
+  // из-за этого молчали подсказки и разбор текста.
+  assert.ok(supportsEffort("claude-opus-5"));
+  assert.ok(supportsEffort("claude-sonnet-5"));
+  assert.ok(supportsEffort("claude-fable-5"));
+  assert.ok(!supportsEffort("claude-haiku-4-5-20251001"));
+  // Незнакомой модели не отправляем: потерять качество ответа не так больно,
+  // как получить 400 и не получить ответа вовсе.
+  assert.ok(!supportsEffort("claude-next-9"));
+  assert.ok(!supportsEffort(""));
+});
+
+test("умолчания моделей не получают effort по ошибке", () => {
+  // Сверяем не константы между собой, а умолчание с возможностью модели:
+  // именно расхождение этих двух вещей и уронило две операции из трёх.
+  withEnv({}, () => {
+    for (const operation of ["analyze_photo", "analyze_text", "suggest"]) {
+      const model = resolveModel(operation);
+      // Утверждение простое: если модель effort не понимает, мы его и не
+      // шлём. Проверяется связка «умолчание ↔ возможность», а не константа
+      // сама с собой — расхождение именно этих двух вещей уронило две
+      // операции из трёх.
+      assert.equal(typeof supportsEffort(model), "boolean", operation);
+    }
+    assert.ok(!supportsEffort(resolveModel("analyze_text")), "разбор текста идёт на haiku — effort ему нельзя");
+    assert.ok(!supportsEffort(resolveModel("suggest")), "подсказки идут на haiku — effort ему нельзя");
+    assert.ok(supportsEffort(resolveModel("analyze_photo")), "фото идёт на sonnet-5 — effort ему можно");
   });
 });
