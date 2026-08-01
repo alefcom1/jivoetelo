@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import { searchFoodReference, type ReferenceFood } from "@/lib/food-reference";
-import { FoodIcon } from "./food-icon";
+import { FoodIcon } from "../food-icon";
 import { haptic } from "./telegram";
 
 /** Позиция в том виде, в каком её ждут оба экрана. */

@@ -479,19 +479,9 @@
 
 /* Значок категории: круглая подложка своего тона и глиф насыщеннее её.
    --food-hue/--food-sat приходят инлайном из lib/food-category.ts. */
-.tg-food-icon {
-  display: grid; place-items: center; flex-shrink: 0; border-radius: 50%;
-  background: hsl(var(--food-hue) var(--food-sat) var(--food-chip-l));
-  color: hsl(var(--food-hue) var(--food-sat) var(--food-l));
-}
-.tg-food-icon svg { display: block; width: 62%; height: 62%; }
-.tg-food-icon--sm { width: 30px; height: 30px; }
-.tg-food-icon--md { width: 44px; height: 44px; }
-.tg-food-icon--lg { width: 56px; height: 56px; border-radius: 18px; }
-/* Без подложки — когда значок уже стоит в чужом контейнере со своим фоном
-   (например, в квадрате миниатюры приёма пищи). */
-.tg-food-icon--bare { background: none; width: auto; height: auto; }
-.tg-food-icon--bare svg { width: 24px; height: 24px; }
+/* Сами значки категорий переехали в app/globals.css: тем же компонентом
+   пользуется веб-кабинет, а globals.css подключён и здесь, и там. Светлоту
+   для тёмной темы Mini App переопределяет у себя, выше. */
 
 /* Иллюстрации пустых экранов */
 .tg-illustration { display: block; width: 132px; height: 132px; }
@@ -505,7 +495,7 @@
   display: grid; place-items: center;
   background: hsl(var(--food-hue, 30) var(--food-sat, 12%) var(--food-chip-l));
 }
-.tg-meal-thumb .tg-food-icon { background: none; width: 100%; height: 100%; }
+.tg-meal-thumb .food-icon { background: none; width: 100%; height: 100%; }
 .tg-meal-thumb .tg-photo-box { width: 100%; height: 100%; }
 
 /* Заливка под линией графика — тот же тон, что и линия, но почти прозрачный.
@@ -572,7 +562,7 @@
 }
 
 /* Значок категории в строке черновика разбора */
-.tg-draft-row .tg-food-icon { margin-right: 2px; }
+.tg-draft-row .food-icon { margin-right: 2px; }
 
 /* Цель по энергии на «Плане» — числом в тон энергии, как и везде */
 .tg-plan-target-value.tg-bar--energy strong { color: hsl(var(--hue) var(--sat) var(--macro-l)); }
@@ -585,7 +575,7 @@
   background: hsl(var(--food-hue, 30) var(--food-sat, 12%) var(--food-chip-l));
   color: inherit;
 }
-.tg-diary-meal-thumb .tg-food-icon { background: none; width: 100%; height: 100%; }
+.tg-diary-meal-thumb .food-icon { background: none; width: 100%; height: 100%; }
 
 /* Переносимый сегмент (например, четыре темпа снижения в «Профиле»): без
    базиса последняя кнопка на второй строке растягивалась во всю ширину. */

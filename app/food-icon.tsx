@@ -9,7 +9,7 @@
 // там, где человек его сделал; значок закрывает всё остальное.
 //
 // Цвет приходит из lib/food-category.ts тоном и насыщенностью, светлоту
-// подставляет CSS вместе с темой (`.tg-food-icon` в app/tg/tg.css).
+// подставляет CSS вместе с темой (`.food-icon` в app/tg/tg.css).
 
 import type { CSSProperties, ReactElement } from "react";
 import { type FoodCategory, foodCategory, foodCategoryInfo, mealCategory } from "@/lib/food-category";
@@ -163,7 +163,7 @@ export function FoodIcon({ name, category, size = "sm", bare = false }: FoodIcon
   const info = foodCategoryInfo(key);
 
   return <span
-    className={`tg-food-icon tg-food-icon--${size}${bare ? " tg-food-icon--bare" : ""}`}
+    className={`food-icon food-icon--${size}${bare ? " food-icon--bare" : ""}`}
     style={foodTint(key)}
     role="img"
     aria-label={info.label}

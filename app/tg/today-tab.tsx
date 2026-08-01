@@ -4,7 +4,7 @@ import { mealCategory } from "@/lib/food-category";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import { withPluralRu } from "@/lib/plural";
 import type { TgMeal, TodayResponse } from "./api";
-import { FoodIcon, foodTint } from "./food-icon";
+import { FoodIcon, foodTint } from "../food-icon";
 import { IconInbox } from "./icons";
 import { ArtEmptyPlate } from "./illustrations";
 import { TgPhoto } from "./photo";

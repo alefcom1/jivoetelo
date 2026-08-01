@@ -10,6 +10,7 @@ import type { PaceKey } from "@/lib/pace";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
 import { getLatestWeightKg } from "@/lib/weight";
 import { AppInvite } from "../app-invite";
+import { MealIcon } from "../food-icon";
 import { EnergyRing, MacroBar } from "./day-visuals";
 import { GoalReporter } from "./goal-reporter";
 
@@ -111,6 +112,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
             const totals = sumTotals(mealItemList);
             return <Link className="day-meal" href={`/app/meals/${meal.id}`} key={meal.id}>
               <time>{meal.eatenTime}</time>
+              {/* Значок категории вместо пустоты слева: тот же набор, что и в
+                  Mini App, — свои глифы с тоном категории, не эмодзи и не
+                  сток. Четыре одинаковые строки без него читались таблицей. */}
+              <MealIcon items={mealItemList.map((i) => i.name)} />
               <div>
                 <b>{MEAL_TYPE_LABELS[meal.mealType] ?? MEAL_TYPE_LABELS.other}</b>
                 <span>{mealItemList.map((i) => i.name).slice(0, 4).join(", ")}</span>

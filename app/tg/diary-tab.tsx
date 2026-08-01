@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { formatDayRu, localToday, shiftDay } from "@/lib/dates";
 import { mealCategory } from "@/lib/food-category";
 import { fetchDiaryDay, type DiaryDayResponse, type DiaryMeal } from "./diary-api";
-import { FoodIcon, foodTint } from "./food-icon";
+import { FoodIcon, foodTint } from "../food-icon";
 import { ArtEmptyPlate } from "./illustrations";
 import { MealEditor } from "./meal-editor";
 import { haptic } from "./telegram";

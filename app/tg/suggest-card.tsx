@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { fetchSuggestions, type SuggestResponse } from "./api";
-import { FoodIcon } from "./food-icon";
+import { FoodIcon } from "../food-icon";
 import { IconSuggest } from "./icons";
 import { haptic } from "./telegram";
 

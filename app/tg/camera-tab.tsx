@@ -16,7 +16,7 @@ import { mealCategory } from "@/lib/food-category";
 import { withPluralRu } from "@/lib/plural";
 import { scaleGrams } from "@/lib/portions";
 import { AddItem, type NewItem } from "./add-item";
-import { FoodIcon } from "./food-icon";
+import { FoodIcon } from "../food-icon";
 import { ArtCamera } from "./illustrations";
 import { haptic, useMainButtonApi } from "./telegram";
 import { TgPhoto } from "./photo";

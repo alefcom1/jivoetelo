@@ -15,7 +15,7 @@ import { CONFIDENCE_LABELS, type Confidence } from "@/lib/confidence";
 import { scaleGrams } from "@/lib/portions";
 import { AddItem, type NewItem } from "./add-item";
 import { deleteMeal, fetchMealDetail, updateMeal, type DiaryMealItem, type MealDetail } from "./diary-api";
-import { FoodIcon } from "./food-icon";
+import { FoodIcon } from "../food-icon";
 import { haptic } from "./telegram";
 import { TgPhoto } from "./photo";
 
