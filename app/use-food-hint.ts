@@ -45,6 +45,17 @@ const STD = [0.229, 0.224, 0.225];
 /** Два раза в секунду. Чаще незачем: тарелка не убегает. */
 const INTERVAL_MS = 500;
 
+/**
+ * Пауза перед тем, как начать качать модель.
+ *
+ * Через «Камеру» проходят и мимоходом: заглянул, передумал, ушёл в текст или
+ * в галерею. Тянуть шесть мегабайт на каждый такой заход — значит отбирать
+ * канал у запроса, ради которого человек и пришёл: разбор еды уходит на
+ * сервер примерно в этот же момент. Две секунды отделяют «человек смотрит в
+ * видоискатель» от «человек здесь случайно».
+ */
+const START_DELAY_MS = 2000;
+
 export type FoodHintState =
   /** Настройка выключена или условия не те — ничего не грузим. */
   | "off"
@@ -59,7 +70,7 @@ type OrtModule = {
   env: { wasm: { wasmPaths: string; numThreads: number; simd?: boolean } };
   Tensor: new (type: string, data: Float32Array, dims: number[]) => unknown;
   InferenceSession: {
-    create(url: string, options?: unknown): Promise<{
+    create(source: string | Uint8Array, options?: unknown): Promise<{
       inputNames: string[];
       outputNames: string[];
       run(feeds: Record<string, unknown>): Promise<Record<string, { data: ArrayLike<number> }>>;
@@ -134,6 +145,10 @@ export function useFoodHint({
 
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    // Загрузку модели можно прервать, и это не мелочь: уйдя с «Камеры» на
+    // текстовый ввод, человек оставлял позади несколько мегабайт, которые
+    // продолжали ехать и мешали разбору.
+    const download = new AbortController();
     const canvas = document.createElement("canvas");
     canvas.width = SIDE;
     canvas.height = SIDE;
@@ -143,11 +158,23 @@ export function useFoodHint({
     const input = new Float32Array(3 * SIDE * SIDE);
 
     void (async () => {
+      await new Promise((resolve) => { timer = setTimeout(resolve, START_DELAY_MS); });
+      if (stopped) return;
+
       let ort: OrtModule;
       let inference: Awaited<ReturnType<OrtModule["InferenceSession"]["create"]>>;
       try {
         ort = await loadRuntime();
-        inference = await ort.InferenceSession.create(MODEL_URL, { executionProviders: ["wasm"] });
+        // Модель качаем сами, а не отдаём ссылку сессии: своим запросом можно
+        // управлять — прервать при уходе с экрана и уступить дорогу разбору.
+        const model = await fetch(MODEL_URL, {
+          signal: download.signal,
+          // Подсказка браузеру, что этот запрос не срочный. Понимают не все,
+          // но там, где понимают, она делает ровно то, что нужно.
+          priority: "low",
+        } as RequestInit).then((response) => response.arrayBuffer());
+        if (stopped) return;
+        inference = await ort.InferenceSession.create(new Uint8Array(model), { executionProviders: ["wasm"] });
       } catch {
         // Не загрузилось — молча живём без подсказки. Сообщать не о чем:
         // камера работает, снимок делается, человек ничего не потерял.
@@ -200,6 +227,7 @@ export function useFoodHint({
     return () => {
       stopped = true;
       if (timer) clearTimeout(timer);
+      download.abort();
     };
   }, [on, videoRef]);
 

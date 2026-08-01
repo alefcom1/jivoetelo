@@ -18,8 +18,7 @@ import { useCallback, useEffect, useState } from "react";
  *
  * Значение читается только в браузере: на сервере localStorage нет, и чтение
  * при отрисовке разошлось бы с гидратацией. Поэтому первый проход всегда
- * отдаёт умолчание, а настоящее значение приезжает эффектом — до этого
- * момента экран ведёт себя как «включено», и это верное умолчание.
+ * отдаёт умолчание, а настоящее значение приезжает эффектом сразу следом.
  */
 
 const KEYS = {
@@ -31,12 +30,34 @@ const KEYS = {
 
 export type CameraPrefKey = keyof typeof KEYS;
 
+/**
+ * Умолчания. Разные, и это главное решение в этом файле.
+ *
+ * **Автоспуск — включён.** Он считается на месте по кадру, который и так
+ * идёт в видоискатель: ни байта трафика, ни миллисекунды ожидания.
+ *
+ * **Распознавание еды — выключено.** Оно тянет около шести с половиной
+ * мегабайт при первом открытии «Камеры», и тянет их ровно тогда, когда
+ * человек собирается отправить снимок на разбор. На мобильном интернете эти
+ * два дела делят один канал, и проигрывает то, ради чего человек пришёл.
+ *
+ * Зелёная рамка — приятное дополнение, а разбор еды — сам продукт. Списывать
+ * секунды со второго ради первого нельзя, тем более без спроса. Кому рамка
+ * нужна, включит её в настройках; там же сказано, чего это стоит.
+ */
+const DEFAULTS: Record<CameraPrefKey, boolean> = {
+  autoShot: true,
+  foodHint: false,
+};
+
 function read(key: CameraPrefKey): boolean {
   try {
-    // Умолчание — «включено»: настройка существует, чтобы её выключить.
-    return window.localStorage.getItem(KEYS[key]) !== "off";
+    const stored = window.localStorage.getItem(KEYS[key]);
+    if (stored === "on") return true;
+    if (stored === "off") return false;
+    return DEFAULTS[key];
   } catch {
-    return true;
+    return DEFAULTS[key];
   }
 }
 
@@ -53,7 +74,10 @@ function write(key: CameraPrefKey, value: boolean): void {
 const EVENT = "jt:camera-prefs";
 
 export function useCameraPref(key: CameraPrefKey): [boolean, (value: boolean) => void] {
-  const [value, setValue] = useState(true);
+  // Первый проход всегда отдаёт умолчание: на сервере localStorage нет, и
+  // чтение при отрисовке разошлось бы с гидратацией. Настоящее значение
+  // приезжает эффектом сразу следом.
+  const [value, setValue] = useState(DEFAULTS[key]);
 
   useEffect(() => {
     const sync = () => setValue(read(key));

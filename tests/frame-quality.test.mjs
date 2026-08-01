@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  frameAdvice,
   frameDifference,
   frameStats,
   readiness,
   toGrayscale,
+  FRAME_ADVICE_LABELS,
+  MAX_CLIPPED,
+  MAX_LUMA,
+  MIN_LUMA,
   MIN_SHARPNESS,
   STEADY_MOTION,
 } from "../lib/frame-quality.ts";
@@ -139,4 +144,69 @@ test("готовность объясняет, чего именно не хва
     { steady: dark.steady, sharp: dark.sharp, lit: dark.lit },
     { steady: true, sharp: true, lit: false },
   );
+});
+
+/**
+ * Совет на экране. Проверяется не текст, а выбор причины: показать одну из
+ * пяти и не показать остальные — это и есть вся работа.
+ */
+
+const GOOD = { sharpness: MIN_SHARPNESS * 2, luma: 130, clipped: 0.02 };
+
+test("хороший кадр советов не требует", () => {
+  assert.equal(frameAdvice(GOOD, 0), "ready");
+  assert.equal(FRAME_ADVICE_LABELS.ready, "", "у «готово» подписи быть не должно");
+});
+
+test("каждая помеха называется своим именем", () => {
+  assert.equal(frameAdvice({ ...GOOD, luma: MIN_LUMA - 1 }, 0), "dark");
+  assert.equal(frameAdvice({ ...GOOD, luma: MAX_LUMA + 1 }, 0), "bright");
+  assert.equal(frameAdvice({ ...GOOD, clipped: MAX_CLIPPED + 0.1 }, 0), "glare");
+  assert.equal(frameAdvice(GOOD, STEADY_MOTION * 2), "shaky");
+  assert.equal(frameAdvice({ ...GOOD, sharpness: MIN_SHARPNESS / 2 }, 0), "blurry");
+});
+
+test("движущийся кадр не объявляется расфокусированным", () => {
+  // Кадр в движении смазан почти всегда. «Не в фокусе» послало бы человека
+  // исправлять то, что исправится само, стоит ему замереть, — а замереть ему
+  // никто при этом не подсказал бы.
+  const smeared = { ...GOOD, sharpness: MIN_SHARPNESS / 4 };
+  assert.equal(frameAdvice(smeared, STEADY_MOTION * 3), "shaky");
+  assert.equal(frameAdvice(smeared, 0), "blurry", "а замерший — уже да");
+});
+
+test("темнота важнее дрожания", () => {
+  // Свет рукой не исправляется, и из-за него не сработает ничего остального.
+  assert.equal(frameAdvice({ ...GOOD, luma: 10 }, STEADY_MOTION * 3), "dark");
+});
+
+test("совет и автоспуск говорят об одном кадре одно и то же", () => {
+  // Расхождение здесь — худшее из возможных: подсказка объясняет одно, а
+  // затвор молчит по другой причине, и человек исправляет не то.
+  const cases = [
+    [GOOD, 0],
+    [{ ...GOOD, luma: 10 }, 0],
+    [{ ...GOOD, luma: 250 }, 0],
+    [{ ...GOOD, clipped: 0.9 }, 0],
+    [GOOD, STEADY_MOTION * 2],
+    [{ ...GOOD, sharpness: 1 }, 0],
+    [{ ...GOOD, sharpness: 1, luma: 10 }, STEADY_MOTION * 5],
+  ];
+  for (const [stats, motion] of cases) {
+    assert.equal(
+      readiness(stats, motion).ready,
+      frameAdvice(stats, motion) === "ready",
+      `разошлись на ${JSON.stringify(stats)} при движении ${motion}`,
+    );
+  }
+});
+
+test("у каждой помехи есть подпись, и она говорит, что делать", () => {
+  for (const kind of ["dark", "bright", "glare", "shaky", "blurry"]) {
+    const label = FRAME_ADVICE_LABELS[kind];
+    assert.ok(label && label.length > 0, `нет подписи для ${kind}`);
+    // Тон продукта: подсказка, а не выговор. Проверка грубая, но ловит
+    // случайный съезд в «плохой кадр» и «вы дрожите».
+    assert.ok(!/плох|непра|ошиб|нельзя/i.test(label), `${kind}: ${label}`);
+  }
 });

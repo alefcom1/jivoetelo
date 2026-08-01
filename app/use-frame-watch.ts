@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  frameAdvice,
   frameDifference,
   frameStats,
   readiness,
   toGrayscale,
   SAMPLE_HEIGHT,
   SAMPLE_WIDTH,
+  type FrameAdvice,
   type Readiness,
 } from "@/lib/frame-quality";
 
@@ -51,9 +53,24 @@ const STEADY_FRAMES = 5;
 /** Длина видимого отсчёта до спуска. */
 export const COUNTDOWN_MS = 700;
 
+/**
+ * Сколько измерений подряд должны сказать одно и то же, прежде чем подсказка
+ * появится на экране.
+ *
+ * Без этого совет мигал бы восемь раз в секунду: «держите ровнее» — «камера
+ * наводится» — «держите ровнее». Мигающий текст читать нельзя, а исправлять
+ * по нему нечего. Полсекунды достаточно, чтобы причина устоялась.
+ *
+ * Снимается подсказка сразу, без выдержки: человек исправил — надо ответить
+ * немедленно, иначе он решит, что не помогло, и продолжит крутить телефон.
+ */
+const ADVICE_HOLD = 4;
+
 export type FrameWatch = {
   /** Последняя оценка кадра. `null` — измерений ещё не было. */
   readiness: Readiness | null;
+  /** Что мешает снять — уже устоявшееся, годное для показа. */
+  advice: FrameAdvice;
   /** 0..1 — заполненность кольца отсчёта. 0 означает «отсчёт не идёт». */
   countdown: number;
   /** Автоспуск включён и не отменён. */
@@ -76,12 +93,14 @@ export function useFrameWatch({
   onFire: () => void;
 }): FrameWatch {
   const [readinessState, setReadinessState] = useState<Readiness | null>(null);
+  const [advice, setAdvice] = useState<FrameAdvice>("ready");
   const [countdown, setCountdown] = useState(0);
   const [auto, setAuto] = useState(true);
 
   // Всё, что меняется каждый кадр, живёт в ref: перерисовывать компонент восемь
   // раз в секунду ради чисел, которых на экране нет, незачем.
   const prevGrayRef = useRef<Uint8ClampedArray | null>(null);
+  const adviceHoldRef = useRef<{ kind: FrameAdvice; count: number }>({ kind: "ready", count: 0 });
   const steadyCountRef = useRef(0);
   const countdownStartRef = useRef<number | null>(null);
   const firedRef = useRef(false);
@@ -107,6 +126,7 @@ export function useFrameWatch({
     setWasActive(active);
     setCountdown(0);
     setReadinessState(null);
+    setAdvice("ready");
   }
 
   useEffect(() => {
@@ -115,6 +135,7 @@ export function useFrameWatch({
       // а не продолжиться с середины по кадру, снятому минуту назад.
       prevGrayRef.current = null;
       steadyCountRef.current = 0;
+      adviceHoldRef.current = { kind: "ready", count: 0 };
       countdownStartRef.current = null;
       firedRef.current = false;
       return;
@@ -146,8 +167,17 @@ export function useFrameWatch({
       // отсчёт не начался с него.
       const motion = previous ? frameDifference(previous, gray) : 1;
 
-      const verdict = readiness(frameStats(gray, SAMPLE_WIDTH, SAMPLE_HEIGHT), motion);
+      const stats = frameStats(gray, SAMPLE_WIDTH, SAMPLE_HEIGHT);
+      const verdict = readiness(stats, motion);
       setReadinessState(verdict);
+
+      // Совет показываем только когда причина устоялась, а снимаем сразу:
+      // подтверждать исправление незачем, оно уже видно в кадре.
+      const kind = frameAdvice(stats, motion);
+      const hold = adviceHoldRef.current;
+      adviceHoldRef.current = kind === hold.kind ? { kind, count: hold.count + 1 } : { kind, count: 1 };
+      if (kind === "ready") setAdvice("ready");
+      else if (adviceHoldRef.current.count >= ADVICE_HOLD) setAdvice(kind);
 
       if (!armed || firedRef.current || now - startedAt < SETTLE_MS) return;
 
@@ -178,6 +208,7 @@ export function useFrameWatch({
 
   return {
     readiness: readinessState,
+    advice,
     countdown,
     auto: armed,
     cancelAuto: () => { setAuto(false); setCountdown(0); },

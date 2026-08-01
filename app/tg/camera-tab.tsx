@@ -25,6 +25,7 @@ import { useCameraPref } from "../camera-prefs";
 import { useFrameWatch } from "../use-frame-watch";
 import { useFoodHint } from "../use-food-hint";
 import { FOOD_THRESHOLD } from "@/lib/food-presence";
+import { FRAME_ADVICE_LABELS } from "@/lib/frame-quality";
 
 type DraftItem = {
   name: string;
@@ -418,12 +419,18 @@ export function CameraTab({
               {/* Отмена — явной кнопкой, а не касанием куда попало: кадр,
                   снятый без предупреждения, ощущается как сбой, и человек
                   должен видеть, чем именно это остановить. */}
+              {/* Порядок важен: сначала то, что вот-вот произойдёт, потом
+                  то, что мешает, и только потом приятное. Сказать «еда в
+                  кадре» о смазанном снимке — соврать: он не годится, и
+                  затвор поэтому и молчит. */}
               {watch.countdown > 0
                 ? <button className="tg-viewfinder-tip tg-viewfinder-tip--action" onClick={watch.cancelAuto}>
                     Снимаю… отменить
                   </button>
-                : <span className="tg-viewfinder-tip">
-                    {foodSeen
+                : <span className="tg-viewfinder-tip" data-kind={watch.advice}>
+                    {watch.advice !== "ready"
+                      ? FRAME_ADVICE_LABELS[watch.advice]
+                      : foodSeen
                       ? "Еда в кадре"
                       : watch.auto
                       ? "Наведите на тарелку — сниму сам"
@@ -481,8 +488,10 @@ export function CameraTab({
       {error && <p className="tg-error">{error}</p>}
       {busy && <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
       {/* Повтор для снимка — только после ошибки: сам он уходит на разбор
-          сразу, отдельного подтверждения не требуя. */}
-      {error && lastPhoto && !busy && <button className="tg-button tg-button-block"
+          сразу, отдельного подтверждения не требуя. В текстовом режиме своя
+          кнопка «Разобрать» уже есть, и вторая рядом сбивала бы с толку —
+          тем более что повторяла бы снимок, а не набранный текст. */}
+      {error && lastPhoto && !busy && mode === "camera" && <button className="tg-button tg-button-block"
         onClick={() => void handleAnalyze(lastPhoto)}>Попробовать снова</button>}
 
       {/* Прочие способы — под кадром и мельче: главное действие тут съёмка,

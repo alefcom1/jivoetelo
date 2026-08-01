@@ -55,6 +55,55 @@ function initDataHeader(): Record<string, string> {
   return { "x-telegram-init-data": initData };
 }
 
+/**
+ * Предел ожидания ответа.
+ *
+ * ## Почему он вообще нужен
+ *
+ * Без него запрос висит, пока его не убьёт операционная система, — на iPhone
+ * это оказалось около трёх минут. Всё это время кнопка говорит «Разбираем…»,
+ * и человек не может ни отменить, ни повторить: экран выглядит зависшим,
+ * потому что он и есть зависший.
+ *
+ * Значение с большим запасом: разбор текста укладывается в секунды, снимок —
+ * в десяток. Полторы минуты означают, что что-то сломалось, и честнее это
+ * сказать, чем ждать дальше.
+ */
+const ANALYZE_TIMEOUT_MS = 90_000;
+const DEFAULT_TIMEOUT_MS = 20_000;
+
+/**
+ * Ошибки сети — своими словами.
+ *
+ * `fetch` в WKWebView бросает `TypeError: Load failed`, в Chrome — `Failed to
+ * fetch`. Эти строки однажды доехали до экрана как есть: человек увидел
+ * «Load failed» посреди русского интерфейса. Своё сообщение не объясняет
+ * больше, но хотя бы говорит, что делать.
+ */
+function networkFailure(cause: unknown): ApiError {
+  if (cause instanceof DOMException && cause.name === "TimeoutError") {
+    return new ApiError({ reason: "error", message: "Слишком долго нет ответа. Попробуйте ещё раз." });
+  }
+  if (cause instanceof DOMException && cause.name === "AbortError") {
+    return new ApiError({ reason: "error", message: "Запрос отменён." });
+  }
+  return new ApiError({ reason: "error", message: "Нет связи с сервером. Проверьте интернет и попробуйте ещё раз." });
+}
+
+/**
+ * Запрос с ограничением по времени и с человеческим текстом ошибки.
+ *
+ * `ApiError` пропускаем наружу как есть: это уже разобранный ответ сервера
+ * с осмысленным сообщением, и подменять его на «нет связи» было бы враньём.
+ */
+async function request(url: string, init: RequestInit = {}, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+  } catch (cause) {
+    throw networkFailure(cause);
+  }
+}
+
 async function handle<T>(response: Response): Promise<T> {
   if (response.ok) return (await response.json()) as T;
   let payload: Record<string, unknown> = {};
@@ -71,11 +120,11 @@ async function handle<T>(response: Response): Promise<T> {
 }
 
 export async function fetchToday(): Promise<TodayResponse> {
-  return handle<TodayResponse>(await fetch("/api/tg/today", { headers: initDataHeader(), cache: "no-store" }));
+  return handle<TodayResponse>(await request("/api/tg/today", { headers: initDataHeader(), cache: "no-store" }));
 }
 
 export async function linkAccount(code: string): Promise<{ ok: true; email: string }> {
-  const response = await fetch("/api/tg/link", {
+  const response = await request("/api/tg/link", {
     method: "POST",
     headers: { ...initDataHeader(), "Content-Type": "application/json" },
     body: JSON.stringify({ code }),
@@ -90,7 +139,7 @@ export async function linkAccount(code: string): Promise<{ ok: true; email: stri
  * защищает от случайного нажатия, но не от запроса, посланного мимо него.
  */
 export async function registerByTelegram(consent: boolean): Promise<{ ok: true; created: boolean }> {
-  const response = await fetch("/api/tg/register", {
+  const response = await request("/api/tg/register", {
     method: "POST",
     headers: { ...initDataHeader(), "Content-Type": "application/json" },
     body: JSON.stringify({ consent }),
@@ -103,7 +152,13 @@ export async function analyzeMeal(formData: FormData): Promise<{
   photoKey: string | null;
   sourceText: string | null;
 }> {
-  const response = await fetch("/api/tg/analyze", { method: "POST", headers: initDataHeader(), body: formData });
+  // Разбор — единственный запрос, который законно идёт долго: на том конце
+  // модель. Остальным хватает общего предела.
+  const response = await request(
+    "/api/tg/analyze",
+    { method: "POST", headers: initDataHeader(), body: formData },
+    ANALYZE_TIMEOUT_MS,
+  );
   return handle(response);
 }
 
@@ -120,7 +175,7 @@ export type ClarificationDto = {
 };
 
 export async function saveMeal(payload: unknown): Promise<{ ok: true; id: number }> {
-  const response = await fetch("/api/tg/meals", {
+  const response = await request("/api/tg/meals", {
     method: "POST",
     headers: { ...initDataHeader(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -137,11 +192,11 @@ export type InboxItemDto = {
 };
 
 export async function fetchInbox(): Promise<{ items: InboxItemDto[] }> {
-  return handle<{ items: InboxItemDto[] }>(await fetch("/api/tg/inbox", { headers: initDataHeader(), cache: "no-store" }));
+  return handle<{ items: InboxItemDto[] }>(await request("/api/tg/inbox", { headers: initDataHeader(), cache: "no-store" }));
 }
 
 export async function dismissInboxItem(id: number): Promise<{ ok: boolean }> {
-  const response = await fetch("/api/tg/inbox", {
+  const response = await request("/api/tg/inbox", {
     method: "POST",
     headers: { ...initDataHeader(), "Content-Type": "application/json" },
     body: JSON.stringify({ id }),
@@ -173,7 +228,7 @@ export type FrequentMealDto = {
 
 export async function fetchFrequentMeals(): Promise<{ meals: FrequentMealDto[] }> {
   return handle<{ meals: FrequentMealDto[] }>(
-    await fetch("/api/tg/frequent", { headers: initDataHeader(), cache: "no-store" }),
+    await request("/api/tg/frequent", { headers: initDataHeader(), cache: "no-store" }),
   );
 }
 
@@ -184,7 +239,7 @@ export type SuggestResponse = {
 };
 
 export async function fetchSuggestions(): Promise<SuggestResponse> {
-  return handle<SuggestResponse>(await fetch("/api/tg/suggest", { headers: initDataHeader(), cache: "no-store" }));
+  return handle<SuggestResponse>(await request("/api/tg/suggest", { headers: initDataHeader(), cache: "no-store" }));
 }
 
 /**

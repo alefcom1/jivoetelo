@@ -159,7 +159,7 @@ try {
   });
   const page = await context.newPage();
   page.on("pageerror", (e) => problems.push(`ошибка страницы: ${e.message}`));
-  await page.addInitScript(`
+  const TELEGRAM_STUB = `
     window.Telegram = { WebApp: {
       initData: ${JSON.stringify(signInitData(TG_USER_ID))},
       initDataUnsafe: { user: { first_name: "Марина" } },
@@ -178,13 +178,18 @@ try {
       HapticFeedback: { impactOccurred(){}, notificationOccurred(){}, selectionChanged(){} },
       ready(){}, expand(){}, onEvent(){}, offEvent(){},
     } };
-  `);
+`;
+  await page.addInitScript(TELEGRAM_STUB);
 
   // Автоспуск на первом заходе выключен намеренно: он срабатывает секунды за
   // две, а модель распознавания едет с нуля дольше. С включённым автоспуском
   // видоискатель исчез бы раньше, чем появилась зелёная рамка, и шаг 5
   // проверял бы не то, что задумано. Сам автоспуск проверяется шагом 6.
   await page.addInitScript(() => window.localStorage.setItem("jt.camera.autoShot", "off"));
+  // Распознавание еды выключено по умолчанию — оно тянет мегабайты и мешает
+  // разбору на мобильном интернете. Здесь включаем явно, иначе проверять
+  // было бы нечего.
+  await page.addInitScript(() => window.localStorage.setItem("jt.camera.foodHint", "on"));
 
   console.log("1. Открываем Mini App и переходим на «Камеру»");
   await page.goto(`${BASE}/tg`);
@@ -265,28 +270,29 @@ try {
   await page.waitForSelector(".tg-today, .tg-hero", { timeout: 20000 });
   await page.evaluate(() => window.localStorage.removeItem("jt.camera.autoShot"));
 
-  console.log("9. С выключенной настройкой модель распознавания не качается вовсе");
-  // Смысл выключателя именно в этом: не «подсказка молчит», а «ни один байт
-  // не поехал». Проверяем по сетевым запросам, а не по виду экрана.
+  console.log("9. По умолчанию модель распознавания не качается вовсе");
+  // Отдельный контекст, а не reload текущего: addInitScript выполняется при
+  // каждой навигации и вернул бы настройку обратно. Здесь проверяется именно
+  // умолчание — то, что получит человек, ничего не трогавший в настройках.
+  const plain = await browser.newContext({ viewport: { width: 420, height: 860 }, permissions: ["camera"] });
+  const plainPage = await plain.newPage();
   const modelRequests = [];
-  page.on("request", (request) => { if (request.url().includes("/models/")) modelRequests.push(request.url()); });
-  await page.evaluate(() => window.localStorage.setItem("jt.camera.foodHint", "off"));
-  await page.evaluate(() => window.localStorage.setItem("jt.camera.autoShot", "off"));
-  await page.reload();
-  await page.waitForSelector(".tg-app", { timeout: 20000 });
-  await page.click('.tg-tabs button:has-text("Камера")');
-  await page.waitForSelector(".tg-viewfinder video", { timeout: 15000 });
-  await new Promise((resolve) => setTimeout(resolve, 6000));
+  plainPage.on("request", (request) => { if (request.url().includes("/models/")) modelRequests.push(request.url()); });
+  await plainPage.addInitScript(TELEGRAM_STUB);
+  await plainPage.goto(`${BASE}/tg`);
+  await plainPage.waitForSelector(".tg-app", { timeout: 20000 });
+  await plainPage.click('.tg-tabs button:has-text("Камера")');
+  await plainPage.waitForSelector(".tg-viewfinder video", { timeout: 15000 });
+  // Ждём дольше, чем отложенный старт загрузки: если бы она была включена,
+  // за это время запросы уже ушли бы.
+  await new Promise((resolve) => setTimeout(resolve, 7000));
   if (modelRequests.length > 0) {
-    problems.push(`при выключенной настройке запрошено ${modelRequests.length} файлов модели`);
+    problems.push(`по умолчанию запрошено ${modelRequests.length} файлов модели: ${modelRequests[0]}`);
   }
-  if (await page.$('.tg-viewfinder-frame[data-food="yes"]')) {
-    problems.push("рамка позеленела при выключенном распознавании");
+  if (await plainPage.$('.tg-viewfinder-frame[data-food="yes"]')) {
+    problems.push("рамка позеленела при выключенном по умолчанию распознавании");
   }
-  await page.evaluate(() => {
-    window.localStorage.removeItem("jt.camera.foodHint");
-    window.localStorage.removeItem("jt.camera.autoShot");
-  });
+  await plain.close();
 
   console.log("10. Крестик закрытия становится стрелкой на внутренних экранах");
   // На «Сегодня» кнопки быть не должно: там крестик закрывает приложение,

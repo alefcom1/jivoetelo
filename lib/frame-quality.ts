@@ -151,3 +151,53 @@ export function readiness(stats: FrameStats, motion: number): Readiness {
   const lit = stats.luma >= MIN_LUMA && stats.luma <= MAX_LUMA && stats.clipped <= MAX_CLIPPED;
   return { steady, sharp, lit, ready: steady && sharp && lit };
 }
+
+/**
+ * Что именно мешает снять — одной причиной.
+ *
+ * ## Почему одна, а не список
+ *
+ * Человек держит телефон над тарелкой и смотрит в кадр. Три замечания разом
+ * он прочитает медленнее, чем исправит любое из них наугад, и всё равно
+ * возьмётся за одно. Значит, называть надо то, за что стоит взяться первым.
+ *
+ * ## Почему такой порядок
+ *
+ * Свет вперёд: рукой он не исправляется, из-за него не сработает ничего
+ * остального, и сказать об этом надо раньше всего.
+ *
+ * Движение важнее резкости, и это не вкусовщина. Кадр в движении смазан
+ * почти всегда — сказать про него «не в фокусе» значит послать человека
+ * исправлять то, что исправится само, стоит ему замереть.
+ *
+ * Пороги ровно те же, что у `readiness`: совет и решение автоспуска обязаны
+ * говорить об одном кадре одно и то же, иначе подсказка объясняет не то,
+ * из-за чего затвор молчит.
+ */
+export type FrameAdvice = "dark" | "bright" | "glare" | "shaky" | "blurry" | "ready";
+
+export function frameAdvice(stats: FrameStats, motion: number): FrameAdvice {
+  if (stats.luma < MIN_LUMA) return "dark";
+  if (stats.luma > MAX_LUMA) return "bright";
+  if (stats.clipped > MAX_CLIPPED) return "glare";
+  if (motion > STEADY_MOTION) return "shaky";
+  if (stats.sharpness < MIN_SHARPNESS) return "blurry";
+  return "ready";
+}
+
+/**
+ * Подписи к советам.
+ *
+ * Тон тот же, что и во всём продукте: подсказка, а не выговор. «Плохой кадр»
+ * и «вы дрожите» здесь невозможны — человек и так делает что может, держа
+ * телефон одной рукой над тарелкой. Каждая строка говорит, что сделать, а не
+ * что не так.
+ */
+export const FRAME_ADVICE_LABELS: Record<FrameAdvice, string> = {
+  dark: "Темновато — ближе к свету",
+  bright: "Слишком светло",
+  glare: "Блики — отверните от окна",
+  shaky: "Держите ровнее",
+  blurry: "Камера наводится…",
+  ready: "",
+};
