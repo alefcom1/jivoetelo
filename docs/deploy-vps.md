@@ -172,7 +172,8 @@ certbot.
 > поднимется, а nginx будет исправно проксировать на чужое приложение:
 > главная отдаст 200 чужой страницей, а `/api/health` и калькуляторы — 404.
 > Диагностика: `ss -tlnp | grep :3000`. Лечение: свободный порт в
-> `APP_HOST_PORT` и тот же номер в `deploy/nginx/jivoetelo-proxy.conf`.
+> `APP_HOST_PORT` и `sudo ./deploy/install-nginx.sh` — он подставит его в
+> конфигурацию nginx сам.
 > `npm run preflight` теперь предупреждает об этом заранее. Выключать работающий сайт ради второго нельзя, поэтому фронтом
 остаётся nginx, а Caddy не используется вовсе. Конфиги — в `deploy/nginx/`.
 
@@ -221,11 +222,17 @@ certbot certonly --webroot -w /var/www/html -d jivoetelo.ru -d www.jivoetelo.ru
 Затем боевой конфиг:
 
 ```bash
-cp deploy/nginx/jivoetelo-headers.conf deploy/nginx/jivoetelo-proxy.conf /etc/nginx/snippets/
-cp deploy/nginx/jivoetelo.conf /etc/nginx/sites-available/jivoetelo.ru
-nginx -t && systemctl reload nginx
+sudo ./deploy/install-nginx.sh
 curl -sI https://jivoetelo.ru | head -3
 ```
+
+> **Копировать эти файлы руками нельзя.** В `jivoetelo-proxy.conf` вместо
+> порта стоит заполнитель — установщик подставляет его из `APP_HOST_PORT` в
+> `.env`, то есть из того же места, откуда берёт порт контейнер. Однажды
+> здесь стояла обычная команда `cp`, в репозитории лежал порт 3000, а
+> приложение слушало 3100 — и весь сайт поехал на соседний techperevod.
+> Ни одна проверка этого не заметила: `nginx -t` доволен, `curl` отдаёт
+> двухсотку, только страница чужая.
 
 Если `nginx -t` ругается `Address family not supported by protocol` — на
 сервере нет IPv6, закомментируйте строки `listen [::]:...`.
