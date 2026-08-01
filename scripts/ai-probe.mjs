@@ -65,12 +65,12 @@ const VISION = process.env.ANTHROPIC_MODEL_VISION || process.env.ANTHROPIC_MODEL
 const TEXT = process.env.ANTHROPIC_MODEL_TEXT || process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";
 
 /**
- * Сколько ждём обычный шаг и сколько — шаг развёртки.
+ * Сколько ждём обычный шаг и сколько — шаг поиска порога.
  *
  * У обычного предел щедрый: надо увидеть, сколько на самом деле нужно, а не
- * упереться в собственную настройку. У развёртки — жёсткий: шагов много, и
- * если каждый висящий будет отниматься по три минуты, прогон не кончится
- * никогда. Для развёртки важен сам факт «встал», а не точное время.
+ * упереться в собственную настройку. У поиска порога — жёсткий: висящих
+ * шагов там несколько, и с тремя минутами на каждый прогон не кончится
+ * никогда. Там важен сам факт «встал», а не точное время.
  */
 const TIMEOUT_MS = Number(process.env.PROBE_TIMEOUT_MS || 180_000);
 const SWEEP_TIMEOUT_MS = Number(process.env.PROBE_SWEEP_TIMEOUT_MS || 45_000);
@@ -83,7 +83,7 @@ if (!TOKEN && !API_KEY) {
 console.log(`Прокси:  ${BASE}`);
 console.log(`Зрение:  ${VISION}`);
 console.log(`Текст:   ${TEXT}`);
-console.log(`Предел:  ${Math.round(TIMEOUT_MS / 1000)} с на шаг, ${Math.round(SWEEP_TIMEOUT_MS / 1000)} с на развёртке\n`);
+console.log(`Предел:  ${Math.round(TIMEOUT_MS / 1000)} с на шаг, ${Math.round(SWEEP_TIMEOUT_MS / 1000)} с на поиске порога\n`);
 
 /** Крошечный JPEG-квадрат 64×64 — минимальная картинка, какую примет модель. */
 const TINY_JPEG =
@@ -242,16 +242,83 @@ const chain = [
   }],
 ];
 
-// Развёртка по весу: картинка везде одна, 64×64. Меняется только вес тела.
-for (const size of [16, 24, 32, 48, 64]) {
-  chain.push([`3.${size}. та же картинка, балласт ${size} КБ`, {
-    body: { model: VISION, max_tokens: 200, messages: [image(paddedImage(size))] },
-    timeoutMs: SWEEP_TIMEOUT_MS,
-  }]);
+let firstFailure = null;
+for (const [label, options] of chain) {
+  const ok = await probe(label, options);
+  if (!ok && !firstFailure) firstFailure = label;
 }
 
-if (photo) {
-  chain.push(
+/**
+ * Порог по весу — бисекцией, а не перебором.
+ *
+ * ## Почему не список размеров
+ *
+ * Так и было в прошлой версии: 16, 24, 32, 48, 64. Беда в том, что каждый
+ * НЕ прошедший размер стоит полного предела ожидания, и список из пяти
+ * даёт три висящих подряд — две с лишним минуты на то, что и так уже
+ * известно после первого. А точности всё равно нет: ответ выходит вида
+ * «где-то между 32 и 43 КБ».
+ *
+ * Бисекция даёт и точность, и скорость: сначала удваиваем, пока не встанет
+ * (проходящие шаги дёшевы — три секунды), потом делим отрезок пополам.
+ * Висящих шагов выходит два-три вместо трёх-четырёх, а порог известен с
+ * точностью до пары килобайт — и именно это число нужно, чтобы выставить
+ * бюджет сжатия в lib/ai/image.ts.
+ *
+ * Возвращает границы: `ok` — наибольший прошедший вес, `bad` — наименьший
+ * не прошедший (или null, если порога нет вовсе).
+ */
+async function weightThreshold() {
+  const step = async (size) => probe(`   балласт ${String(size).padStart(3)} КБ`, {
+    body: { model: VISION, max_tokens: 200, messages: [image(paddedImage(size))] },
+    timeoutMs: SWEEP_TIMEOUT_MS,
+  });
+
+  let ok = 0;
+  let bad = null;
+  for (const size of [16, 32, 64, 128, 256]) {
+    if (await step(size)) ok = size;
+    else { bad = size; break; }
+  }
+  if (bad === null) return { ok, bad: null };
+
+  // Половиним, пока отрезок не станет уже двух килобайт: дальше уточнять
+  // нечего — бюджет сжатия всё равно выставляется с запасом.
+  while (bad - ok > 2) {
+    const middle = Math.round((ok + bad) / 2);
+    if (await step(middle)) ok = middle;
+    else bad = middle;
+  }
+  return { ok, bad };
+}
+
+let threshold = { ok: 0, bad: null };
+if (!firstFailure) {
+  console.log("\nПорог по весу: картинка везде одна, 64×64 — меняется только вес тела\n");
+  threshold = await weightThreshold();
+  if (threshold.bad !== null) {
+    firstFailure = `вес тела около ${threshold.bad} КБ`;
+    console.log(`\n   ${threshold.ok} КБ проходит, ${threshold.bad} КБ нет — порог между ними.`);
+  } else {
+    console.log("\n   Порога нет: прошло даже 256 КБ. Значит вес ни при чём.");
+  }
+}
+
+/**
+ * Шаги 4–6 добавляют к картинке снимок, схему и раздумья. Они имеют смысл
+ * ровно тогда, когда вес не мешает: если порог найден и он ниже веса
+ * снимка, все три встанут по той же причине — и отнимут по три минуты
+ * каждый, ничего нового не сказав. Прогонять их принудительно: PROBE_ALL=1.
+ */
+const photoBodyKb = photo ? Math.round((photo.bytes * 4 / 3) / 1024) : 0;
+const heavierThanThreshold = threshold.bad !== null && photoBodyKb >= threshold.bad;
+
+if (photo && heavierThanThreshold && !process.env.PROBE_ALL) {
+  console.log(`\nШаги 4–6 пропущены: снимок весит ~${photoBodyKb} КБ в теле запроса,`);
+  console.log(`это выше найденного порога. Прогнать всё равно: PROBE_ALL=1`);
+} else if (photo) {
+  console.log("");
+  const rest = [
     ["4. настоящий снимок", {
       body: { model: VISION, max_tokens: 200, messages: [image(photo.base64)] },
     }],
@@ -269,13 +336,11 @@ if (photo) {
         messages: [image(photo.base64)],
       },
     }],
-  );
-}
-
-let firstFailure = null;
-for (const [label, options] of chain) {
-  const ok = await probe(label, options);
-  if (!ok && !firstFailure) firstFailure = label;
+  ];
+  for (const [label, options] of rest) {
+    const ok = await probe(label, options);
+    if (!ok && !firstFailure) firstFailure = label;
+  }
 }
 
 /**
@@ -285,7 +350,8 @@ for (const [label, options] of chain) {
 if (firstFailure) {
   console.log("\nЧАСТЬ 2. Тот же вес, но другие адресаты: чей это порог\n");
 
-  const HEAVY_KB = Number(process.env.PROBE_HEAVY_KB || 64);
+  // Берём вес, на котором встало, — с ним и сравниваем других адресатов.
+  const HEAVY_KB = Number(process.env.PROBE_HEAVY_KB || threshold.bad || 64);
   const origin = new URL(BASE).origin;
 
   await probe("2a. прокси, негодный секрет", {
@@ -321,8 +387,7 @@ if (!firstFailure) {
   console.log("  1   — не работает прокси или ключ;");
   console.log("  2   — недоступна модель зрения (проверьте ANTHROPIC_MODEL_VISION);");
   console.log("  3   — прокси не пропускает картинки вовсе;");
-  console.log("  3.N — дело в ВЕСЕ тела, а не в снимке: картинка везде одна, 64×64.");
-  console.log("        Номер шага, на котором встало, и есть порог;");
+  console.log("  вес — дело в ВЕСЕ тела, а не в снимке: картинка везде одна, 64×64;");
   console.log("  4   — дело именно в снимке (пиксели), а не в весе;");
   console.log("  5   — дело в схеме ответа;");
   console.log("  6   — дело в раздумьях (effort) — это мы уже убрали.");
