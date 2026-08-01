@@ -139,79 +139,9 @@
   font-size: 14px;
 }
 
-/* Карточка графика веера */
-.plan-chart-card {
-  padding: 26px;
-  background: var(--white);
-  border: 1px solid var(--line);
-}
+/* Стили графика-веера переехали в app/globals.css: тем же компонентом
+   пользуется страница веса в кабинете, а globals.css подключён везде. */
 
-.plan-chart {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.plan-chart-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.plan-chart-svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.plan-chart-area {
-  fill: var(--coral);
-  fill-opacity: 0.18;
-  stroke: none;
-}
-
-.plan-chart-mid {
-  fill: none;
-  stroke: var(--black);
-  stroke-width: 1.5;
-}
-
-.plan-chart-target {
-  stroke: var(--muted);
-  stroke-width: 1;
-  stroke-dasharray: 4 4;
-}
-
-.plan-chart-target-label {
-  font: 700 10px var(--sans);
-  fill: var(--muted);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.plan-chart-today {
-  fill: var(--coral);
-  stroke: var(--white);
-  stroke-width: 2;
-}
-
-.plan-chart-axis {
-  font: 700 10px var(--sans);
-  fill: var(--muted);
-}
-
-.plan-chart-caption {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
 
 .plan-chart-note {
   margin: 0;

@@ -1,10 +1,14 @@
 import { redirect } from "next/navigation";
 import { asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { weightEntries } from "@/db/schema";
+import { profiles, weightEntries } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDayRu } from "@/lib/dates";
+import { buildFan } from "@/lib/fan";
+import type { PaceKey } from "@/lib/pace";
+import { computeTargets, type Activity, type Goal, type SexForFormula } from "@/lib/targets";
 import { weeklyTrendChange, weightTrend } from "@/lib/trend";
+import FanChart from "../../raschet/plan/fan-chart";
 import { WeightForm } from "./weight-form";
 
 export default async function WeightPage() {
@@ -20,6 +24,36 @@ export default async function WeightPage() {
   const weekly = weeklyTrendChange(trend);
   const recent = [...trend].reverse().slice(0, 14);
 
+  // Прогноз-веер: тот же график, что видит аноним на калькуляторе, — только
+  // здесь он построен на настоящем весе из дневника, а не на введённом
+  // однажды числе. Показывать его посетителю и прятать от того, кто ведёт
+  // записи, было ровно наоборот тому, как должно быть.
+  const profile = (await getDb().select().from(profiles).where(eq(profiles.userId, user.id)).limit(1))[0];
+  const latestKg = trend.length > 0 ? trend[trend.length - 1].weightKg : null;
+  const targets = profile && latestKg
+    ? computeTargets({
+        goal: profile.goal as Goal,
+        sexForFormula: profile.sexForFormula as SexForFormula,
+        birthYear: profile.birthYear,
+        heightCm: profile.heightCm,
+        weightKg: latestKg,
+        activity: profile.activity as Activity,
+        adjustmentKcal: profile.kcalAdjustment,
+        pace: profile.pace as PaceKey | null,
+      })
+    : null;
+  const fan = profile && latestKg && targets
+    ? buildFan({
+        sexForFormula: profile.sexForFormula as SexForFormula,
+        birthYear: profile.birthYear,
+        heightCm: profile.heightCm,
+        weightKg: latestKg,
+        activity: profile.activity as Activity,
+        intakeKcal: targets.kcalTarget,
+        targetWeightKg: profile.targetWeightKg ?? undefined,
+      })
+    : null;
+
   return <main className="weight">
     <h1>Вес</h1>
     <p className="addflow-hint">
@@ -27,6 +61,14 @@ export default async function WeightPage() {
     </p>
 
     <WeightForm />
+
+    {fan && <section className="plan-chart-card weight-forecast">
+      <FanChart
+        fan={fan}
+        targetWeightKg={profile?.targetWeightKg ?? undefined}
+        maintaining={profile?.goal === "maintain"}
+      />
+    </section>}
 
     {trend.length > 0 && <section className="day-totals">
       <div><strong>{trend[trend.length - 1].trendKg}</strong><span>тренд, кг</span></div>
