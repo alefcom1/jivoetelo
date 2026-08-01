@@ -55,12 +55,20 @@ export function describeAiFailure(error: unknown): AiFailure {
   return { kind: "unknown", status, message: text };
 }
 
-/** Одна строка в лог: где, на какой модели и что именно сломалось. */
-export function logAiFailure(operation: string, model: string, error: unknown): AiFailure {
+/**
+ * Одна строка в лог: где, на какой модели, сколько ждали и что сломалось.
+ *
+ * Время обязательно. «Request timed out» без него не отвечает на главный
+ * вопрос — модель думала минуту или две, — а от ответа зависит, поднимать
+ * предел или уменьшать задачу. Мы этот вопрос уже задавали и не смогли
+ * ответить по логу.
+ */
+export function logAiFailure(operation: string, model: string, error: unknown, startedAt?: number): AiFailure {
   const failure = describeAiFailure(error);
+  const elapsed = startedAt ? ` за ${Math.round((Date.now() - startedAt) / 1000)} с` : "";
   console.error(
     `[ai] ${operation} на ${model}: ${failure.kind}` +
-    `${failure.status ? ` ${failure.status}` : ""} — ${failure.message}`,
+    `${failure.status ? ` ${failure.status}` : ""}${elapsed} — ${failure.message}`,
   );
   return failure;
 }

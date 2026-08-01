@@ -93,11 +93,19 @@ test("разбор фото доходит до модели и возвраща
   assert.equal(result.analysis.items[0].name, "Гречка");
   assert.equal(result.usage.inputTokens, 100);
 
-  // Зрение идёт на sonnet, и раздумья ему разрешены — это и есть причина,
-  // по которой ему нужно больше времени, чем разбору текста.
+  // Зрение идёт на sonnet — на нём и держится качество разбора.
   assert.match(received.body.model, /sonnet/);
-  assert.equal(received.body.output_config.effort, "medium");
   assert.equal(received.body.output_config.format.type, "json_schema");
+
+  // Раздумий не просим. Именно они ломали разбор фото: `effort: "medium"`
+  // при потолке в 16000 токенов — это «размышляй, бюджет почти не
+  // ограничен», и модель размышляла дольше двух минут. Узнавание еды — это
+  // работа зрения, а не рассуждения.
+  assert.equal(received.body.output_config.effort, undefined, "раздумья вернулись в разбор фото");
+  assert.ok(
+    received.body.max_tokens <= 4000,
+    `потолок ответа ${received.body.max_tokens} — с таким запасом модель снова уйдёт думать на минуты`,
+  );
 
   const image = received.body.messages[0].content.find((part) => part.type === "image");
   assert.ok(image, "снимок не попал в запрос");
@@ -109,7 +117,6 @@ test("разбор текста идёт на другую модель и бе�
   await provider.analyseMeal({ kind: "text", text: "два сырника и капучино" });
 
   assert.match(received.body.model, /haiku/);
-  // haiku отвечает на effort четырёхсоткой и не выполняет запрос вовсе.
   assert.equal(received.body.output_config.effort, undefined);
   assert.ok(!JSON.stringify(received.body.messages).includes("image"));
 });
@@ -129,5 +136,8 @@ test("подсказки уходят тем же путём", async () => {
 
   assert.equal(result.suggestions[0].title, "Творог с ягодами");
   assert.match(received.body.model, /haiku/);
+  // Здесь та же связка уцелела случайно: haiku `effort` не понимает вовсе и
+  // потому его игнорировал. Полагаться на это нельзя — модель сменится.
   assert.equal(received.body.output_config.effort, undefined);
+  assert.ok(received.body.max_tokens <= 4000, `потолок ответа ${received.body.max_tokens}`);
 });

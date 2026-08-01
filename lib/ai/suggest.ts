@@ -1,5 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { createAnthropicClient, readUsage, resolveModel, supportsEffort, retriesFor, supportsFallbacks, timeoutFor } from "./client.ts";
+import { createAnthropicClient, readUsage, resolveModel, retriesFor, supportsFallbacks, timeoutFor } from "./client.ts";
 import { DisabledSuggestionProvider } from "./disabled.ts";
 import { logAiFailure } from "./failure.ts";
 import { resolveAiMode } from "./mode.ts";
@@ -105,6 +105,15 @@ const SUGGESTIONS_SCHEMA = {
   },
 } as const;
 
+/**
+ * Потолок ответа. Три варианта блюд с объяснениями — это сотни токенов, а не
+ * тысячи; здесь стояло 16000 вместе с `effort: "medium"`, и на разборе фото
+ * такая же связка обернулась ответом дольше двух минут (см. MAX_TOKENS в
+ * ./anthropic.ts). Подсказки уцелели случайно: они идут на haiku, который
+ * `effort` не понимает вовсе и потому его игнорировал.
+ */
+const MAX_TOKENS = 2000;
+
 const SYSTEM_PROMPT = `Ты — ассистент сервиса «Живое Тело». Подбери 3 варианта следующего приёма пищи под остаток дня пользователя.
 
 Правила:
@@ -192,24 +201,23 @@ export class AnthropicSuggestionProvider implements SuggestionProvider {
     const model = resolveModel("suggest");
     const withFallbacks = supportsFallbacks(model);
     let response: Anthropic.Beta.Messages.BetaMessage;
+    const startedAt = Date.now();
     try {
       response = await this.client.beta.messages.create({
         model,
-        max_tokens: 16000,
+        max_tokens: MAX_TOKENS,
         ...(withFallbacks
           ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
           : {}),
         output_config: {
-          // effort понимают не все модели: haiku отвечает на него 400 и не
-          // выполняет запрос вовсе (см. supportsEffort в ./client.ts).
-          ...(supportsEffort(model) ? { effort: "medium" as const } : {}),
+          // effort здесь не задаётся сознательно: см. MAX_TOKENS выше.
           format: { type: "json_schema", schema: SUGGESTIONS_SCHEMA },
         },
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: buildPrompt(context) }],
       }, { timeout: timeoutFor("suggest"), maxRetries: retriesFor("suggest") });
     } catch (error) {
-      logAiFailure("suggest", model, error);
+      logAiFailure("suggest", model, error, startedAt);
       throw new MealAnalysisError("Anthropic request failed", "provider_error");
     }
     if (response.stop_reason === "refusal") {

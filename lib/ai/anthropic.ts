@@ -1,5 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { createAnthropicClient, readUsage, resolveModel, supportsEffort, retriesFor, supportsFallbacks, timeoutFor } from "./client.ts";
+import { createAnthropicClient, readUsage, resolveModel, retriesFor, supportsFallbacks, timeoutFor } from "./client.ts";
 import { logAiFailure } from "./failure.ts";
 import { compressPhotoForAi } from "./image.ts";
 import { MEAL_ANALYSIS_SCHEMA, validateMealAnalysis } from "./schema.ts";
@@ -19,6 +19,33 @@ const SYSTEM_PROMPT = `Ты — ассистент нутрициолога в �
 - Калорийность должна сходиться с составом: белки и усвояемые углеводы по 4 ккал/г, жиры 9, клетчатка 2, спирт 7.
 
 Языковые правила (обязательно): никаких оценок и морализаторства. Запрещены формулировки вида «плохая еда», «вредно», «запрещённый продукт», «слишком много». Ты описываешь еду, а не судишь её.`;
+
+/**
+ * Потолок ответа — и почему он не шестнадцать тысяч.
+ *
+ * ## Что случилось
+ *
+ * Разбор фото не работал: модель не отвечала за две минуты, запрос обрывался
+ * по таймауту, в логе — две строки «Request timed out» подряд. Ни отказа
+ * сервера, ни обрыва связи: модель действительно столько думала.
+ *
+ * Думала она потому, что мы её об этом просили. В запросе стояло
+ * `effort: "medium"` при `max_tokens: 16000` — то есть «размышляй, бюджет
+ * почти не ограничен». Для задачи «прочитать тарелку и выдать JSON» это
+ * бессмысленно дорого: узнавание еды — работа зрения, а не рассуждения, и
+ * пятнадцать тысяч токенов раздумий не делают гречку гречкой вернее.
+ *
+ * ## Что теперь
+ *
+ * `effort` не задаётся вовсе, а потолок сведён к тому, что нужно ответу:
+ * разбор из десятка позиций с уточняющими вопросами укладывается в тысячу
+ * токенов с запасом. Четыре тысячи — запас на запас; при этом бюджет уже не
+ * позволяет уйти в раздумья на минуты.
+ *
+ * Разбор текста шёл тем же путём и работал только потому, что haiku `effort`
+ * не понимает вовсе (см. supportsEffort) — то есть работал случайно.
+ */
+const MAX_TOKENS = 4000;
 
 export class AnthropicMealProvider implements MealVisionProvider {
   private client: Anthropic;
@@ -56,27 +83,25 @@ export class AnthropicMealProvider implements MealVisionProvider {
     const withFallbacks = supportsFallbacks(model);
 
     let response: Anthropic.Beta.Messages.BetaMessage;
+    const startedAt = Date.now();
     try {
       response = await this.client.beta.messages.create({
         model,
-        max_tokens: 16000,
+        max_tokens: MAX_TOKENS,
         ...(withFallbacks
           ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const }
           : {}),
         output_config: {
-          // effort понимают не все модели: haiku отвечает на него 400 и не
-          // выполняет запрос вовсе (см. supportsEffort в ./client.ts).
-          ...(supportsEffort(model) ? { effort: "medium" as const } : {}),
+          // effort здесь не задаётся сознательно — см. рассуждение у MAX_TOKENS.
           format: { type: "json_schema", schema: MEAL_ANALYSIS_SCHEMA },
         },
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content }],
-        // Предел на запрос, а не на клиента: зрение с раздумьями думает
-        // заметно дольше разбора строки текста, и один общий предел на обе
-        // операции уже обрубал разбор фото посередине.
+        // Предел на запрос, а не на клиента: разбор снимка и разбор строки —
+        // задачи разного веса, и один общий предел на обе уже ломал первую.
       }, { timeout: timeoutFor(operation), maxRetries: retriesFor(operation) });
     } catch (error) {
-      logAiFailure(operation, model, error);
+      logAiFailure(operation, model, error, startedAt);
       throw new MealAnalysisError("Anthropic request failed", "provider_error");
     }
 
