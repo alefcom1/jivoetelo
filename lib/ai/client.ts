@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { Agent as UndiciAgent } from "undici";
+import { Agent as UndiciAgent, fetch as undiciFetch } from "undici";
 import type { AiOperation } from "../quota-policy.ts";
 
 /**
@@ -14,15 +14,42 @@ import type { AiOperation } from "../quota-policy.ts";
  * pipelining: 0 отключает переиспользование keep-alive соединений. Без этого
  * долгоживущий пул может держать сокет, который удалённая сторона уже
  * закрыла, — следующий запрос падает с ECONNRESET. Проверено на боевом
- * прокси techperevod; fetchOptions.dispatcher — официально поддерживаемый
- * SDK способ подменить transport для Node.js fetch (undici).
+ * прокси techperevod.
+ *
+ * ## Почему свой fetch, а не fetchOptions.dispatcher
+ *
+ * Раньше агент отдавался глобальному `fetch` через `fetchOptions.dispatcher`.
+ * Способ официальный, но он молча предполагает, что undici один. А их два:
+ * в Node 22 встроен undici 6, а пакетом установлен undici 8. Обработчик
+ * запроса у них разный — в шестой версии `onConnect/onHeaders/onData`, в
+ * восьмой `onRequestStart/onResponseStart/...`. Встроенный fetch собирал
+ * обработчик по-старому и звал `dispatch` у нашего агента, а тот проверял
+ * его по-новому и отказывал:
+ *
+ *     InvalidArgumentError: invalid onRequestStart method
+ *
+ * Наружу это выглядело как `Error: Connection error` без статуса и заголовков
+ * — то есть как проблема сети, хотя ни одного пакета не ушло.
+ *
+ * Поэтому fetch берём из того же пакета, что и агент: тогда обе половины
+ * транспорта заведомо одной версии, чем бы ни оказался снабжён Node.
  */
 const upstreamAgent = new UndiciAgent({ pipelining: 0, keepAliveTimeout: 1 });
 
+/**
+ * Транспорт всех обращений к модели. Вынесен отдельно, чтобы его можно было
+ * проверить тестом без сети и без ключей — см. tests/ai-transport.test.mjs.
+ */
+export const upstreamFetch = ((input: unknown, init?: unknown) =>
+  undiciFetch(input as Parameters<typeof undiciFetch>[0], {
+    ...(init as Parameters<typeof undiciFetch>[1]),
+    dispatcher: upstreamAgent,
+  })) as unknown as typeof fetch;
+
 export function createAnthropicClient(): Anthropic {
   // apiKey/authToken/baseURL SDK читает из окружения сам; передаём только
-  // диспетчер, чтобы не дублировать логику выбора учётных данных.
-  return new Anthropic({ fetchOptions: { dispatcher: upstreamAgent } });
+  // транспорт, чтобы не дублировать логику выбора учётных данных.
+  return new Anthropic({ fetch: upstreamFetch });
 }
 
 /** Есть ли у сервера учётные данные для реальных вызовов. */
