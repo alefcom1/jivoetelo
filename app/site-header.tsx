@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { hasLinks, NAV_ASIDE, NAV_SECTIONS, type NavSection } from "@/lib/site-nav";
 import { Logo } from "./logo";
 
 /**
@@ -20,20 +21,27 @@ import { Logo } from "./logo";
  * Из-за выпадающего меню: ему нужно состояние. Зато теперь оно нужно только
  * здесь — до этого из-за него вся главная целиком была клиентской.
  *
+ * ## Одно состояние на два раздела — так было и так не работало
+ *
+ * Состояние называлось `menu` и было булевым: открыто или нет. Панель при
+ * этом была одна и показывала оба списка сразу, поэтому «Продукт» и
+ * «Решения» открывали одно и то же — разделов как будто и не существовало.
+ * Теперь в состоянии лежит подпись открытого раздела, а панель показывает
+ * ссылки только этого раздела.
+ *
+ * Из того же корня росла и вторая странность: перейдя табом с «Решений» на
+ * «Журнал», человек оставлял панель открытой — закрывать её было некому,
+ * потому что `onFocus` стоял только на разделах с меню. Теперь фокус на
+ * любом пункте задаёт состояние явно: у раздела с панелью — свою подпись,
+ * у якорного — пусто.
+ *
  * ## Про ссылки на разделы
  *
- * Разделы «Продукт», «Журнал» и «О нас» живут якорями на главной. На самой
- * главной по ним плавно прокручиваем, с других страниц — переходим. Одно и
- * то же поведение везде выглядело бы поломкой: на главной перезагрузка ради
+ * Разделы «Журнал» и «О нас» живут якорями на главной. На самой главной по
+ * ним плавно прокручиваем, с других страниц — переходим. Одно и то же
+ * поведение везде выглядело бы поломкой: на главной перезагрузка ради
  * прокрутки, на других страницах прокрутка в никуда.
  */
-
-const SECTIONS = [
-  { label: "Продукт", menu: true },
-  { label: "Решения", menu: true },
-  { label: "Журнал", anchor: "journal" },
-  { label: "О нас", anchor: "about" },
-] as const;
 
 export type HeaderCta = { href: string; label: string };
 
@@ -46,53 +54,93 @@ function goToSection(anchor: string) {
   else window.location.assign(`/#${anchor}`);
 }
 
+/** Идентификатор панели — чтобы кнопка могла на неё сослаться для читалок. */
+function panelId(section: NavSection) {
+  return `nav-panel-${NAV_SECTIONS.indexOf(section)}`;
+}
+
 export function SiteHeader({ cta = DEFAULT_CTA }: { cta?: HeaderCta }) {
-  const [menu, setMenu] = useState(false);
+  /** Подпись открытого раздела — или null, если ничего не открыто. */
+  const [open, setOpen] = useState<string | null>(null);
+  const [drawer, setDrawer] = useState(false);
+
+  const opened = NAV_SECTIONS.find((section) => section.label === open);
+  const panel = opened && hasLinks(opened) ? opened : null;
+
+  function closeAll() {
+    setOpen(null);
+    setDrawer(false);
+  }
 
   return <header
     className="site-header"
     // Меню закрывается, когда курсор уходит со всей шапки: сама выпадающая
     // панель лежит внутри неё, поэтому переход с пункта на панель разрывом
     // не считается. Escape — для тех, кто пришёл с клавиатуры.
-    onMouseLeave={() => setMenu(false)}
-    onKeyDown={(event) => { if (event.key === "Escape") setMenu(false); }}
+    onMouseLeave={() => setOpen(null)}
+    onKeyDown={(event) => { if (event.key === "Escape") closeAll(); }}
   >
-    <Link className="logo" href="/"><span><Logo /></span>Живое Тело</Link>
+    <Link className="logo" href="/" onClick={closeAll}><span><Logo /></span>Живое Тело</Link>
     <nav className="main-nav" aria-label="Навигация">
-      {SECTIONS.map((section) => "menu" in section
+      {NAV_SECTIONS.map((section) => hasLinks(section)
         ? <button
             key={section.label}
-            aria-expanded={menu}
+            aria-expanded={open === section.label}
+            aria-controls={panelId(section)}
             // Наведение — основной способ, но не единственный: на телефоне
             // его нет вовсе, а с клавиатуры до меню добираются табом.
-            onMouseEnter={() => setMenu(true)}
-            onFocus={() => setMenu(true)}
-            onClick={() => setMenu(!menu)}
+            onMouseEnter={() => setOpen(section.label)}
+            onFocus={() => setOpen(section.label)}
+            onClick={() => setOpen(open === section.label ? null : section.label)}
           >{section.label}<small>⌄</small></button>
         : <button
             key={section.label}
-            onMouseEnter={() => setMenu(false)}
-            onClick={() => goToSection(section.anchor)}
+            // Фокус здесь закрывает панель так же, как и наведение: иначе
+            // переход табом с «Решений» оставлял её висеть.
+            onMouseEnter={() => setOpen(null)}
+            onFocus={() => setOpen(null)}
+            onClick={() => { setOpen(null); goToSection(section.anchor); }}
           >{section.label}</button>)}
     </nav>
     <div className="header-actions">
       <Link className="login" href="/login">Войти</Link>
       <Link className="header-cta" href={cta.href}>{cta.label} <b>↗</b></Link>
+      {/* Гамбургер — единственная навигация на телефоне: .main-nav и «Войти»
+          там спрятаны шириной, и до этой правки попасть с телефона было
+          некуда, кроме как по логотипу на главную. */}
+      <button
+        className="burger"
+        aria-expanded={drawer}
+        aria-controls="nav-drawer"
+        aria-label={drawer ? "Закрыть меню" : "Открыть меню"}
+        onClick={() => setDrawer(!drawer)}
+      >{drawer ? "✕" : "☰"}</button>
     </div>
-    {menu && <div className="mega-menu">
+
+    {panel && <div className="mega-menu" id={panelId(panel)}>
       <div>
-        <p>Продукт</p>
-        <Link href="/#experience">Дневник питания <b>→</b></Link>
-        <Link href="/raschet/plan">Персональный план <b>→</b></Link>
-        <Link href="/#experience">Прогресс и привычки <b>→</b></Link>
+        <p>{panel.label}</p>
+        {panel.links.map((link) => <Link key={link.label} href={link.href} onClick={closeAll}>
+          {link.label} <b>→</b>
+        </Link>)}
       </div>
-      <div>
-        <p>Решения</p>
-        <Link href="/#specialists">Для себя <b>→</b></Link>
-        <Link href="/pro">Для специалистов <b>→</b></Link>
-        <Link href="/skolko-kalorij">Калькуляторы <b>→</b></Link>
-      </div>
-      <aside>Считает по фотографии.<br /><em>Работает в Telegram.</em></aside>
+      <aside>{NAV_ASIDE.line}<br /><em>{NAV_ASIDE.accent}</em></aside>
+    </div>}
+
+    {drawer && <div className="nav-drawer" id="nav-drawer">
+      {NAV_SECTIONS.map((section) => hasLinks(section)
+        // На телефоне раскрывать нечего: экран и так вертикальный, и лишнее
+        // касание ради списка из трёх ссылок — плата ни за что.
+        ? <section key={section.label}>
+            <p>{section.label}</p>
+            {section.links.map((link) => <Link key={link.label} href={link.href} onClick={closeAll}>
+              {link.label} <b>→</b>
+            </Link>)}
+          </section>
+        : <button key={section.label} onClick={() => { closeAll(); goToSection(section.anchor); }}>
+            {section.label} <b>→</b>
+          </button>)}
+      <Link className="drawer-login" href="/login" onClick={closeAll}>Войти</Link>
     </div>}
   </header>;
 }
