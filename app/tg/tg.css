@@ -540,6 +540,17 @@
 .tg-illustration { display: block; width: 132px; height: 132px; }
 .tg-empty .tg-illustration { margin-bottom: 2px; }
 
+/* Живело: карточка серии дней.
+   Полосой, а не блоком — она стоит над кольцом энергии, главным объектом
+   экрана, и всё, что выше кольца, отодвигает его вниз. Отсюда и 72 пикселя
+   картинки вместо 132 у иллюстраций пустых экранов. */
+.tg-mascot-art { display: block; width: 72px; height: 72px; flex-shrink: 0; }
+.tg-streak { display: flex; gap: 12px; align-items: center; }
+.tg-streak-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tg-streak-body b { font-size: 17px; letter-spacing: -0.01em; }
+.tg-streak-body p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--tg-hint); }
+.tg-streak-body em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--brand-coral); }
+
 /* Миниатюра приёма пищи: настоящий снимок, если он есть, иначе значок
    категории на подложке её же тона. Размер один и тот же — список не
    «прыгает» от того, сфотографировал человек еду или ввёл текстом. */

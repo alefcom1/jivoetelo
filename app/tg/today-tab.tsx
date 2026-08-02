@@ -8,6 +8,7 @@ import { FoodIcon, foodTint } from "../food-icon";
 import { IconInbox } from "./icons";
 import { ArtEmptyPlate } from "./illustrations";
 import { TgPhoto } from "./photo";
+import { StreakCard } from "./streak-card";
 import { SuggestCard } from "./suggest-card";
 import { WeightTrend } from "./weight-trend";
 
@@ -154,6 +155,12 @@ export function TodayTab({
         ? totals.kcal >= kcalMid ? "День набран." : "Ваш день идёт."
         : "Ваш день идёт."}</h1>
     </header>
+
+    {/* Живело стоит выше кольца сознательно: серия — это повод открыть
+        приложение, и повод должен быть виден до того, как человек начнёт
+        разбираться в цифрах дня. Ниже кольца его увидели бы только те, кто и
+        так дошёл до конца экрана. */}
+    <StreakCard streak={data.streak} />
 
     {/* Калории и макросы — крупно и сразу, без раскрытия (раздел «Три отличия
         от макета» спецификации Mini App v2, пункт 1). */}

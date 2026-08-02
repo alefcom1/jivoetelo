@@ -1,7 +1,8 @@
 import { localToday, MEAL_TYPE_LABELS } from "@/lib/dates";
 import { countPending } from "@/lib/inbox";
 import { splitMacroTargets } from "@/lib/macro-split";
-import { getDaySummary } from "@/lib/meals";
+import { getDaySummary, listLoggedDays } from "@/lib/meals";
+import { computeStreak } from "@/lib/streak";
 import { weeklyTrendChange, weightTrend } from "@/lib/trend";
 import { listRecentWeights } from "@/lib/weight";
 import { authorize } from "../_auth";
@@ -10,12 +11,14 @@ export async function GET(request: Request) {
   const auth = await authorize(request);
   if ("response" in auth) return auth.response;
 
-  // Три независимых чтения — параллельно, а не одно за другим: ни одно не
-  // зависит от результата другого.
-  const [summary, inboxPending, weights] = await Promise.all([
-    getDaySummary(auth.user.id, localToday()),
+  const today = localToday();
+  // Независимые чтения — параллельно, а не одно за другим: ни одно не зависит
+  // от результата другого.
+  const [summary, inboxPending, weights, loggedDays] = await Promise.all([
+    getDaySummary(auth.user.id, today),
     countPending(auth.user.id),
     listRecentWeights(auth.user.id, 30),
+    listLoggedDays(auth.user.id),
   ]);
 
   const trend = weightTrend(weights);
@@ -43,5 +46,8 @@ export async function GET(request: Request) {
     inboxPending,
     // null, если записей веса ещё нет: рисовать график не из чего.
     weight: trend.length > 0 ? { entries: trend, weeklyChangeKg: weeklyTrendChange(trend) } : null,
+    // Числа серии считаются здесь, а текст — на клиенте (lib/mascot.ts):
+    // реплики персонажа живут рядом с картинкой, которую они подписывают.
+    streak: computeStreak(loggedDays, today),
   });
 }

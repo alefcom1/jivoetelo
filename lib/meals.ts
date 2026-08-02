@@ -66,6 +66,20 @@ export async function getDaySummary(userId: number, day: string): Promise<DaySum
   };
 }
 
+/**
+ * Дни, в которых есть хотя бы одна запись, — за всё время.
+ *
+ * Окна здесь нет намеренно: счётчик дней и «недели с заботой» (lib/streak.ts)
+ * не сбрасываются никогда, и посчитать их по последним тридцати дням нельзя.
+ * Строк это даёт немного — одна дата на день, то есть сотни, а не тысячи, — и
+ * запрос идёт по тому же индексу (user_id, eaten_on), что и остальные чтения
+ * дневника.
+ */
+export async function listLoggedDays(userId: number): Promise<string[]> {
+  const rows = await getDb().selectDistinct({ day: meals.eatenOn }).from(meals).where(eq(meals.userId, userId));
+  return rows.map((row) => row.day);
+}
+
 /** Актуальные цели пользователя или null, если план ещё не настроен. */
 export async function getTargetsForUser(userId: number): Promise<Targets | null> {
   const rows = await getDb().select().from(profiles).where(eq(profiles.userId, userId)).limit(1);

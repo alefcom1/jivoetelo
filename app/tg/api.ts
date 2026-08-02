@@ -1,5 +1,6 @@
 "use client";
 
+import type { StreakResult } from "@/lib/streak";
 import { getWebApp } from "./telegram.ts";
 
 export type TgTotals = { kcal: number; protein: number; fat: number; carbs: number; fiber: number };
@@ -38,6 +39,12 @@ export type TodayResponse = {
   /** Снимки, присланные боту и ещё не подтверждённые — строка на «Сегодня». */
   inboxPending: number;
   weight: TgWeight | null;
+  /**
+   * Серия дней с записями. Числа приходят с сервера, текст к ним собирает
+   * lib/mascot.ts уже здесь — так реплики персонажа лежат рядом с картинкой,
+   * которую подписывают, а не двумя наборами слов в разных местах.
+   */
+  streak: StreakResult;
 };
 
 export type ApiFailure = { reason: "not_linked" | "invalid_signature" | "not_configured" | "error"; message?: string };
