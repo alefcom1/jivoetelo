@@ -15,7 +15,7 @@
 import { useState } from "react";
 import { CONFIDENCE_LABELS, type Confidence } from "@/lib/confidence";
 import { MEAL_TYPE_LABELS } from "@/lib/dates";
-import { itemTotals, sumTotals } from "@/lib/nutrition";
+import { isBlankNutrition, itemTotals, sumTotals } from "@/lib/nutrition";
 import { scaleGrams } from "@/lib/portions";
 import { updateMealItems } from "../../meal-actions";
 
@@ -104,7 +104,15 @@ export function MealItemsPanel({
           {items.map((item, index) => {
             const t = itemTotals(item);
             return <tr key={index}>
-              <td>{item.name}{item.confidence === "low" && <i> · неточно</i>}</td>
+              <td>
+                {item.name}
+                {/* «0 ккал» у еды почти всегда значит не «еда без калорий», а
+                    «числа не ввели». Пока это молчаливый ноль, человек считает
+                    его данными и правит не то. */}
+                {isBlankNutrition(item)
+                  ? <i> · числа не заполнены</i>
+                  : item.confidence === "low" && <i> · неточно</i>}
+              </td>
               <td>{item.grams} г</td>
               {showCalories && <td>{t.kcal}</td>}
               <td>{t.protein} г</td>
@@ -144,7 +152,9 @@ export function MealItemsPanel({
           <button type="button" onClick={() => patch(index, { grams: scaleGrams(item.grams, 2) })} aria-label="Увеличить порцию вдвое">2×</button>
         </div>
         <div className="draft-item-meta">
-          {item.confidence !== "high" && <i>{CONFIDENCE_LABELS[(item.confidence as Confidence) ?? "medium"]}</i>}
+          {isBlankNutrition(item)
+            ? <i>числа не заполнены</i>
+            : item.confidence !== "high" && <i>{CONFIDENCE_LABELS[(item.confidence as Confidence) ?? "medium"]}</i>}
           {showCalories && <span>{Math.round((item.kcalPer100 * item.grams) / 100)} ккал</span>}
           <span>белок {Math.round((item.proteinPer100 * item.grams) / 10) / 10} г</span>
           {/* Раскрыто по умолчанию: на этот экран приходят чинить именно

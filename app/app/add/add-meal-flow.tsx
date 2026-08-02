@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import type { AnalysisItem, Clarification, MealAnalysis } from "@/lib/ai";
 import { MEAL_TYPE_LABELS } from "@/lib/dates";
-import { sumTotals } from "@/lib/nutrition";
+import { isBlankNutrition, sumTotals } from "@/lib/nutrition";
 import { scaleGrams } from "@/lib/portions";
 import { analyzeMeal, saveMeal } from "../meal-actions";
 import { CameraCapture } from "./camera-capture";
@@ -301,10 +301,17 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
           )}
         </div>
         <div className="draft-item-meta">
-          {item.confidence !== "high" && <i>{CONFIDENCE_LABELS[item.confidence]}</i>}
+          {/* Позиция, добавленная руками, приходит с нулями во всех числах, а
+              поля «на 100 г» спрятаны под раскрытием — сохранить пустую еду
+              легко и незаметно. В дневнике она потом выглядит как «Салат,
+              300 г — 0 ккал», и понять по ней, забыли числа или их правда
+              ноль, уже нельзя. */}
+          {isBlankNutrition(item)
+            ? <i>числа не заполнены</i>
+            : item.confidence !== "high" && <i>{CONFIDENCE_LABELS[item.confidence]}</i>}
           {showCalories && <span>{Math.round((item.kcalPer100 * item.grams) / 100)} ккал</span>}
           <span>белок {Math.round((item.proteinPer100 * item.grams) / 10) / 10} г</span>
-          <details>
+          <details open={isBlankNutrition(item)}>
             <summary>на 100 г</summary>
             <div className="per100-grid">
               <label>ккал<input type="number" min={0} max={900} value={item.kcalPer100} onChange={(e) => updateItem(index, { kcalPer100: Number(e.target.value) })} /></label>
