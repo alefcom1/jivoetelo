@@ -81,12 +81,24 @@ export type CompressedPhoto = { data: Buffer; mediaType: "image/webp" };
  *    нехватка памяти). Сжатие — оптимизация, а не условие разбора,
  *    поэтому ошибку не бросаем: вызывающий код отправит оригинал.
  */
-export async function compressPhotoForAi(data: Buffer): Promise<CompressedPhoto | null> {
+export async function compressPhotoForAi(
+  data: Buffer,
+  /**
+   * Потолок веса. Умолчание — жёсткий бюджет для отправки телом запроса.
+   *
+   * Маршрут, отдающий снимок по ссылке, передаёт сюда Infinity, и это не
+   * лень, а разные условия: по ссылке картинка едет обычным HTTP внутрь, где
+   * порога в 32 КБ нет вовсе. Лестница качества там гоняла бы кодек до
+   * четырёх раз ради ограничения, которого на этом пути не существует, — и
+   * отдавала бы картинку хуже, чем можно.
+   */
+  targetBytes: number = TARGET_BYTES,
+): Promise<CompressedPhoto | null> {
   try {
     const metadata = await sharp(data, { failOn: "none" }).metadata();
     const longSide = Math.max(metadata.width ?? 0, metadata.height ?? 0);
     const fitsByPixels = longSide > 0 && longSide <= MAX_DIMENSION_PX;
-    const fitsByBytes = data.length <= TARGET_BYTES;
+    const fitsByBytes = data.length <= targetBytes;
     if (fitsByPixels && fitsByBytes) {
       return null;
     }
@@ -109,7 +121,7 @@ export async function compressPhotoForAi(data: Buffer): Promise<CompressedPhoto 
       // на том же объекте вернёт результат первой ступени.
       const candidate = await resized.clone().webp({ quality }).toBuffer();
       best = candidate;
-      if (candidate.length <= TARGET_BYTES) break;
+      if (candidate.length <= targetBytes) break;
     }
     if (!best) return null;
 
@@ -121,7 +133,7 @@ export async function compressPhotoForAi(data: Buffer): Promise<CompressedPhoto 
       return null;
     }
 
-    if (best.length > TARGET_BYTES) {
+    if (best.length > targetBytes) {
       // Досюда доходят редкие кадры — очень пёстрые или очень широкие.
       // Отправляем как есть: лучше тяжёлый запрос, чем каша вместо еды.
       console.warn(`[ai] снимок не ужался в бюджет: ${Math.round(best.length / 1024)} КБ`);

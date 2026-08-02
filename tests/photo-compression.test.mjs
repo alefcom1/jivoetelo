@@ -155,3 +155,21 @@ test("падение сжатия не роняет разбор: пустой �
     assert.equal(result, null);
   });
 });
+
+test("без потолка по весу кодек отрабатывает один раз и качество выше", async () => {
+  // Так снимок готовится для отдачи по ссылке: там едет обычный HTTP внутрь,
+  // и ограничение в 180 КБ, придуманное для тела запроса, только портило бы
+  // картинку. Пиксели ужимаются по-прежнему — их считает модель.
+  const original = await makePhotoLike(2048, 1536, 8);
+
+  const budgeted = await compressPhotoForAi(original);
+  const unlimited = await compressPhotoForAi(original, Number.POSITIVE_INFINITY);
+
+  assert.notEqual(unlimited, null);
+  const meta = await sharp(unlimited.data).metadata();
+  assert.equal(Math.max(meta.width, meta.height), 1024, "пиксели всё равно ужимаются");
+  assert.ok(
+    unlimited.data.length > budgeted.data.length,
+    `без потолка ожидали кадр тяжелее и лучше: ${budgeted.data.length} → ${unlimited.data.length}`,
+  );
+});

@@ -30,18 +30,40 @@ import { isPhotoKey, photoMimeType, readPhoto } from "@/lib/storage";
  * (lib/ai/image.ts), логично отдать именно её, а не оригинал с диска.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {
-  const notFound = () => new Response("Not found", { status: 404 });
+  const startedAt = Date.now();
+
+  /**
+   * Каждый исход попадает в лог, и это не отладочный мусор.
+   *
+   * Сюда ходит чужой сервер, которого мы не видим. Когда разбор фото встал,
+   * различить «Anthropic не пришёл вовсе», «пришёл и получил 404» и «пришёл,
+   * получил картинку, но что-то пошло дальше» было решительно нечем: маршрут
+   * молчал при любом исходе. Одна строка на запрос закрывает весь этот вопрос,
+   * а запросов тут ровно столько же, сколько разборов по фото.
+   */
+  const done = (outcome: string, extra = "") => {
+    console.log(`[ai-photo] ${outcome} за ${Date.now() - startedAt} мс${extra}`);
+  };
+  const notFound = (why: string) => {
+    done(why);
+    return new Response("Not found", { status: 404 });
+  };
 
   const { token } = await params;
   const key = verifyPhotoLink(token);
-  if (!key || !isPhotoKey(key)) return notFound();
+  if (!key) return notFound("подпись не сошлась или срок вышел");
+  if (!isPhotoKey(key)) return notFound("ключ неверной формы");
 
   const data = await readPhoto(key);
-  if (!data) return notFound();
+  if (!data) return notFound(`файла нет: ${key}`);
 
-  const compressed = await compressPhotoForAi(data);
+  // Без потолка по весу: по ссылке снимок едет обычным HTTP внутрь, а не
+  // через прокси, где тело тяжелее ~32 КБ не проходит. Уменьшаем только
+  // пиксели — их считает модель, — и кодируем один раз, а не четыре.
+  const compressed = await compressPhotoForAi(data, Number.POSITIVE_INFINITY);
   const body = compressed?.data ?? data;
   const mediaType = compressed?.mediaType ?? photoMimeType(key);
+  done("отдали", ` — ${key}, ${Math.round(data.length / 1024)} → ${Math.round(body.length / 1024)} КБ`);
 
   return new Response(new Uint8Array(body), {
     headers: {
