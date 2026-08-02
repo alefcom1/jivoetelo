@@ -4,6 +4,7 @@ import { mealItems, meals, profiles, weightEntries } from "@/db/schema";
 import { localToday, shiftDay } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
 import { proposeAdjustment, type AdjustmentProposal } from "@/lib/adaptive";
+import { computeMealStats, type PeriodStats } from "@/lib/meal-stats";
 import type { PaceKey } from "@/lib/pace";
 import { buildWeekReview, type DayStat, type WeekReview } from "@/lib/review";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
@@ -15,6 +16,8 @@ export type ReviewData = {
   proposal: AdjustmentProposal | null;
   weekStart: string;
   weekEnd: string;
+  /** Счётчики приёмов пищи за ту же неделю — те же числа, что на «Плане». */
+  mealStats: PeriodStats;
 };
 
 /** Собирает данные недельного обзора за последние 7 дней (включая сегодня). */
@@ -24,9 +27,12 @@ export async function getReviewData(userId: number, showCalories: boolean): Prom
   const weekStart = shiftDay(weekEnd, -6);
 
   const weekMeals = await db
-    .select({ id: meals.id, eatenOn: meals.eatenOn })
+    .select({ id: meals.id, eatenOn: meals.eatenOn, eatenTime: meals.eatenTime, mealType: meals.mealType })
     .from(meals)
     .where(and(eq(meals.userId, userId), gte(meals.eatenOn, weekStart)));
+  // Окно уже ограничено неделей запросом выше, поэтому началом истории здесь
+  // служит сам weekStart: обзор и так называется недельным.
+  const mealStats = computeMealStats(weekMeals, weekEnd, weekStart).week;
   const mealIds = weekMeals.map((m) => m.id);
   const items = mealIds.length > 0 ? await db.select().from(mealItems).where(inArray(mealItems.mealId, mealIds)) : [];
 
@@ -83,7 +89,8 @@ export async function getReviewData(userId: number, showCalories: boolean): Prom
     weeklyTrendChangeKg: trendChange,
     targets,
     showCalories,
+    mealStats,
   });
 
-  return { review, targets, proposal, weekStart, weekEnd };
+  return { review, targets, proposal, weekStart, weekEnd, mealStats };
 }

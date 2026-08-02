@@ -2,6 +2,7 @@
 // поддерживающий язык, тренд вместо шума. Текст детерминированный —
 // собирается из посчитанной статистики без обращения к модели.
 
+import { describePeriod, type PeriodStats } from "./meal-stats.ts";
 import type { Targets } from "./targets.ts";
 
 export type DayStat = {
@@ -16,6 +17,13 @@ export type WeekReviewInput = {
   weeklyTrendChangeKg: number | null;
   targets: Targets | null;
   showCalories: boolean;
+  /**
+   * Счётчики приёмов пищи за период (lib/meal-stats.ts). Необязательны: обзор
+   * строится и без них. Здесь, а не отдельным блоком на странице, потому что
+   * из этого же построителя собираются письма — иначе счётчики пришлось бы
+   * держать в двух местах и они бы разошлись.
+   */
+  mealStats?: PeriodStats | null;
 };
 
 export type WeekReview = {
@@ -53,6 +61,12 @@ export function buildWeekReview(input: WeekReviewInput): WeekReview {
         ? `Вы вели дневник ${daysLogged} из 7 дней — это устойчивый ритм, на который можно опираться.`
         : `Вы вели дневник ${daysLogged} из 7 дней. Регулярность важнее полноты: даже одна запись в день сохраняет картину.`,
   });
+
+  // Приёмы пищи — сколько их было и когда. Это факт о ритме, а не о питании,
+  // поэтому отдельной секцией и до разбора КБЖУ.
+  if (input.mealStats && input.mealStats.mealCount > 0) {
+    sections.push({ title: "Приёмы пищи", text: describePeriod(input.mealStats) });
+  }
 
   // Питание
   const nutrition: string[] = [];

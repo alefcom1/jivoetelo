@@ -8,6 +8,7 @@ import { getDb } from "@/db";
 import { meals, profiles, weightEntries } from "@/db/schema";
 import { computeAdherence, hasEnoughAdherenceData, type AdherenceResult } from "./adherence.ts";
 import { localToday, shiftDay } from "./dates.ts";
+import { computeMealStats, hasEnoughMealStats, type MealStats } from "./meal-stats.ts";
 import { computeTdee, computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
 import { weeklyTrendChange, weightTrend, type TrendPoint } from "./trend.ts";
 
@@ -30,6 +31,9 @@ export type PlanData = {
   hasEnoughTrendData: boolean;
   adherence: AdherenceResult;
   hasEnoughAdherenceData: boolean;
+  /** Сколько и когда человек ест — счётчики за неделю и за месяц. */
+  mealStats: MealStats;
+  hasEnoughMealStats: { week: boolean; month: boolean };
 };
 
 export async function getPlanData(userId: number): Promise<PlanData> {
@@ -68,19 +72,28 @@ export async function getPlanData(userId: number): Promise<PlanData> {
     };
   }
 
-  const loggedDays = await db
-    .selectDistinct({ eatenOn: meals.eatenOn })
+  // Один запрос на оба разбора: приверженности нужны дни с записями, статистике
+  // — сами приёмы со временем и типом. Окно берём по большему из двух (56 дней);
+  // computeMealStats урежет своё до 7 и 30 дней сам.
+  const windowMeals = await db
+    .select({ eatenOn: meals.eatenOn, eatenTime: meals.eatenTime, mealType: meals.mealType })
     .from(meals)
     .where(and(eq(meals.userId, userId), gte(meals.eatenOn, shiftDay(today, -(ADHERENCE_WINDOW_DAYS - 1)))));
 
   const adherence = computeAdherence(
-    loggedDays.map((r) => r.eatenOn),
+    windowMeals.map((r) => r.eatenOn),
     today,
     adherenceEarliest,
     ADHERENCE_WINDOW_DAYS,
   );
+  const mealStats = computeMealStats(windowMeals, today, adherenceEarliest);
 
   return {
+    mealStats,
+    hasEnoughMealStats: {
+      week: hasEnoughMealStats(mealStats.week),
+      month: hasEnoughMealStats(mealStats.month),
+    },
     targets,
     trend: trend.slice(-CHART_POINTS_LIMIT),
     weeklyTrendChangeKg,

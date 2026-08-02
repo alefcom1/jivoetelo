@@ -9,7 +9,7 @@ export default async function ReviewPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { review, targets, proposal, weekStart, weekEnd } = await getReviewData(user.id, user.showCalories);
+  const { review, targets, proposal, weekStart, weekEnd, mealStats } = await getReviewData(user.id, user.showCalories);
 
   return <main className="review">
     <h1>Недельный обзор</h1>
@@ -17,6 +17,7 @@ export default async function ReviewPage() {
 
     <section className="day-totals">
       <div><strong>{review.daysLogged}</strong><span>дней с записями</span></div>
+      <div><strong>{mealStats.mealCount}</strong><span>приёмов пищи</span></div>
       {user.showCalories && review.avgKcal !== null && <div><strong>{review.avgKcal}</strong><span>ккал в среднем</span></div>}
       {review.avgProtein !== null && <div><strong>{review.avgProtein}</strong><span>белок, г в среднем</span></div>}
       {review.avgFiber !== null && <div><strong>{review.avgFiber}</strong><span>клетчатка, г в среднем</span></div>}

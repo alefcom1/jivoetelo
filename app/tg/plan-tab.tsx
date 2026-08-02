@@ -80,9 +80,46 @@ function AdherenceBars({ adherence }: { adherence: PlanResponse["adherence"] }) 
   </div>;
 }
 
+/**
+ * Счётчики приёмов пищи за неделю и за месяц.
+ *
+ * Отдельно от «Приверженности» сознательно: та отвечает на вопрос «в какие дни
+ * я веду дневник», эта — «сколько и когда я ем». Дней с записями может быть
+ * семь из семи, а приёмов в них — то один, то шесть.
+ *
+ * «В день с записями», а не «в день»: деление на все дни окна смешало бы «стал
+ * есть реже» и «стал реже записывать» — про второе уже отвечает соседняя
+ * секция.
+ */
+function MealCounts({ period }: { period: PlanResponse["mealStats"]["week"] }) {
+  return <div className="tg-card tg-meal-stats">
+    <div className="tg-draft-total-row">
+      <div><strong>{period.mealCount}</strong><span>приёмов</span></div>
+      <div><strong>{formatDecimalRu(period.perLoggedDay)}</strong><span>в день с записями</span></div>
+      <div><strong>{period.daysLogged}<i> / {period.days}</i></strong><span>дней с записями</span></div>
+    </div>
+    {period.byType.length > 0 && <ul className="tg-meal-types">
+      {period.byType.map((type) => <li key={type.mealType}>
+        <b>{type.label}</b>
+        <span>{type.count}</span>
+        {/* Обычное время — медиана: один ужин в час ночи не должен объявлять
+            «обычным» время, в которое человек не ест никогда. */}
+        {type.typicalTime && <time>обычно {type.typicalTime}</time>}
+      </li>)}
+    </ul>}
+  </div>;
+}
+
+function formatDecimalRu(value: number | null): string {
+  return value === null ? "—" : value.toFixed(1).replace(".", ",");
+}
+
 export function PlanTab() {
   const [data, setData] = useState<PlanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** Какой период показывают счётчики приёмов пищи. Неделя первой: месяц
+   * отвечает на вопрос «как я живу вообще», а неделя — «как я живу сейчас». */
+  const [period, setPeriod] = useState<"week" | "month">("week");
 
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +136,9 @@ export function PlanTab() {
     </div>;
   }
 
-  const { targets, trend, weeklyTrendChangeKg, latestWeightKg, targetWeightKg, hasEnoughTrendData, adherence, hasEnoughAdherenceData } = data;
+  const { targets, trend, weeklyTrendChangeKg, latestWeightKg, targetWeightKg, hasEnoughTrendData, adherence, hasEnoughAdherenceData, mealStats } = data;
+  const shownPeriod = mealStats[period];
+  const periodHasData = data.hasEnoughMealStats[period];
 
   return <div className="tg-page">
     <header className="tg-hero"><h1>План</h1></header>
@@ -136,6 +175,22 @@ export function PlanTab() {
           <p>Настройте стартовый план в веб-версии — здесь появится цель по энергии и её объяснение.</p>
           <a className="tg-link" href="/app/onboarding" target="_blank" rel="noreferrer">Настроить план →</a>
         </section>}
+
+    {/* Приёмы пищи: сколько и когда */}
+    <section className="tg-section">
+      <h2>Приёмы пищи</h2>
+      <div className="tg-segment">
+        <button className={period === "week" ? "active" : ""} onClick={() => setPeriod("week")}>За неделю</button>
+        <button className={period === "month" ? "active" : ""} onClick={() => setPeriod("month")}>За месяц</button>
+      </div>
+      {periodHasData
+        ? <MealCounts period={shownPeriod} />
+        : <div className="tg-card tg-hint-card">
+            <p>{shownPeriod.mealCount === 0
+              ? "За этот период записей не было — так бывает, и навёрстывать ничего не нужно."
+              : "Пока слишком мало дней, чтобы показывать средние: одна запись — это запись, а не закономерность."}</p>
+          </div>}
+    </section>
 
     {/* Динамика веса */}
     <section className="tg-section">
