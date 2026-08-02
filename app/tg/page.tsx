@@ -8,6 +8,7 @@ import { DiaryTab } from "./diary-tab";
 import { IconAdd, IconInbox, IconPlan, IconProfile, IconToday } from "./icons";
 import { InboxTab } from "./inbox-tab";
 import { LinkScreen } from "./link-screen";
+import { MealEditor } from "./meal-editor";
 import { PlanTab } from "./plan-tab";
 import { ProfileTab } from "./profile-tab";
 import { TodayTab } from "./today-tab";
@@ -45,6 +46,14 @@ export default function MiniApp() {
    * из одного места: экран не знал, откуда пришёл.
    */
   const [cameraFrom, setCameraFrom] = useState<{ tab: Tab; day: string | null }>({ tab: "today", day: null });
+  /**
+   * Приём пищи, открытый на правку прямо с «Сегодня». Живёт в оболочке, а не
+   * внутри вкладки (в отличие от такой же правки в «Дневнике», где она —
+   * подэкран самой вкладки): нативной кнопкой «назад» владеет оболочка, а на
+   * «Сегодня» этой кнопки нет вовсе — без записи в стеке правка оказалась бы
+   * экраном, из которого системный жест выбрасывает из приложения.
+   */
+  const [todayMealId, setTodayMealId] = useState<number | null>(null);
   /** Открытый день «Дневника» — здесь, а не внутри вкладки: переключение
    * вкладки размонтирует экран, и после «Камеры» человек возвращался бы на
    * сегодня, а не на тот день, с которого уходил. */
@@ -108,6 +117,7 @@ export default function MiniApp() {
     haptic("tap");
     setInboxItem(null);
     setInboxOpen(false);
+    setTodayMealId(null);
     // «Камера» из нижней панели — это всегда запись за сегодня с возвратом
     // на «Сегодня»: сюда нажали не из «Дневника», прошлого дня в виду нет.
     if (next === "camera") setCameraFrom({ tab: "today", day: null });
@@ -119,6 +129,7 @@ export default function MiniApp() {
     haptic("tap");
     setInboxItem(null);
     setInboxOpen(false);
+    setTodayMealId(null);
     setCameraFrom({ tab: from, day });
     setTab("camera");
   }
@@ -142,9 +153,10 @@ export default function MiniApp() {
    * Куда ведёт нативная кнопка «назад».
    *
    * Порядок — от самого глубокого экрана к самому мелкому, и это и есть
-   * стек: черновик разбора → снимок из инбокса → список инбокса → вкладка,
-   * отличная от «Сегодня». На «Сегодня» кнопки нет вовсе, и там крестик
-   * закрывает приложение — так же, как в самом Telegram.
+   * стек: черновик разбора → снимок из инбокса → список инбокса → правка
+   * записи с «Сегодня» → вкладка, отличная от «Сегодня». На «Сегодня»
+   * кнопки нет вовсе, и там крестик закрывает приложение — так же, как в
+   * самом Telegram.
    *
    * Вкладки — не история, и обычно панель вкладок стрелку не показывает.
    * Здесь показывает сознательно: «Сегодня» у нас действительно главный
@@ -154,6 +166,7 @@ export default function MiniApp() {
   const goBack = discardDraft
     ?? (inboxItem ? () => { haptic("tap"); setInboxItem(null); setInboxOpen(true); }
       : inboxOpen ? () => { haptic("tap"); setInboxOpen(false); }
+      : todayMealId !== null ? () => { haptic("tap"); setTodayMealId(null); }
       : tab !== "today" ? () => { haptic("tap"); setTab("today"); }
       : null);
   useBackButton(status === "ready" ? goBack : null);
@@ -196,12 +209,22 @@ export default function MiniApp() {
           />
         : inboxOpen
         ? <InboxTab onPick={(item) => { haptic("tap"); setInboxItem(item); }} onBack={() => setInboxOpen(false)} />
+        : todayMealId !== null
+        ? <MealEditor
+            mealId={todayMealId}
+            showCalories={today.showCalories}
+            backLabel="Сегодня"
+            onBack={() => setTodayMealId(null)}
+            onChanged={() => { setTodayMealId(null); void load(); }}
+          />
         : <>
             {tab === "today" && <TodayTab
               data={today}
               firstName={firstName}
               onOpenCamera={() => openCamera("today")}
               onOpenInbox={() => { haptic("tap"); setInboxOpen(true); }}
+              onOpenMeal={(id) => { haptic("tap"); setTodayMealId(id); }}
+              onWeightAdded={() => { void load(); }}
             />}
             {tab === "diary" && <DiaryTab
               day={diaryDay}

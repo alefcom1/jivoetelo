@@ -29,11 +29,19 @@ const MEAL_TYPES: Array<[string, string]> = [
 export function MealEditor({
   mealId,
   showCalories,
+  backLabel = "Дневник",
   onBack,
   onChanged,
 }: {
   mealId: number;
   showCalories: boolean;
+  /**
+   * Куда ведёт стрелка возврата. Экран открывается из двух мест — из списка
+   * дня в «Дневнике» и из списка приёмов на «Сегодня», — и подпись должна
+   * называть тот список, откуда пришли: «← Дневник» с главного экрана
+   * обещает переход на другую вкладку, которого не будет.
+   */
+  backLabel?: string;
   onBack: () => void;
   /** Запись сохранена или удалена — экран возвращается к списку дня, список нужно перезагрузить. */
   onChanged: () => void;
@@ -124,7 +132,7 @@ export function MealEditor({
 
   if (!meal || !items) {
     return <div className="tg-page">
-      <button className="tg-link-button" onClick={onBack}>← Дневник</button>
+      <button className="tg-link-button" onClick={onBack}>← {backLabel}</button>
       <header className="tg-hero"><h1>Запись</h1></header>
       {error ? <p className="tg-error">{error}</p> : <div className="tg-spinner" aria-label="Загрузка" />}
     </div>;
@@ -142,7 +150,7 @@ export function MealEditor({
   );
 
   return <div className="tg-page">
-    <button className="tg-link-button" onClick={onBack}>← Дневник</button>
+    <button className="tg-link-button" onClick={onBack}>← {backLabel}</button>
     <header className="tg-hero">
       <p className="tg-kicker">{meal.eatenTime}</p>
       <h1>Правка записи</h1>

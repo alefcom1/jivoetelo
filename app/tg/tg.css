@@ -141,12 +141,32 @@
   transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* «Осталось на сегодня» — остаток дня числами. Заголовок оформлен как у
+   .tg-section, но живёт внутри карточки, поэтому правило своё. */
+.tg-remaining { display: flex; flex-direction: column; gap: 12px; }
+.tg-remaining h2 {
+  margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--tg-hint);
+}
+
 /* Тренд веса — мини-график SVG на «Сегодня» */
 .tg-weight { display: flex; flex-direction: column; gap: 10px; }
 .tg-weight-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .tg-weight-head strong { display: block; font: 500 26px var(--brand-serif); letter-spacing: -0.02em; }
 .tg-weight-head strong small { font-size: 13px; font-weight: 600; color: var(--tg-hint); }
 .tg-weight-change { font-size: 12px; font-weight: 700; color: var(--tg-hint); white-space: nowrap; }
+/* Замер вносится из самой карточки тренда. Кнопка компактная и вторичная:
+   она стоит рядом с главным числом экрана и не должна с ним спорить. */
+.tg-weight-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.tg-weight-add {
+  border: 0; border-radius: 999px; padding: 8px 14px; min-height: 36px;
+  background: color-mix(in srgb, var(--brand-coral) 14%, transparent); color: var(--brand-coral);
+  font: 700 13px var(--font-body), sans-serif; cursor: pointer; white-space: nowrap;
+}
+.tg-weight-add:active { opacity: 0.75; }
+.tg-weight-head strong.tg-weight-empty { color: var(--tg-hint); font-size: 17px; }
+.tg-weight-form { display: flex; gap: 8px; }
+.tg-weight-form .tg-input { flex: 1; min-width: 0; background: var(--tg-bg); }
 .tg-weight-svg { display: block; width: 100%; height: 64px; }
 .tg-weight-svg polyline { fill: none; stroke: var(--brand-coral); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -164,11 +184,21 @@
 .tg-section { display: flex; flex-direction: column; gap: 10px; }
 .tg-section h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
 .tg-meals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.tg-meals li { display: flex; align-items: center; gap: 12px; background: var(--tg-surface); border-radius: var(--radius); padding: 14px; }
+/* Карточкой строки стала сама кнопка, а не <li>: нажатие открывает правку
+   записи, и область нажатия должна совпадать с тем, что человек видит
+   строкой, — до последнего пикселя фона. */
+.tg-meals li { display: flex; }
+.tg-meal-row {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  border: 0; border-radius: var(--radius); padding: 14px;
+  background: var(--tg-surface); color: var(--tg-text);
+  font: inherit; text-align: left; cursor: pointer; transition: opacity 180ms ease;
+}
+.tg-meal-row:active { opacity: 0.75; }
 .tg-meals time { font-size: 12px; font-weight: 700; color: var(--tg-hint); width: 42px; font-variant-numeric: tabular-nums; }
-.tg-meals li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tg-meal-row > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .tg-meals b { font-size: 14px; }
-.tg-meals li > div span { font-size: 12px; color: var(--tg-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-meal-row > div span { font-size: 12px; color: var(--tg-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tg-meals strong { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font: 500 17px var(--brand-serif); white-space: nowrap; }
 .tg-meals strong em { font: 500 11px var(--font-body), sans-serif; font-style: normal; color: var(--tg-hint); }
 
@@ -510,7 +540,7 @@
 /* Строка приёма пищи на «Сегодня». Время переехало внутрь заголовка, к
    названию приёма: миниатюра слева теперь несёт больше смысла, чем колонка
    из четырёх цифр, и отдавать ей отдельную колонку незачем. */
-.tg-meals li { padding: 10px 14px; }
+.tg-meal-row { padding: 10px 14px; }
 .tg-meals b { display: flex; align-items: baseline; gap: 8px; }
 .tg-meals b time { width: auto; font-size: 11px; }
 
