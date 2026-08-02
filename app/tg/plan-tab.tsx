@@ -217,6 +217,14 @@ export function PlanTab() {
           </div>}
     </section>
 
+    {/* Вес и еда. Раздела нет вовсе, когда показывать нечего: блок, который
+        каждую неделю что-нибудь «находит», через месяц читается как гороскоп
+        (см. buildImpactSection). */}
+    {data.impact && <section className="tg-section">
+      <h2>{data.impact.title}</h2>
+      <div className="tg-card"><p className="tg-impact-text">{data.impact.text}</p></div>
+    </section>}
+
     {/* Приверженность */}
     <section className="tg-section">
       <h2>Приверженность</h2>

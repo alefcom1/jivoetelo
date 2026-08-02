@@ -125,7 +125,7 @@ function minutesOf(time: string): number | null {
  * задерживают воду. Сигнал по ним появляется на третьей-четвёртой неделе,
  * тогда как по конкретному блюду — на восьмой.
  */
-function dayFlags(day: DayIntake): string[] {
+export function dayFlags(day: DayIntake): string[] {
   const flags: string[] = [];
   if (day.hasAlcohol) flags.push(FLAG_ALCOHOL);
   const last = day.lastMealTime ? minutesOf(day.lastMealTime) : null;

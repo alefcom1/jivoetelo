@@ -4,6 +4,7 @@ import { mealItems, meals, profiles, weightEntries } from "@/db/schema";
 import { localToday, shiftDay } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
 import { proposeAdjustment, type AdjustmentProposal } from "@/lib/adaptive";
+import { getDishImpact } from "@/lib/dish-impact";
 import { computeMealStats, type PeriodStats } from "@/lib/meal-stats";
 import type { PaceKey } from "@/lib/pace";
 import { buildWeekReview, type DayStat, type WeekReview } from "@/lib/review";
@@ -18,6 +19,8 @@ export type ReviewData = {
   weekEnd: string;
   /** Счётчики приёмов пищи за ту же неделю — те же числа, что на «Плане». */
   mealStats: PeriodStats;
+  /** Раздел «Вес и еда» — тот же текст, что на «Плане» и в письме. */
+  impact: { title: string; text: string } | null;
 };
 
 /** Собирает данные недельного обзора за последние 7 дней (включая сегодня). */
@@ -92,5 +95,7 @@ export async function getReviewData(userId: number, showCalories: boolean): Prom
     mealStats,
   });
 
-  return { review, targets, proposal, weekStart, weekEnd, mealStats };
+  const impact = await getDishImpact(userId, weekEnd);
+
+  return { review, targets, proposal, weekStart, weekEnd, mealStats, impact: impact.section };
 }
