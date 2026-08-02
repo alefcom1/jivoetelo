@@ -9,6 +9,7 @@ import { IconInbox } from "./icons";
 import { ArtEmptyPlate } from "./illustrations";
 import { TgPhoto } from "./photo";
 import { SuggestCard } from "./suggest-card";
+import { haptic } from "./telegram";
 import { WeightTrend } from "./weight-trend";
 
 function greeting(): string {
@@ -91,11 +92,17 @@ export function TodayTab({
   firstName,
   onOpenCamera,
   onOpenInbox,
+  onOpenMeal,
+  onReload,
 }: {
   data: TodayResponse;
   firstName: string | null;
   onOpenCamera: () => void;
   onOpenInbox: () => void;
+  /** Правка приёма пищи живёт в «Дневнике» — туда и уводим. */
+  onOpenMeal: (mealId: number) => void;
+  /** Перечитать день: после замера веса тренд на этом же экране устарел. */
+  onReload: () => void;
 }) {
   const { totals, targets, showCalories } = data;
   const kcalMid = targets?.kcalTarget ?? null;
@@ -127,8 +134,6 @@ export function TodayTab({
       <a className="tg-link" href="/app/onboarding" target="_blank" rel="noreferrer">Настроить план →</a>
     </section>}
 
-    <WeightTrend weight={data.weight} />
-
     {/* Строка инбокса — только если снимки правда ждут; пустой инбокс на
         «Сегодня» не упоминается вовсе (раздел «Три отличия от макета»,
         пункт 2). Формулировка про «не успели подтвердить», а не «разберём
@@ -139,8 +144,6 @@ export function TodayTab({
       <b>→</b>
     </button>}
 
-    <SuggestCard showCalories={showCalories} />
-
     <section className="tg-section">
       <h2>Приёмы пищи</h2>
       {data.meals.length === 0
@@ -150,19 +153,33 @@ export function TodayTab({
             <button className="tg-button" onClick={onOpenCamera}>Снять еду</button>
           </div>
         : <ul className="tg-meals">
+            {/* Строка — кнопка: нажатие открывает правку. Раньше по ней не
+                происходило ничего, хотя выглядела она ровно как список в
+                «Дневнике», где нажатие работает. Молчащий элемент, похожий
+                на рабочий, хуже отсутствующего. */}
             {data.meals.map((meal) => <li key={meal.id}>
-              <MealThumb meal={meal} />
-              <div>
-                <b>{meal.title} <time>{meal.time}</time></b>
-                <span>{meal.items.slice(0, 3).join(", ")}</span>
-              </div>
-              <strong>
-                {showCalories && <>{meal.kcal}<small> ккал</small></>}
-                <em>{meal.protein} г белка</em>
-              </strong>
+              <button className="tg-meal-row" onClick={() => { haptic("tap"); onOpenMeal(meal.id); }}>
+                <MealThumb meal={meal} />
+                <div>
+                  <b>{meal.title} <time>{meal.time}</time></b>
+                  <span>{meal.items.slice(0, 3).join(", ")}</span>
+                </div>
+                <strong>
+                  {showCalories && <>{meal.kcal}<small> ккал</small></>}
+                  <em>{meal.protein} г белка</em>
+                </strong>
+              </button>
             </li>)}
           </ul>}
     </section>
+
+    {/* Порядок блоков: сначала день, потом что в нём уже есть, потом
+        подсказка на остаток, и только в конце вес. Вес — итог недели, а не
+        новость дня: наверху он отвечал на вопрос, которого человек в этот
+        момент не задаёт. */}
+    <SuggestCard showCalories={showCalories} />
+
+    <WeightTrend weight={data.weight} onAdded={onReload} />
 
     {/* Дисклеймер и документы должны быть доступны и внутри Telegram, а не
         только на сайте: для части людей Mini App — единственный вход. */}

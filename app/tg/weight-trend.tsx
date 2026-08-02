@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { pointsToArea, pointsToPolyline, sparklinePoints } from "@/lib/sparkline";
 import type { TgWeight } from "./api";
+import { addMeasurement } from "./plan-profile-api";
+import { haptic } from "./telegram";
 
 const WIDTH = 280;
 const HEIGHT = 64;
@@ -14,10 +17,47 @@ const PADDING = 6;
  * вода и еда, тренд показывает настоящую динамику (тот же принцип, что и
  * в вебе, `app/app/weight/page.tsx`).
  *
+ * ## Почему запись веса живёт прямо здесь
+ *
+ * Раньше поле было только в «Профиле» — на четвёртой вкладке, за двумя
+ * касаниями от карточки, которая как раз и напоминает про вес. Человек
+ * видел свой тренд и не мог его пополнить, не уходя с экрана. Тренду же
+ * нужны регулярные замеры: без них он просто перестаёт двигаться.
+ *
+ * Форма закрыта до нажатия. Открытое поле ввода в карточке, которую человек
+ * видит каждый день, — это ежедневный молчаливый упрёк; кнопка честнее.
+ *
  * Ничего не рендерит, если записей веса ещё нет: план без данных не может
  * посчитать ни цели, ни тренд, а пустой график хуже отсутствующего.
  */
-export function WeightTrend({ weight }: { weight: TgWeight | null }) {
+export function WeightTrend({ weight, onAdded }: { weight: TgWeight | null; onAdded?: () => void }) {
+  const [adding, setAdding] = useState(false);
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleAdd() {
+    const parsed = Number(value.trim().replace(",", "."));
+    if (!Number.isFinite(parsed) || parsed < 30 || parsed > 300) {
+      setError("Вес должен быть от 30 до 300 кг.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await addMeasurement(parsed);
+      haptic("success");
+      setValue("");
+      setAdding(false);
+      onAdded?.();
+    } catch {
+      haptic("error");
+      setError("Не получилось сохранить замер.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!weight || weight.entries.length === 0) return null;
 
   const { entries, weeklyChangeKg } = weight;
@@ -53,5 +93,23 @@ export function WeightTrend({ weight }: { weight: TgWeight | null }) {
       <path className="tg-weight-area" d={pointsToArea(points, HEIGHT)} />
       <polyline points={pointsToPolyline(points)} />
     </svg>}
+
+    {adding
+      ? <div className="tg-weight-add">
+          <input
+            className="tg-input" type="number" inputMode="decimal" step="0.1" min={30} max={300}
+            placeholder="вес сегодня, кг" autoFocus
+            value={value} onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && value.trim()) void handleAdd(); }}
+          />
+          <button className="tg-button" onClick={() => void handleAdd()} disabled={busy || value.trim() === ""}>
+            {busy ? "…" : "Сохранить"}
+          </button>
+          <button className="tg-link" onClick={() => { setAdding(false); setError(null); }}>Отмена</button>
+        </div>
+      : <button className="tg-link tg-weight-add-open" onClick={() => { haptic("tap"); setAdding(true); }}>
+          + Добавить замер
+        </button>}
+    {error && <p className="tg-error">{error}</p>}
   </section>;
 }

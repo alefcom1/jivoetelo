@@ -69,10 +69,17 @@ export function DiaryTab({
   day,
   onDayChange,
   onOpenCamera,
+  openMealId,
 }: {
   day: string;
   onDayChange: (day: string) => void;
   onOpenCamera: (day: string | null) => void;
+  /**
+   * Приём пищи, который надо открыть на правку сразу. Нажатие по строке на
+   * «Сегодня» ведёт сюда: правка живёт в «Дневнике», и второй такой же
+   * экран заводить незачем.
+   */
+  openMealId?: number | null;
 }) {
   const [data, setData] = useState<DiaryDayResponse | null>(null);
   // Изначально true — идёт первая загрузка. В true его переводят только
@@ -82,7 +89,15 @@ export function DiaryTab({
   // `.then`/`.catch`, куда он и так кладёт результат запроса.
   const [pending, setPending] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMealId, setSelectedMealId] = useState<number | null>(null);
+  const [selectedMealId, setSelectedMealId] = useState<number | null>(openMealId ?? null);
+  // Пришли с «Сегодня» с новым приёмом пищи — открываем его. Правка
+  // состояния при отрисовке, а не в эффекте: иначе экран успел бы мигнуть
+  // списком, прежде чем показать редактор.
+  const [lastOpened, setLastOpened] = useState<number | null>(openMealId ?? null);
+  if (openMealId !== undefined && openMealId !== lastOpened) {
+    setLastOpened(openMealId ?? null);
+    setSelectedMealId(openMealId ?? null);
+  }
 
   // При переключении дня старые данные остаются на экране до ответа сервера
   // (не сбрасываем `data` в null) — иначе каждый клик по стрелке дёргал бы

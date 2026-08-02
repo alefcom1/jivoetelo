@@ -164,13 +164,24 @@
 .tg-section { display: flex; flex-direction: column; gap: 10px; }
 .tg-section h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
 .tg-meals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.tg-meals li { display: flex; align-items: center; gap: 12px; background: var(--tg-surface); border-radius: var(--radius); padding: 14px; }
+.tg-meals li { background: var(--tg-surface); border-radius: var(--radius); }
+/* Строка целиком — кнопка: нажатие открывает правку. Сбрасываем оформление
+   кнопки до нуля, иначе браузер добавит рамку, фон и центрирование текста. */
+.tg-meal-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px;
+  border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.tg-meal-row:active { background: color-mix(in srgb, var(--tg-hint) 12%, transparent); border-radius: var(--radius); }
 .tg-meals time { font-size: 12px; font-weight: 700; color: var(--tg-hint); width: 42px; font-variant-numeric: tabular-nums; }
-.tg-meals li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tg-meal-row > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .tg-meals b { font-size: 14px; }
-.tg-meals li > div span { font-size: 12px; color: var(--tg-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-meal-row > div span { font-size: 12px; color: var(--tg-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tg-meals strong { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font: 500 17px var(--brand-serif); white-space: nowrap; }
 .tg-meals strong em { font: 500 11px var(--font-body), sans-serif; font-style: normal; color: var(--tg-hint); }
+
+/* Запись веса прямо в карточке тренда: раньше поле жило только в «Профиле»,
+   за двумя касаниями от графика, который про вес и напоминает. */
+.tg-weight-add { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+.tg-weight-add .tg-input { flex: 1; min-width: 0; }
+.tg-weight-add-open { margin-top: 12px; font-size: 13px; font-weight: 600; }
 
 .tg-empty { background: var(--tg-surface); border-radius: var(--radius); padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .tg-empty svg { color: color-mix(in srgb, var(--tg-hint) 55%, transparent); }
