@@ -125,25 +125,181 @@ export const FOOD_REFERENCE: ReferenceFood[] = [
   { name: "Кофе чёрный без сахара", kcal: 2, protein: 0.1, fat: 0, carbs: 0, fiber: 0, portionG: 200 },
   { name: "Чай без сахара", kcal: 1, protein: 0, fat: 0, carbs: 0.2, fiber: 0, portionG: 200 },
   { name: "Сок апельсиновый", kcal: 45, protein: 0.7, fat: 0.2, carbs: 10.4, fiber: 0.2, portionG: 200 },
+
+  // Фрукты и ягоды. Свежие — по съедобной части, без кожуры и косточек.
+  { name: "Нектарин", kcal: 44, protein: 1.1, fat: 0.3, carbs: 10.6, fiber: 1.7, portionG: 150 },
+  { name: "Персик", kcal: 39, protein: 0.9, fat: 0.3, carbs: 9.5, fiber: 1.5, portionG: 150 },
+  { name: "Абрикос", kcal: 48, protein: 1.4, fat: 0.4, carbs: 11.1, fiber: 2, portionG: 100 },
+  { name: "Слива", kcal: 46, protein: 0.7, fat: 0.3, carbs: 11.4, fiber: 1.4, portionG: 100 },
+  { name: "Мандарин", kcal: 53, protein: 0.8, fat: 0.3, carbs: 13.3, fiber: 1.8, portionG: 100 },
+  { name: "Грейпфрут", kcal: 42, protein: 0.8, fat: 0.1, carbs: 10.7, fiber: 1.6, portionG: 200 },
+  // Углеводы у лимона занижены относительно западных таблиц намеренно. Там
+  // их считают «по разности» — всё, что не белок, не жир, не вода и не зола,
+  // — и в эти 9,3 г попадает лимонная кислота, которой в лимоне около 5 г и
+  // которая энергии почти не даёт. Отсюда и заявленные 29 ккал вместо 39.
+  { name: "Лимон", kcal: 29, protein: 1.1, fat: 0.3, carbs: 5.8, fiber: 2.8, portionG: 30 },
+  { name: "Киви", kcal: 61, protein: 1.1, fat: 0.5, carbs: 14.7, fiber: 3, portionG: 100 },
+  { name: "Хурма", kcal: 67, protein: 0.6, fat: 0.2, carbs: 18.6, fiber: 3.6, portionG: 150 },
+  { name: "Гранат", kcal: 83, protein: 1.7, fat: 1.2, carbs: 18.7, fiber: 4, portionG: 150 },
+  { name: "Ананас", kcal: 50, protein: 0.5, fat: 0.1, carbs: 13.1, fiber: 1.4, portionG: 150 },
+  { name: "Манго", kcal: 60, protein: 0.8, fat: 0.4, carbs: 15, fiber: 1.6, portionG: 150 },
+  { name: "Арбуз", kcal: 30, protein: 0.6, fat: 0.2, carbs: 7.6, fiber: 0.4, portionG: 300 },
+  { name: "Дыня", kcal: 34, protein: 0.8, fat: 0.2, carbs: 8.2, fiber: 0.9, portionG: 200 },
+  { name: "Вишня", kcal: 50, protein: 1, fat: 0.3, carbs: 12.2, fiber: 1.6, portionG: 100 },
+  { name: "Черешня", kcal: 63, protein: 1.1, fat: 0.2, carbs: 16, fiber: 2.1, portionG: 100 },
+  { name: "Малина", kcal: 52, protein: 1.2, fat: 0.7, carbs: 11.9, fiber: 6.5, portionG: 100 },
+  { name: "Смородина чёрная", kcal: 63, protein: 1.4, fat: 0.4, carbs: 15.4, fiber: 4.8, portionG: 100 },
+  { name: "Ежевика", kcal: 43, protein: 1.4, fat: 0.5, carbs: 9.6, fiber: 5.3, portionG: 100 },
+
+  // Сухофрукты — вес маленький, калорийность как у сладкого.
+  { name: "Изюм", kcal: 299, protein: 3.1, fat: 0.5, carbs: 79.2, fiber: 3.7, portionG: 40 },
+  { name: "Курага", kcal: 241, protein: 3.4, fat: 0.5, carbs: 62.6, fiber: 7.3, portionG: 40 },
+  { name: "Чернослив", kcal: 240, protein: 2.2, fat: 0.4, carbs: 63.9, fiber: 7.1, portionG: 40 },
+  { name: "Финики", kcal: 277, protein: 1.8, fat: 0.2, carbs: 75, fiber: 6.7, portionG: 40 },
+
+  // Овощи и грибы
+  { name: "Свёкла отварная", kcal: 44, protein: 1.7, fat: 0.2, carbs: 10, fiber: 2, portionG: 150 },
+  { name: "Тыква запечённая", kcal: 28, protein: 1, fat: 0.1, carbs: 6.5, fiber: 1.1, portionG: 200 },
+  { name: "Баклажан", kcal: 25, protein: 1, fat: 0.2, carbs: 5.9, fiber: 3.4, portionG: 150 },
+  { name: "Капуста цветная", kcal: 25, protein: 1.9, fat: 0.3, carbs: 5, fiber: 2, portionG: 150 },
+  { name: "Капуста квашеная", kcal: 19, protein: 0.9, fat: 0.1, carbs: 4.3, fiber: 2.9, portionG: 150 },
+  { name: "Редис", kcal: 16, protein: 0.7, fat: 0.1, carbs: 3.4, fiber: 1.6, portionG: 100 },
+  { name: "Чеснок", kcal: 149, protein: 6.4, fat: 0.5, carbs: 33.1, fiber: 2.1, portionG: 10 },
+  { name: "Горошек зелёный", kcal: 81, protein: 5.4, fat: 0.4, carbs: 14.5, fiber: 5.1, portionG: 100 },
+  { name: "Кукуруза консервированная", kcal: 86, protein: 3.2, fat: 1.2, carbs: 19, fiber: 2.7, portionG: 100 },
+  { name: "Шпинат", kcal: 23, protein: 2.9, fat: 0.4, carbs: 3.6, fiber: 2.2, portionG: 100 },
+  { name: "Зелень свежая", kcal: 43, protein: 3.7, fat: 1.1, carbs: 7, fiber: 3.5, portionG: 20 },
+  { name: "Шампиньоны", kcal: 22, protein: 3.1, fat: 0.3, carbs: 3.3, fiber: 1, portionG: 150 },
+
+  // Орехи и семена
+  { name: "Фундук", kcal: 628, protein: 15, fat: 61, carbs: 16.7, fiber: 9.7, portionG: 30 },
+  { name: "Кешью", kcal: 553, protein: 18.2, fat: 43.9, carbs: 30.2, fiber: 3.3, portionG: 30 },
+  { name: "Фисташки", kcal: 560, protein: 20.2, fat: 45.3, carbs: 27.2, fiber: 10.6, portionG: 30 },
+  { name: "Арахис", kcal: 567, protein: 25.8, fat: 49.2, carbs: 16.1, fiber: 8.5, portionG: 30 },
+  { name: "Семечки подсолнечные", kcal: 584, protein: 20.8, fat: 51.5, carbs: 20, fiber: 8.6, portionG: 30 },
+  { name: "Кунжут", kcal: 573, protein: 17.7, fat: 49.7, carbs: 23.4, fiber: 11.8, portionG: 15 },
+  { name: "Семена чиа", kcal: 486, protein: 16.5, fat: 30.7, carbs: 42.1, fiber: 34.4, portionG: 20 },
+
+  // Молочное
+  { name: "Ряженка 4%", kcal: 67, protein: 2.9, fat: 4, carbs: 4.2, fiber: 0, portionG: 200 },
+  { name: "Творог 9%", kcal: 159, protein: 16.7, fat: 9, carbs: 2, fiber: 0, portionG: 150 },
+  { name: "Сыр плавленый", kcal: 290, protein: 12, fat: 25, carbs: 4, fiber: 0, portionG: 30 },
+  { name: "Брынза", kcal: 260, protein: 17.9, fat: 20.1, carbs: 0.4, fiber: 0, portionG: 50 },
+  { name: "Сливки 10%", kcal: 118, protein: 3, fat: 10, carbs: 4, fiber: 0, portionG: 50 },
+  { name: "Мороженое пломбир", kcal: 227, protein: 3.6, fat: 15, carbs: 20.4, fiber: 0, portionG: 100 },
+
+  // Гарниры и каши — тоже в готовом виде
+  { name: "Пшённая каша на воде", kcal: 90, protein: 3, fat: 0.7, carbs: 17, fiber: 1.3, portionG: 200 },
+  { name: "Манная каша на молоке", kcal: 98, protein: 3, fat: 3.2, carbs: 15.3, fiber: 0.2, portionG: 200 },
+  { name: "Кускус отварной", kcal: 112, protein: 3.8, fat: 0.2, carbs: 23.2, fiber: 1.4, portionG: 150 },
+  { name: "Картофельное пюре", kcal: 88, protein: 2, fat: 3, carbs: 13.5, fiber: 1.3, portionG: 200 },
+
+  // Мясо, птица, рыба
+  { name: "Куриная голень", kcal: 185, protein: 20, fat: 11, carbs: 0, fiber: 0, portionG: 150 },
+  { name: "Печень говяжья", kcal: 135, protein: 20.4, fat: 3.6, carbs: 4, fiber: 0, portionG: 100 },
+  { name: "Ветчина", kcal: 165, protein: 17, fat: 10, carbs: 1.5, fiber: 0, portionG: 50 },
+  { name: "Минтай отварной", kcal: 79, protein: 17.6, fat: 1, carbs: 0, fiber: 0, portionG: 150 },
+  { name: "Хек отварной", kcal: 95, protein: 18.5, fat: 2.3, carbs: 0, fiber: 0, portionG: 150 },
+  { name: "Икра красная", kcal: 250, protein: 24.6, fat: 17.9, carbs: 0, fiber: 0, portionG: 30 },
+  { name: "Крабовые палочки", kcal: 88, protein: 6, fat: 1, carbs: 14, fiber: 0, portionG: 100 },
+
+  // Хлеб и выпечка
+  { name: "Батон нарезной", kcal: 264, protein: 7.5, fat: 2.9, carbs: 50.9, fiber: 2.5, portionG: 30 },
+  { name: "Лаваш тонкий", kcal: 236, protein: 7.9, fat: 1, carbs: 47.6, fiber: 2, portionG: 60 },
+  { name: "Печенье овсяное", kcal: 437, protein: 6.5, fat: 14.5, carbs: 71, fiber: 3, portionG: 30 },
+  { name: "Пряник", kcal: 350, protein: 4.8, fat: 2.8, carbs: 77, fiber: 1.5, portionG: 40 },
+
+  // Сладкое и соусы
+  { name: "Сгущённое молоко", kcal: 320, protein: 7.2, fat: 8.5, carbs: 55.5, fiber: 0, portionG: 30 },
+  { name: "Варенье", kcal: 260, protein: 0.4, fat: 0.2, carbs: 64, fiber: 0.8, portionG: 30 },
+  { name: "Халва подсолнечная", kcal: 523, protein: 11.6, fat: 29.7, carbs: 54, fiber: 6.4, portionG: 30 },
+  { name: "Зефир", kcal: 326, protein: 0.8, fat: 0.1, carbs: 79.8, fiber: 0, portionG: 30 },
+  { name: "Хумус", kcal: 166, protein: 7.9, fat: 9.6, carbs: 14.3, fiber: 6, portionG: 50 },
+  { name: "Соевый соус", kcal: 53, protein: 8.1, fat: 0.6, carbs: 4.9, fiber: 0.8, portionG: 15 },
+  { name: "Горчица", kcal: 143, protein: 9.9, fat: 12.7, carbs: 5.3, fiber: 3.3, portionG: 10 },
+
+  // Напитки
+  { name: "Сок яблочный", kcal: 46, protein: 0.1, fat: 0.1, carbs: 11.3, fiber: 0.2, portionG: 200 },
+  { name: "Компот из сухофруктов", kcal: 60, protein: 0.3, fat: 0, carbs: 15, fiber: 0.2, portionG: 200 },
+  { name: "Кола", kcal: 42, protein: 0, fat: 0, carbs: 10.6, fiber: 0, portionG: 330 },
 ];
+
 
 function normalize(value: string): string {
   return value.toLowerCase().replace(/ё/g, "е").trim();
 }
 
+function commonPrefix(a: string, b: string): number {
+  const limit = Math.min(a.length, b.length);
+  let i = 0;
+  while (i < limit && a[i] === b[i]) i += 1;
+  return i;
+}
+
 /**
- * Поиск по справочнику. Совпадение по подстроке, но вперёд выходит то, что
- * начинается с запроса: по «мол» сначала «Молоко», а потом «Шоколад
- * молочный». При равенстве — что короче: короткое название почти всегда и
- * есть основной продукт.
+ * Совпадение слова с поправкой на русские окончания.
+ *
+ * Поиск по вхождению искал запрос ВНУТРИ названия, и потому находил продукт
+ * только при точном совпадении формы слова. «Помидоры», «яблоки», «огурцы»,
+ * «бананы» не находили ничего — хотя «Помидор», «Яблоко», «Огурец» и «Банан»
+ * в справочнике есть. А по-русски еду пишут во множественном числе, так что
+ * справочник был наполовину недоступен там, где продукт в нём был.
+ *
+ * Сравниваем по общему корню в обе стороны. Порог в четыре буквы и «не
+ * длиннее корня плюс два окончания» подобран так, чтобы «огурцы» находили
+ * «огурец», но «груша» не находила «грудку»: у них общего только «гру».
+ */
+const MIN_STEM = 4;
+const MAX_ENDING = 2;
+
+/** 2 — слово начинается с запроса, 1 — совпал только корень, 0 — не совпало. */
+function matchQuality(word: string, needle: string): 0 | 1 | 2 {
+  if (word.startsWith(needle) || needle.startsWith(word)) return 2;
+  const shared = commonPrefix(word, needle);
+  return shared >= MIN_STEM && shared >= Math.min(word.length, needle.length) - MAX_ENDING ? 1 : 0;
+}
+
+/**
+ * Поиск по справочнику. Вперёд выходит то, что начинается с запроса: по «мол»
+ * сначала «Молоко», а потом «Шоколад молочный». При равенстве — что короче:
+ * короткое название почти всегда и есть основной продукт.
+ *
+ * Все слова запроса должны найтись в названии: «куриная грудка» обязана
+ * попасть в грудку, а не в любое блюдо, где встретилось одно из двух слов.
+ *
+ * Точное начало слова идёт впереди совпадения по корню, и это не мелочь:
+ * «греческ» иначе поднимает «Гречку» выше «Йогурта греческого», потому что у
+ * них общие четыре буквы, а гречка стоит первым словом в названии.
  */
 export function searchFoodReference(query: string, limit = 8): ReferenceFood[] {
-  const needle = normalize(query);
-  if (needle.length < 2) return [];
+  const needles = normalize(query).split(/[^a-zа-я0-9]+/).filter((word) => word.length >= 2);
+  if (needles.length === 0) return [];
+
   return FOOD_REFERENCE
-    .map((food) => ({ food, at: normalize(food.name).indexOf(needle) }))
-    .filter((row) => row.at >= 0)
-    .sort((a, b) => a.at - b.at || a.food.name.length - b.food.name.length)
+    .map((food) => {
+      const words = normalize(food.name).split(/[^a-zа-я0-9]+/).filter(Boolean);
+      // Позиция самого раннего совпавшего слова задаёт порядок внутри
+      // одинакового качества; качество берём худшее из слов запроса.
+      let earliest = Number.POSITIVE_INFINITY;
+      let quality = 2;
+      for (const needle of needles) {
+        let best = 0;
+        let at = -1;
+        words.forEach((word, index) => {
+          const q = matchQuality(word, needle);
+          if (q > best) {
+            best = q;
+            at = index;
+          }
+        });
+        if (best === 0) return null;
+        quality = Math.min(quality, best);
+        earliest = Math.min(earliest, at);
+      }
+      return { food, at: earliest, quality };
+    })
+    .filter((row): row is { food: ReferenceFood; at: number; quality: number } => row !== null)
+    .sort((a, b) => b.quality - a.quality || a.at - b.at || a.food.name.length - b.food.name.length)
     .slice(0, limit)
     .map((row) => row.food);
 }
