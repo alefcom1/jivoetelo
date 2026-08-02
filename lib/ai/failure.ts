@@ -26,6 +26,51 @@ function messageOf(error: unknown): string {
   return String(error);
 }
 
+function codeOf(error: unknown): string | undefined {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === "string" ? code : undefined;
+}
+
+/**
+ * Самая глубокая причина в цепочке `cause`.
+ *
+ * Одного уровня мало, и это выяснилось дорого. `fetch` в undici бросает
+ * `TypeError: fetch failed`, а настоящая причина — `getaddrinfo ENOTFOUND`,
+ * `ECONNREFUSED`, ошибка сертификата — лежит уровнем ниже. SDK Anthropic
+ * добавляет сверху третий: `APIConnectionError: Connection error.`.
+ *
+ * Разбор, читавший ровно один `cause`, печатал в лог «Connection error.
+ * (fetch failed)» — то есть ровно то бесполезное сообщение, ради замены
+ * которого этот модуль и написан. Прокси лежал, а по логу это было не
+ * отличить ни от сбоя DNS, ни от протухшего сертификата.
+ *
+ * `seen` — не паранойя: цепочка `cause` может замкнуться на себя, и обход
+ * без метки посещённых зациклил бы процесс, который просто писал в лог.
+ */
+function rootCause(error: unknown): { message: string; code?: string } {
+  let current: unknown = error;
+  let deepest = { message: messageOf(error), code: codeOf(error) };
+  const seen = new Set<unknown>();
+
+  while (current instanceof Error && current.cause !== undefined && !seen.has(current)) {
+    seen.add(current);
+    current = current.cause;
+    if (current instanceof Error) deepest = { message: current.message, code: codeOf(current) };
+  }
+  return deepest;
+}
+
+/**
+ * Причина обрыва связи одной строкой: код, если он есть и не повторяет текст,
+ * и само сообщение. Пусто, когда глубже верхнего уровня ничего не нашлось.
+ */
+export function networkDetail(error: unknown): string {
+  const root = rootCause(error);
+  if (root.message === messageOf(error)) return "";
+  const code = root.code && !root.message.includes(root.code) ? `${root.code} ` : "";
+  return ` (${code}${root.message})`;
+}
+
 /**
  * Отличает «не дождались» от «не доехали» и от «сервер ответил отказом».
  *
@@ -49,8 +94,7 @@ export function describeAiFailure(error: unknown): AiFailure {
     return { kind: "http", status, message: detail ? `${text} — ${detail}` : text };
   }
   if (name === "APIConnectionError" || /connect|socket|ECONN|EAI_AGAIN|fetch failed/i.test(text)) {
-    const cause = record.cause instanceof Error ? ` (${record.cause.message})` : "";
-    return { kind: "network", status, message: text + cause };
+    return { kind: "network", status, message: text + networkDetail(error) };
   }
   return { kind: "unknown", status, message: text };
 }
