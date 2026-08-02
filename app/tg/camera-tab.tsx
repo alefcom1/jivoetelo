@@ -18,7 +18,7 @@ import { scaleGrams } from "@/lib/portions";
 import { AddItem, type NewItem } from "./add-item";
 import { FoodIcon } from "../food-icon";
 import { ArtCamera } from "./illustrations";
-import { haptic, useMainButtonApi } from "./telegram";
+import { haptic, useInsideTelegram, useMainButton } from "./telegram";
 import { TgPhoto } from "./photo";
 import { cameraGrantedThisSession, useCamera } from "../use-camera";
 import { useCameraPref } from "../camera-prefs";
@@ -133,7 +133,7 @@ export function CameraTab({
   const [photoKey, setPhotoKey] = useState<string | null>(null);
   const [sourceText, setSourceText] = useState<string | null>(null);
   const [mealType, setMealType] = useState(guessMealType());
-  const mainButton = useMainButtonApi();
+  const insideTelegram = useInsideTelegram();
   const {
     videoRef, state: cameraState, devices, deviceId,
     start: startCamera, stop: stopCamera, switchTo, shoot,
@@ -341,14 +341,34 @@ export function CameraTab({
 
   // Нативная кнопка Telegram — основное действие текущего шага. В режиме
   // съёмки это спуск затвора: «Разобрать» там нечего, кадра ещё нет.
-  useEffect(() => {
-    if (busy) return;
-    if (items) return mainButton.show("Сохранить", () => void handleSave());
-    if (inbox) return;
-    if (mode === "text") return mainButton.show("Разобрать", () => void handleAnalyze());
-    if (cameraState === "live") return mainButton.show("Снять", () => void handleShoot());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, busy, text, mode, mealType, cameraState, inbox?.id]);
+  //
+  // Считаем прямо при отрисовке, а не в эффекте. Раньше эффект перезапускался
+  // на каждое изменение текста — обработчик замыкал его, и иначе кнопка
+  // нажималась бы с устаревшим значением. Но перезапуск означает hide() и
+  // следом show(), поэтому кнопка дёргалась на каждую букву. Теперь свежий
+  // обработчик приезжает через ref внутри useMainButton, а подпись меняется
+  // только когда действительно меняется шаг.
+  const mainAction = busy ? null
+    : items ? { label: "Сохранить", run: () => void handleSave() }
+    : inbox ? null
+    : mode === "text" ? { label: "Разобрать", run: () => void handleAnalyze() }
+    : cameraState === "live" ? { label: "Снять", run: () => void handleShoot() }
+    : null;
+  useMainButton(mainAction?.label ?? null, () => mainAction?.run());
+
+  /**
+   * Смена способа ввода гасит прошлую ошибку.
+   *
+   * Без этого сообщение от неудавшегося снимка оставалось на экране в
+   * текстовом режиме — человек открывал «Описать словами», начинал набирать
+   * и видел под полем «Сервис разбора сейчас недоступен», хотя ничего ещё не
+   * отправлял. Выглядит как отказ до запроса.
+   */
+  function switchMode(next: "camera" | "text") {
+    haptic("tap");
+    setError(null);
+    setMode(next);
+  }
 
   function updateItem(index: number, patch: Partial<DraftItem>) {
     setItems((current) => current && current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
@@ -489,11 +509,14 @@ export function CameraTab({
         <h1 className="tg-camera-title">Что вы ели?</h1>
         <textarea className="tg-input" rows={3} value={text} onChange={(e) => setText(e.target.value)}
           placeholder="Например: два сырника, ложка сметаны и капучино" />
-        {/* Отправка текста требует явного действия; дублируем MainButton в
-            интерфейсе, потому что вне Telegram её нет. */}
-        <button className="tg-button tg-button-block" onClick={() => void handleAnalyze()} disabled={busy}>
+        {/* Своя кнопка нужна ТОЛЬКО вне Telegram: там нативной главной
+            кнопки не существует. Внутри Telegram она была лишней и стояла
+            второй такой же «Разобрать» — одна над панелью вкладок, другая
+            под ней. */}
+        {!insideTelegram && <button className="tg-button tg-button-block"
+          onClick={() => void handleAnalyze()} disabled={busy}>
           {busy ? "Разбираем…" : "Разобрать"}
-        </button>
+        </button>}
       </>}
 
       {error && <p className="tg-error">{error}</p>}
@@ -508,7 +531,7 @@ export function CameraTab({
       {/* Прочие способы — под кадром и мельче: главное действие тут съёмка,
           а галерея и текст выручают, когда снять нельзя или уже поздно. */}
       <div className="tg-ways">
-        {mode !== "camera" && <button className="tg-way" onClick={() => { haptic("tap"); setMode("camera"); }}>
+        {mode !== "camera" && <button className="tg-way" onClick={() => switchMode("camera")}>
           Снять камерой
         </button>}
         <label className="tg-way">
@@ -521,7 +544,7 @@ export function CameraTab({
           <input type="file" accept="image/*" onChange={handlePhotoChange} />
           Из галереи
         </label>
-        {mode !== "text" && <button className="tg-way" onClick={() => { haptic("tap"); setMode("text"); }}>
+        {mode !== "text" && <button className="tg-way" onClick={() => switchMode("text")}>
           Описать словами
         </button>}
       </div>
@@ -651,9 +674,11 @@ export function CameraTab({
     </div>
 
     {error && <p className="tg-error">{error}</p>}
-    <button className="tg-button tg-button-block" onClick={() => void handleSave()} disabled={busy}>
+    {/* Как и «Разобрать»: внутри Telegram сохраняет нативная кнопка. */}
+    {!insideTelegram && <button className="tg-button tg-button-block"
+      onClick={() => void handleSave()} disabled={busy}>
       {busy ? "Сохраняем…" : "Сохранить"}
-    </button>
+    </button>}
     <button className="tg-link tg-link-block" onClick={discardDraft}>← Начать заново</button>
   </div>;
 }

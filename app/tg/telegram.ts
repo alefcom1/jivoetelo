@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Тонкая типизированная обёртка над window.Telegram.WebApp. Официальный скрипт
 // telegram-web-app.js подключается в layout; SDK-обёртки не берём — прототипу
@@ -120,20 +120,61 @@ export function useBackButton(onBack: (() => void) | null): void {
   }, [visible]);
 }
 
-/** Управление нативной главной кнопкой Telegram. */
-export function useMainButtonApi() {
-  return {
-    show(text: string, onClick: () => void): () => void {
-      const webApp = getWebApp();
-      if (!webApp) return () => {};
-      const button = webApp.MainButton;
-      button.setText(text);
-      button.onClick(onClick);
-      button.show();
-      return () => {
-        button.offClick(onClick);
-        button.hide();
-      };
-    },
-  };
+/**
+ * Есть ли вокруг нас Telegram.
+ *
+ * Нужно ровно для одного: решить, рисовать ли свою кнопку действия. Внутри
+ * Telegram главная кнопка нативная, снаружи её нет вовсе — и без этой
+ * проверки в браузере не было бы кнопки совсем, а в Telegram их было бы две.
+ *
+ * Значение состояние, а не просто вызов `getWebApp()`: скрипт Telegram
+ * подключается отдельным тегом и на первой отрисовке может ещё не
+ * выполниться. Проверка в теле компонента дала бы «снаружи» на первом кадре
+ * и «внутри» на втором — то есть мигание кнопки при каждом входе.
+ */
+export function useInsideTelegram(): boolean {
+  const [inside, setInside] = useState(() => getWebApp() !== null);
+  useEffect(() => {
+    if (inside) return;
+    // Скрипт мог не успеть; ждём его появления один кадр, а не бесконечно:
+    // если Telegram нет, его и не будет.
+    const id = setTimeout(() => setInside(getWebApp() !== null), 0);
+    return () => clearTimeout(id);
+  }, [inside]);
+  return inside;
+}
+
+/**
+ * Нативная главная кнопка Telegram — основное действие текущего экрана.
+ *
+ * ## Почему хук, а не `mainButton.show(...)` внутри эффекта
+ *
+ * Так было, и получалось вот что. Обработчик замыкал набранный текст,
+ * поэтому эффект приходилось перезапускать на каждое изменение — а перезапуск
+ * означает `offClick` + `hide()` и следом `setText` + `show()`. Кнопка
+ * пересоздавалась на каждую букву и заметно дёргалась при наборе.
+ *
+ * Здесь то же решение, что и у `useBackButton`: обработчик живёт в ref и
+ * всегда свежий, а эффект зависит только от подписи. Меняется подпись —
+ * меняется кнопка; меняется текст в поле — не происходит ничего.
+ *
+ * `null` вместо подписи прячет кнопку.
+ */
+export function useMainButton(label: string | null, onClick: () => void): void {
+  const handlerRef = useRef(onClick);
+  useEffect(() => { handlerRef.current = onClick; });
+
+  useEffect(() => {
+    const button = getWebApp()?.MainButton;
+    if (!button) return;
+    if (label === null) { button.hide(); return; }
+    const handle = () => handlerRef.current();
+    button.setText(label);
+    button.onClick(handle);
+    button.show();
+    return () => {
+      button.offClick(handle);
+      button.hide();
+    };
+  }, [label]);
 }
