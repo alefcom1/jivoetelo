@@ -1,7 +1,18 @@
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * Дата вида YYYY-MM-DD, которая действительно существует.
+ *
+ * Одной проверки формы мало: «2026-13-40» ей соответствует, а «2026-02-30»
+ * ещё и разбирается движком — молча, со сдвигом на 2 марта. Дальше по коду
+ * такое значение считается настоящей датой: уходит в базу, попадает в
+ * `new Date()` и там превращается либо в Invalid Date, либо в чужой день.
+ * Поэтому дата разбирается и сверяется обратно со строкой.
+ */
 export function isValidDay(value: string | undefined): value is string {
-  return !!value && DATE_RE.test(value);
+  if (!value || !DATE_RE.test(value)) return false;
+  const date = new Date(`${value}T12:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 export function appTimeZone(): string {
