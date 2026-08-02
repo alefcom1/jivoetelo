@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { hasLinks, NAV_ASIDE, NAV_SECTIONS, type NavSection } from "@/lib/site-nav";
+import { hasLinks, NAV_SECTIONS, type NavSection } from "@/lib/site-nav";
 import { Logo } from "./logo";
 
 /**
@@ -124,7 +125,10 @@ export function SiteHeader({ cta = DEFAULT_CTA }: { cta?: HeaderCta }) {
           {link.label} <b>→</b>
         </Link>)}
       </div>
-      <aside>{NAV_ASIDE.line}<br /><em>{NAV_ASIDE.accent}</em></aside>
+      <figure className="mega-art">
+        <Image src={panel.art.src} alt={panel.art.alt} width={1120} height={460} />
+        <figcaption>{panel.art.caption}<br /><em>{panel.art.accent}</em></figcaption>
+      </figure>
     </div>}
 
     {drawer && <div className="nav-drawer" id="nav-drawer">

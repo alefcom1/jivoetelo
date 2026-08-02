@@ -40,14 +40,25 @@ const ART = [
   { name: "calculators", width: 1920 },
   // На главной не используется — кадр для страницы /pro.
   { name: "pro-talk", width: 960 },
+  // Правая часть выпадающих панелей меню: около 560 CSS в ширину, с запасом
+  // на плотные экраны. Кадрируем в широкую полосу — панель низкая, и без
+  // обрезки от вертикального снимка была бы видна одна середина.
+  // position задан вручную: «attention» у sharp выбирает область по
+  // контрасту и на утреннем кадре уводило в тёмный угол со скатертью
+  // вместо тарелки. Середина кадра здесь как раз то, ради чего он снят.
+  { name: "day-morning", as: "menu-product", width: 1120, height: 460, position: "centre" },
+  { name: "calculators", as: "menu-calculators", width: 1120, height: 460 },
 ];
 
 await mkdir(outDir, { recursive: true });
 
-for (const { name, width } of ART) {
+for (const { name, as, width, height, position } of ART) {
+  const out = as ?? name;
+  // height задан — режем под нужные пропорции по центру кадра; без него
+  // масштабируем по ширине, сохраняя исходное соотношение.
   const info = await sharp(resolve(root, `docs/illustrations/${name}.webp`))
-    .resize({ width })
+    .resize(height ? { width, height, fit: "cover", position: position ?? "attention" } : { width })
     .webp({ quality: 82 })
-    .toFile(resolve(outDir, `${name}.webp`));
-  console.log(`  ok   public/site/${name}.webp — ${info.width}×${info.height}, ${Math.round(info.size / 1024)} КБ`);
+    .toFile(resolve(outDir, `${out}.webp`));
+  console.log(`  ok   public/site/${out}.webp — ${info.width}×${info.height}, ${Math.round(info.size / 1024)} КБ`);
 }

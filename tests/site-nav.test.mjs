@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { hasLinks, NAV_SECTIONS } from "../lib/site-nav.ts";
+import { readdir } from "node:fs/promises";
+import { hasLinks, NAV_EXEMPT, NAV_SECTIONS } from "../lib/site-nav.ts";
 
 /**
  * Главное меню (lib/site-nav.ts, app/site-header.tsx).
@@ -88,4 +89,47 @@ test("подписи ссылок не повторяются внутри па�
     const labels = section.links.map((link) => link.label);
     assert.equal(new Set(labels).size, labels.length, `повтор в «${section.label}»: ${labels.join(", ")}`);
   }
+});
+
+test("картинка панели существует и у каждого раздела своя", async () => {
+  const files = await readdir(new URL("../public/site/", import.meta.url));
+  const used = new Set();
+  for (const section of NAV_SECTIONS.filter(hasLinks)) {
+    const file = section.art.src.replace("/site/", "");
+    assert.ok(files.includes(file), `нет файла public/site/${file} — соберите: node scripts/site-art.mjs`);
+    assert.ok(!used.has(file), `${file} стоит в двух разделах — панели снова выглядят одинаково`);
+    used.add(file);
+    assert.ok(section.art.alt.length > 10, `у «${section.label}» пустое описание картинки`);
+  }
+});
+
+/**
+ * Обход всех публичных страниц приложения. Динамические сегменты (`[dish]`)
+ * пропускаем: это дети своего раздела, отдельный вход в меню им не нужен.
+ */
+async function publicPages(dir = new URL("../app/", import.meta.url), prefix = "") {
+  const found = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (entry.name === "page.tsx") found.push(prefix || "/");
+    if (!entry.isDirectory()) continue;
+    if (entry.name.startsWith("[") || entry.name.startsWith("_") || entry.name.startsWith("(")) continue;
+    // Закрытые разделы: кабинет, админка, Mini App и API.
+    if (["app", "admin", "tg", "api"].includes(entry.name) && !prefix) continue;
+    found.push(...await publicPages(new URL(`${entry.name}/`, dir), `${prefix}/${entry.name}`));
+  }
+  return found;
+}
+
+test("каждая публичная страница доступна из меню — иначе она есть только в поиске", async () => {
+  // Ровно эта проверка нашла три расчёта (калории, белок, темп), которые в
+  // меню не попали: люди приходили на них из поиска и не могли уйти дальше.
+  const reachable = new Set(
+    NAV_SECTIONS.filter(hasLinks).flatMap((s) => s.links.map((l) => l.href.split("#")[0])),
+  );
+  const missing = (await publicPages())
+    .filter((page) => page !== "/")
+    .filter((page) => !reachable.has(page))
+    .filter((page) => !NAV_EXEMPT.some((skip) => page === skip || page.startsWith(`${skip}/`)));
+
+  assert.deepEqual(missing, [], `нет входа из меню: ${missing.join(", ")}`);
 });
