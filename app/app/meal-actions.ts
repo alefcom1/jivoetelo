@@ -8,6 +8,7 @@ import { mealItems, meals, users } from "@/db/schema";
 import { ANALYSIS_ERRORS, getMealProvider, MealAnalysisError, type MealAnalysis } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { getPendingItem, markProcessed } from "@/lib/inbox";
+import { withDishKeys } from "@/lib/meals";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import {
   ALLOWED_PHOTO_TYPES,
@@ -170,7 +171,7 @@ export async function saveMeal(input: SaveMealInput): Promise<{ ok: false; error
         analysis: input.analysis ?? null,
       })
       .returning({ id: meals.id });
-    await db.insert(mealItems).values(items.map((item) => ({ ...item, mealId: inserted[0].id })));
+    await db.insert(mealItems).values(withDishKeys(items).map((item) => ({ ...item, mealId: inserted[0].id })));
     // Снимок уходит из инбокса только теперь, когда приём пищи действительно
     // сохранён: до этого момента разбор можно было бросить на полпути.
     if (input.inboxId) await markProcessed(user.id, input.inboxId, inserted[0].id);

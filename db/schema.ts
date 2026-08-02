@@ -297,6 +297,19 @@ export const mealItems = pgTable("meal_items", {
     .notNull()
     .references(() => meals.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  /**
+   * Канонический ключ блюда (lib/dish-key.ts): `dish:ovsyanka` или `cat:cereal`.
+   *
+   * Нужен потому, что `name` — свободный текст от разбора снимка, и одна и та
+   * же тарелка называется каждый раз по-новому. Без устойчивого ключа у любого
+   * блюда в статистике будет n = 1 — это уже проверено на «как обычно?»
+   * (см. комментарий к repeatableMeals в lib/frequent-meals.ts).
+   *
+   * Nullable означает «ключ ещё не проставлен»: так выглядят записи, сделанные
+   * до миграции 0015. У опознанного, но неизвестного блюда ключ не пустой, а
+   * `cat:other`, и путать эти два состояния нельзя.
+   */
+  dishKey: text("dish_key"),
   grams: doublePrecision("grams").notNull(),
   kcalPer100: doublePrecision("kcal_per_100").notNull().default(0),
   proteinPer100: doublePrecision("protein_per_100").notNull().default(0),

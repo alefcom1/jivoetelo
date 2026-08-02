@@ -5,6 +5,7 @@ import { and, eq, gte, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { mealItems, meals, profiles } from "@/db/schema";
 import type { DiaryItemRow, DiaryMealRow } from "./diary.ts";
+import { dishKey } from "./dish-key.ts";
 import type { PastMeal } from "./frequent-meals.ts";
 import { sumTotals, type NutritionTotals } from "./nutrition.ts";
 import type { PaceKey } from "./pace.ts";
@@ -135,6 +136,19 @@ export function normalizeMealItems(rawItems: unknown): SaveMealItem[] {
     .slice(0, 30);
 }
 
+/**
+ * Проставляет канонический ключ блюда каждой позиции перед записью.
+ *
+ * Отдельной функцией, а не строкой в каждом из трёх мест вставки: разойдись
+ * они — часть позиций легла бы без ключа, и статистика молча считала бы по
+ * неполной выборке. Ключ выводится из названия и потому не может разойтись с
+ * ним; хранится он всё же в базе, чтобы разбор за 90 дней не пересчитывал
+ * словарь на каждой строке.
+ */
+export function withDishKeys<T extends { name: string }>(items: T[]): Array<T & { dishKey: string }> {
+  return items.map((item) => ({ ...item, dishKey: dishKey(item.name).key }));
+}
+
 /** Сохраняет приём пищи. Возвращает id созданной записи. */
 export async function saveMeal(input: SaveMealInput): Promise<number> {
   const db = getDb();
@@ -152,7 +166,7 @@ export async function saveMeal(input: SaveMealInput): Promise<number> {
     .returning({ id: meals.id });
 
   const mealId = inserted[0].id;
-  await db.insert(mealItems).values(input.items.map((item) => ({ ...item, mealId })));
+  await db.insert(mealItems).values(withDishKeys(input.items).map((item) => ({ ...item, mealId })));
   return mealId;
 }
 
@@ -320,7 +334,7 @@ export async function replaceMealItemsForUser(
   if (!owned[0]) return false;
 
   await db.delete(mealItems).where(eq(mealItems.mealId, mealId));
-  await db.insert(mealItems).values(items.map((item) => ({ ...item, mealId })));
+  await db.insert(mealItems).values(withDishKeys(items).map((item) => ({ ...item, mealId })));
   await db.update(meals).set({ mealType: MEAL_TYPES.includes(mealType) ? mealType : "other" }).where(eq(meals.id, mealId));
   return true;
 }
