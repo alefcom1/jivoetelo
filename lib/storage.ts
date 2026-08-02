@@ -19,9 +19,20 @@ function uploadsDir(): string {
   return process.env.UPLOADS_DIR ?? path.join(process.cwd(), "data", "uploads");
 }
 
-/** Ключи имеют вид `<userId>/<uuid>.<ext>` — принадлежность видна из ключа. */
+/**
+ * Ключи имеют вид `<userId>/<uuid>.<ext>`. Форма проверяется отдельно от
+ * принадлежности: там, где ключ пришёл из нашей же подписи (ссылка для
+ * модели, lib/ai/photo-link.ts), владельца спрашивать не у кого, а вот
+ * убедиться, что в ключе нет `..` и он не уводит из каталога, надо всё
+ * равно — на случай, если ключ подписи когда-нибудь утечёт.
+ */
+export function isPhotoKey(key: string): boolean {
+  return /^\d+\/[0-9a-f-]+\.[a-z]+$/.test(key);
+}
+
+/** Принадлежность видна из ключа: он начинается с идентификатора владельца. */
 export function photoBelongsTo(key: string, userId: number): boolean {
-  return /^\d+\/[0-9a-f-]+\.[a-z]+$/.test(key) && key.startsWith(`${userId}/`);
+  return isPhotoKey(key) && key.startsWith(`${userId}/`);
 }
 
 export function photoMimeType(key: string): string {

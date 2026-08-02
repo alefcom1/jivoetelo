@@ -40,7 +40,19 @@ export type MealAnalysis = {
 
 export type MealInput =
   | { kind: "text"; text: string }
-  | { kind: "photo"; data: Buffer; mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; note?: string };
+  | {
+      kind: "photo";
+      data: Buffer;
+      mediaType: "image/jpeg" | "image/png" | "image/webp" | "image/gif";
+      note?: string;
+      /**
+       * Ключ снимка в хранилище, если он там уже лежит. Позволяет отдать
+       * модели ссылку вместо самих байтов — на боевом канале тело тяжелее
+       * ~32 КБ до прокси не доезжает (см. lib/ai/photo-link.ts). Без ключа
+       * снимок уходит телом, как раньше: в разработке иначе никак.
+       */
+      photoKey?: string;
+    };
 
 /** Расход токенов на вызов — для учёта и дневных лимитов (см. lib/quota.ts). */
 export type TokenUsage = { inputTokens: number; outputTokens: number };

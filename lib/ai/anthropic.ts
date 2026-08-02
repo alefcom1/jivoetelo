@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { createAnthropicClient, readUsage, resolveModel, retriesFor, supportsFallbacks, timeoutFor } from "./client.ts";
 import { logAiFailure } from "./failure.ts";
 import { compressPhotoForAi } from "./image.ts";
+import { photoLinkFor } from "./photo-link.ts";
 import { MEAL_ANALYSIS_SCHEMA, validateMealAnalysis } from "./schema.ts";
 import { MealAnalysisError, type MealAnalysisResult, type MealInput, type MealVisionProvider } from "./types.ts";
 
@@ -57,14 +58,24 @@ export class AnthropicMealProvider implements MealVisionProvider {
   async analyseMeal(input: MealInput): Promise<MealAnalysisResult> {
     const content: Anthropic.Beta.Messages.BetaContentBlockParam[] = [];
     if (input.kind === "photo") {
-      // Сжимаем перед отправкой в AI (lib/ai/image.ts) — в хранилище и
-      // пользователю уходит оригинал, `input.data` здесь не трогаем.
-      const compressed = await compressPhotoForAi(input.data);
-      const photo = compressed ?? { data: input.data, mediaType: input.mediaType };
-      content.push({
-        type: "image",
-        source: { type: "base64", media_type: photo.mediaType, data: photo.data.toString("base64") },
-      });
+      // Ссылка вместо байтов, когда снимок уже лежит в хранилище: тело
+      // тяжелее ~32 КБ до прокси не доезжает, и сжатием это не лечится
+      // (замеры и разбор — в lib/ai/photo-link.ts). Модель скачает снимок
+      // с нашего сервера сама, а наружу уйдёт пара килобайт JSON.
+      const link = input.photoKey ? photoLinkFor(input.photoKey) : null;
+      if (link) {
+        content.push({ type: "image", source: { type: "url", url: link } });
+      } else {
+        // Запасной путь: разработка без HTTPS и снимки, которых в хранилище
+        // ещё нет. Сжимаем перед отправкой (lib/ai/image.ts) — в хранилище и
+        // пользователю уходит оригинал, `input.data` здесь не трогаем.
+        const compressed = await compressPhotoForAi(input.data);
+        const photo = compressed ?? { data: input.data, mediaType: input.mediaType };
+        content.push({
+          type: "image",
+          source: { type: "base64", media_type: photo.mediaType, data: photo.data.toString("base64") },
+        });
+      }
       content.push({
         type: "text",
         text: input.note

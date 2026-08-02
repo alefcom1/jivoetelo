@@ -39,6 +39,7 @@ export async function POST(request: Request) {
         data,
         mediaType: photoMimeType(item.photoKey) as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
         note: item.note ?? undefined,
+        photoKey: item.photoKey,
       });
       await recordUsage(auth.user.id, operation, result.usage);
       return Response.json({ analysis: result.analysis, photoKey: item.photoKey, sourceText: item.note });
@@ -63,6 +64,7 @@ export async function POST(request: Request) {
         data,
         mediaType: file.type as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
         note,
+        photoKey,
       });
       await recordUsage(auth.user.id, operation, result.usage);
       return Response.json({ analysis: result.analysis, photoKey, sourceText: note ?? null });

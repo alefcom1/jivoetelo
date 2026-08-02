@@ -53,6 +53,7 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
         data,
         mediaType: photoMimeType(item.photoKey) as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
         note: item.note ?? undefined,
+        photoKey: item.photoKey,
       });
       analysis = result.analysis;
       await recordUsage(user.id, operation, result.usage);
@@ -76,6 +77,7 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
         data,
         mediaType: file.type as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
         note,
+        photoKey,
       });
       analysis = result.analysis;
       await recordUsage(user.id, operation, result.usage);
