@@ -203,10 +203,13 @@ export function TodayTab({
               {data.meals.map((meal) => <li key={meal.id}>
                 <button className="tg-meal-row" onClick={() => onOpenMeal(meal.id)}>
                   <MealThumb meal={meal} />
-                  <div>
+                  {/* Внутри кнопки только строчные элементы: <div> здесь был бы
+                      невалидной разметкой — тем же приёмом собрана строка
+                      «Дневника» (.tg-diary-meal). */}
+                  <span className="tg-meal-row-body">
                     <b>{meal.title} <time>{meal.time}</time></b>
                     <span>{meal.items.slice(0, 3).join(", ")}</span>
-                  </div>
+                  </span>
                   <strong>
                     {showCalories && <>{meal.kcal}<small> ккал</small></>}
                     <em>{meal.protein} г белка</em>

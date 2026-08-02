@@ -196,9 +196,9 @@
 }
 .tg-meal-row:active { opacity: 0.75; }
 .tg-meals time { font-size: 12px; font-weight: 700; color: var(--tg-hint); width: 42px; font-variant-numeric: tabular-nums; }
-.tg-meal-row > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tg-meal-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .tg-meals b { font-size: 14px; }
-.tg-meal-row > div span { font-size: 12px; color: var(--tg-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-meal-row-body > span { font-size: 12px; color: var(--tg-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tg-meals strong { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font: 500 17px var(--brand-serif); white-space: nowrap; }
 .tg-meals strong em { font: 500 11px var(--font-body), sans-serif; font-style: normal; color: var(--tg-hint); }
 
