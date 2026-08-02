@@ -55,6 +55,36 @@ export const MOOD_LABELS: Record<MascotMood, string> = {
   asleep: "Живело спит",
 };
 
+/**
+ * Поза персонажа. Файлы лежат в public/mascot, режутся из листа спрайтов
+ * скриптом scripts/cut-mascot.py — резать руками нельзя: хвосты и значки
+ * заходят за границы клеток, и половина хвоста уезжает к соседу.
+ *
+ * Поз восемь, состояний серии пять, и соответствие не один в один: у взятой
+ * вехи своя поза, ликующая, — это единственный момент, когда персонажу
+ * позволено праздновать. Остальные три позы («?», «!», удивление) ждут своих
+ * экранов и здесь не используются.
+ */
+export type MascotPose = "happy" | "cheer" | "calm" | "warm" | "sad" | "asleep" | "puzzled" | "surprised";
+
+const POSE_BY_MOOD: Record<MascotMood, MascotPose> = {
+  happy: "happy",
+  calm: "calm",
+  // Заморозка — не про холод, а про «я тебя прикрыл»: поза с сердечком, а не
+  // с сугробом. Персонаж сделал одолжение, а не отморозился.
+  frozen: "warm",
+  missed: "sad",
+  asleep: "asleep",
+};
+
+export function mascotPose(speech: MascotSpeech): MascotPose {
+  return speech.milestone ? "cheer" : POSE_BY_MOOD[speech.mood];
+}
+
+export function mascotImage(pose: MascotPose): string {
+  return `/mascot/${pose}.webp`;
+}
+
 function streakLine(days: number): string {
   return `${withPluralRu(days, DAY_FORMS)} подряд`;
 }

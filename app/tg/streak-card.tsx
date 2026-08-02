@@ -11,16 +11,21 @@
 // (lib/mascot.ts). Разделение не случайное: считать серию на клиенте значило
 // бы отдавать туда все даты записей, а хранить реплики персонажа на сервере —
 // разносить его голос по двум местам.
+//
+// Картинка — обычный <img>, а не next/image: файл маленький, ровно один на
+// экран, и оптимизатор Next тут добавил бы только запрос к своему эндпоинту.
+// Позы лежат в public/mascot и режутся скриптом scripts/cut-mascot.py.
 
-import { mascotSpeech, MOOD_LABELS } from "@/lib/mascot";
+import { mascotImage, mascotPose, mascotSpeech, MOOD_LABELS } from "@/lib/mascot";
 import type { StreakResult } from "@/lib/streak";
-import { ArtRaccoon } from "./illustrations";
 
 export function StreakCard({ streak }: { streak: StreakResult }) {
   const speech = mascotSpeech(streak);
 
   return <section className="tg-card tg-streak">
-    <ArtRaccoon mood={speech.mood} label={MOOD_LABELS[speech.mood]} />
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img className="tg-mascot" src={mascotImage(mascotPose(speech))} alt={MOOD_LABELS[speech.mood]}
+      width={288} height={288} />
     <div className="tg-streak-body">
       <b>{speech.title}</b>
       <p>{speech.note}</p>

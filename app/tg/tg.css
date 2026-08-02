@@ -542,9 +542,10 @@
 
 /* Живело: карточка серии дней.
    Полосой, а не блоком — она стоит над кольцом энергии, главным объектом
-   экрана, и всё, что выше кольца, отодвигает его вниз. Отсюда и 72 пикселя
-   картинки вместо 132 у иллюстраций пустых экранов. */
-.tg-mascot-art { display: block; width: 72px; height: 72px; flex-shrink: 0; }
+   экрана, и всё, что выше кольца, отодвигает его вниз. Отсюда и 76 пикселей
+   картинки вместо 132 у иллюстраций пустых экранов.
+   Файл в 288 пикселей на сторону — с запасом на экраны с тройной плотностью. */
+.tg-mascot { display: block; width: 76px; height: 76px; flex-shrink: 0; }
 .tg-streak { display: flex; gap: 12px; align-items: center; }
 .tg-streak-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .tg-streak-body b { font-size: 17px; letter-spacing: -0.01em; }
