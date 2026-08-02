@@ -4,11 +4,21 @@
  * «в 23:40 бот молчит» пришлось бы проверять, дожидаясь 23:40.
  *
  * Главное правило здесь не техническое: напоминание не должно вызывать вину.
- * Поэтому мы не считаем серии, не пишем «вы пропустили» и никогда не
- * отправляем больше одного сообщения в день.
+ * Поэтому мы не пишем «вы пропустили» и никогда не отправляем больше одного
+ * сообщения в день.
+ *
+ * Серии дней раньше не считались вовсе — именно из-за этого правила. Теперь
+ * они есть (lib/streak.ts), но в напоминание попадают не числом, а репликой
+ * Живело: «серия сбилась, но 43 дня с записями остались». Разница не
+ * косметическая. Голое число в сообщении бота работает как счётчик долга; та
+ * же цифра из уст персонажа, который пропустил вместе с человеком, — как
+ * напоминание о сделанном. Правила, при которых бот вообще открывает рот,
+ * при этом не меняются ни на йоту: повод нужен прежний.
  */
 
+import { mascotReminderLine } from "./mascot.ts";
 import { pluralRu, withPluralRu } from "./plural.ts";
+import type { StreakResult } from "./streak.ts";
 
 /** Час, раньше которого бот не пишет. Утро — не время для напоминаний о еде. */
 export const QUIET_HOURS_END = 9;
@@ -52,6 +62,11 @@ export type ReminderContext = {
   pendingPhotosToday: number;
   /** Сколько приёмов пищи записано сегодня — в любом из клиентов. */
   mealsToday: number;
+  /**
+   * Серия дней. Необязательна: без неё напоминание остаётся ровно таким, каким
+   * было, — строка Живело просто не добавляется.
+   */
+  streak?: StreakResult | null;
 };
 
 const PHOTO_FORMS = ["фото", "фото", "фото"] as const;
@@ -87,17 +102,27 @@ export function planReminder(ctx: ReminderContext): ReminderPlan | null {
 
   // Неразобранные фото — единственный повод, где у нас есть что показать.
   if (ctx.pendingPhotosToday > 0) {
-    return { kind: "photo_digest", text: photoDigestText(ctx.pendingPhotosToday) };
+    return { kind: "photo_digest", text: withMascot(photoDigestText(ctx.pendingPhotosToday), ctx.streak) };
   }
 
   // Пустой день. Пишем один раз и без упрёка: если человек не захотел ничего
   // записывать — это его право, а не повод для второго захода.
   if (ctx.mealsToday === 0) {
-    return { kind: "gentle_nudge", text: GENTLE_NUDGE_TEXT };
+    return { kind: "gentle_nudge", text: withMascot(GENTLE_NUDGE_TEXT, ctx.streak) };
   }
 
   // День записан, фото разобраны — писать не о чем.
   return null;
+}
+
+/**
+ * Дописывает реплику Живело, если ему есть что сказать. Повод для самого
+ * сообщения уже найден выше — персонаж не добавляет поводов, он добавляет
+ * контекст к тому, что и так отправляется.
+ */
+function withMascot(text: string, streak: StreakResult | null | undefined): string {
+  const line = streak ? mascotReminderLine(streak) : null;
+  return line ? `${text}\n\n${line}` : text;
 }
 
 /**

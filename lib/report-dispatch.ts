@@ -37,6 +37,7 @@ import {
   type ReportKind,
 } from "./report-period.ts";
 import { renderReportEmail, renderReportTelegram } from "./report-render.ts";
+import { ensureReportToken, reportUnsubscribePostUrl } from "./report-unsubscribe.ts";
 import { resolveChannels, type ReportChannel } from "./report-prefs.ts";
 import { siteUrl } from "./site.ts";
 import { botToken, createTelegramClient, trySend } from "./telegram-api.ts";
@@ -211,13 +212,16 @@ async function markFailed(id: number, message: string, forceAttempts?: number): 
 
 async function sendByEmail(recipient: ReportRecipient, report: Awaited<ReturnType<typeof buildUserReport>>): Promise<boolean> {
   if (!recipient.email) return false;
-  const links = { siteUrl: siteUrl(), settingsUrl: settingsUrl() };
-  const letter = renderReportEmail(report, null, links);
+  const letter = renderReportEmail(report, null, { siteUrl: siteUrl(), settingsUrl: settingsUrl() });
   await getMailer().send({
     to: recipient.email,
     subject: letter.subject,
     text: letter.text,
     html: letter.html,
+    // Кнопка «Отписаться» в самом почтовом клиенте. Без неё человек, которому
+    // отчёты надоели, нажимает «Спам» — и страдает доставляемость всего
+    // остального, включая письма о сбросе пароля.
+    unsubscribePostUrl: reportUnsubscribePostUrl(await ensureReportToken(recipient.userId)),
   });
   return true;
 }

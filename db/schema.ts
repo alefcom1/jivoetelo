@@ -514,6 +514,11 @@ export const reportPreferences = pgTable("report_preferences", {
   weekly: text("weekly").notNull().default("auto"),
   monthly: text("monthly").notNull().default("auto"),
   weightNumbers: boolean("weight_numbers").notNull().default(true),
+  /**
+   * Токен для заголовка List-Unsubscribe (RFC 8058). Nullable: строка
+   * настроек заводится и без него — токен появляется при первом письме.
+   */
+  unsubscribeToken: text("unsubscribe_token"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

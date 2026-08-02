@@ -23,8 +23,10 @@ import { localMoment } from "./dates.ts";
 import { isLetterNumber, parseSeriesContext, renderLetter } from "./email-series.ts";
 import { unsubscribePostUrl, unsubscribeUrl } from "./email-subscribe.ts";
 import { countPendingOnDay } from "./inbox.ts";
+import { listLoggedDays } from "./meals.ts";
 import { getMailer } from "./mailer.ts";
 import { planReminder, QUIET_HOURS_END, QUIET_HOURS_START } from "./reminders.ts";
+import { computeStreak } from "./streak.ts";
 import { dispatchDueReports, enqueueDueReports } from "./report-dispatch.ts";
 import { siteUrl } from "./site.ts";
 import { botToken, createTelegramClient, trySend } from "./telegram-api.ts";
@@ -184,9 +186,10 @@ export async function dispatchDueReminders(now: Date, limit = REMINDER_BATCH): P
 
   for (const row of rows) {
     try {
-      const [pendingPhotosToday, mealsToday] = await Promise.all([
+      const [pendingPhotosToday, mealsToday, loggedDays] = await Promise.all([
         countPendingOnDay(row.id, moment.day),
         countMealsOnDay(row.id, moment.day),
+        listLoggedDays(row.id),
       ]);
 
       const plan = planReminder({
@@ -199,6 +202,7 @@ export async function dispatchDueReminders(now: Date, limit = REMINDER_BATCH): P
         lastReminderOn: row.last_reminder_on,
         pendingPhotosToday,
         mealsToday,
+        streak: computeStreak(loggedDays, moment.day),
       });
       if (!plan) continue;
 
