@@ -147,3 +147,18 @@ export function searchFoodReference(query: string, limit = 8): ReferenceFood[] {
     .slice(0, limit)
     .map((row) => row.food);
 }
+
+/**
+ * Число из поля ввода КБЖУ: запятая как разделитель (на телефоне цифровая
+ * клавиатура даёт её, а не точку), пустое поле и мусор — ноль.
+ *
+ * Верхняя граница обрезает, а не отвергает: человек списывает числа с
+ * упаковки, и промах на разряд («170» белка вместо «17») не должен ни ронять
+ * форму, ни утекать в базу. Ноль вместо пустого — тоже осознанно: на упаковке
+ * прочерк в строке клетчатки значит именно ноль.
+ */
+export function parseNutrient(value: string, max: number): number {
+  const parsed = Number(String(value).trim().replace(",", "."));
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.min(max, parsed);
+}

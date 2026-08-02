@@ -773,3 +773,17 @@
 .tg-consent{display:flex;gap:10px;align-items:flex-start;text-align:left;margin:4px 0 18px;font-size:13px;line-height:1.5;color:var(--tg-hint)}
 .tg-consent input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--brand-coral)}
 .tg-consent a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+
+/* .tg-input рассчитан на фон страницы: его заливка — тот же --tg-surface, что
+   и у карточки. Внутри .tg-add-item (это .tg-card) он сливался с ней в белое
+   на белом, и поля ввода выглядели просто строчками текста. */
+.tg-add-item .tg-input {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--tg-hint) 32%, transparent);
+}
+.tg-add-item .tg-input:focus-visible { border-color: var(--brand-coral); }
+.tg-add-item-grid .tg-input { padding: 10px 12px; }
+
+/* Открытый на весь экран блок добавления: кнопка-триггер прижата влево
+   (.tg-add-item-open), а здесь он единственное содержимое — во всю ширину. */
+.tg-camera-manual { display: flex; flex-direction: column; gap: 10px; }

@@ -119,7 +119,11 @@ export function CameraTab({
   // Способ ввода. По умолчанию — камера: экран для этого и открывают. Снимок
   // из галереи в этот выбор не входит вовсе — он доступен кнопкой из любого
   // режима и сразу уходит на разбор, отдельного состояния ему не нужно.
-  const [mode, setMode] = useState<"camera" | "text">("camera");
+  // «Руками» — третий способ, единственный, который вообще не обращается к
+  // модели. «Повторить» ниже тоже работает без неё, но только если в дневнике
+  // уже что-то есть; собрать новую запись при выключенном разборе или
+  // исчерпанной квоте до сих пор было нечем.
+  const [mode, setMode] = useState<"camera" | "text" | "manual">("camera");
   const [text, setText] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   // Последний снимок — для повтора после сетевой ошибки: переснимать кадр или
@@ -349,9 +353,14 @@ export function CameraTab({
   // обработчик приезжает через ref внутри useMainButton, а подпись меняется
   // только когда действительно меняется шаг.
   const mainAction = busy ? null
-    : items ? { label: "Сохранить", run: () => void handleSave() }
+    // Пустой черновик (все позиции убраны крестиком) сохранять нечем:
+    // handleSave на нём молча выходит, и кнопка выглядела бы сломанной.
+    : items ? (items.length > 0 ? { label: "Сохранить", run: () => void handleSave() } : null)
     : inbox ? null
     : mode === "text" ? { label: "Разобрать", run: () => void handleAnalyze() }
+    // «Руками»: главное действие принадлежит форме внутри экрана («Добавить»),
+    // а не шагу целиком — снимать и разбирать тут нечего.
+    : mode === "manual" ? null
     : cameraState === "live" ? { label: "Снять", run: () => void handleShoot() }
     : null;
   useMainButton(mainAction?.label ?? null, () => mainAction?.run());
@@ -364,7 +373,7 @@ export function CameraTab({
    * и видел под полем «Сервис разбора сейчас недоступен», хотя ничего ещё не
    * отправлял. Выглядит как отказ до запроса.
    */
-  function switchMode(next: "camera" | "text") {
+  function switchMode(next: "camera" | "text" | "manual") {
     haptic("tap");
     setError(null);
     setMode(next);
@@ -519,6 +528,18 @@ export function CameraTab({
         </button>}
       </>}
 
+      {/* Путь без модели. Первая же добавленная позиция открывает обычный
+          черновик — дальше всё как после разбора: порции, тип приёма, «Сохранить». */}
+      {mode === "manual" && <div className="tg-camera-manual">
+        <h1 className="tg-camera-title">Что вы ели?</h1>
+        <p className="tg-hint">Найдите продукт в справочнике или введите КБЖУ с упаковки. Модель здесь не участвует — способ работает и с выключенным разбором.</p>
+        <AddItem startOpen onAdd={(item: NewItem) => setItems([{
+          ...item,
+          suggestedGrams: item.grams,
+          confidence: (item.confidence as Confidence) ?? "medium",
+        }])} />
+      </div>}
+
       {error && <p className="tg-error">{error}</p>}
       {busy && <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
       {/* Повтор для снимка — только после ошибки: сам он уходит на разбор
@@ -546,6 +567,9 @@ export function CameraTab({
         </label>
         {mode !== "text" && <button className="tg-way" onClick={() => switchMode("text")}>
           Описать словами
+        </button>}
+        {mode !== "manual" && <button className="tg-way" onClick={() => switchMode("manual")}>
+          Собрать руками
         </button>}
       </div>
 
@@ -596,10 +620,17 @@ export function CameraTab({
   const kcalRange = showCalories ? confidenceRange(totals.kcal, confidence) : null;
   const firstQuestion = clarifications[0]?.question ?? null;
 
+  // Черновик без разбора — собранный руками или повторённый из прошлой
+  // записи. Проверять там не за кем: числа взяты из справочника, с упаковки
+  // или из уже сохранённой записи, а не оценены моделью по фотографии.
+  const handMade = analysis === null;
+
   return <div className="tg-page">
     <header className="tg-hero">
-      <h1>Проверьте разбор</h1>
-      <p className="tg-hint">Оценка приблизительная — поправьте вес, если нужно.</p>
+      <h1>{handMade ? "Ваша запись" : "Проверьте разбор"}</h1>
+      <p className="tg-hint">{handMade
+        ? "Добавьте всё, что было в этом приёме пищи, и поправьте вес."
+        : "Оценка приблизительная — поправьте вес, если нужно."}</p>
     </header>
 
     {clarifications.map((clar, clarIndex) => <div className="tg-clarify" key={clar.question}>
@@ -647,6 +678,7 @@ export function CameraTab({
         </div>
       </li>)}
     </ul>
+    {items.length === 0 && <p className="tg-hint">Позиций не осталось — добавьте хотя бы одну.</p>}
 
     {/* Разбор мог не заметить гарнир или соус — дописать его здесь дешевле,
         чем переснимать блюдо и тратить ещё один вызов модели. */}
@@ -676,7 +708,7 @@ export function CameraTab({
     {error && <p className="tg-error">{error}</p>}
     {/* Как и «Разобрать»: внутри Telegram сохраняет нативная кнопка. */}
     {!insideTelegram && <button className="tg-button tg-button-block"
-      onClick={() => void handleSave()} disabled={busy}>
+      onClick={() => void handleSave()} disabled={busy || items.length === 0}>
       {busy ? "Сохраняем…" : "Сохранить"}
     </button>}
     <button className="tg-link tg-link-block" onClick={discardDraft}>← Начать заново</button>

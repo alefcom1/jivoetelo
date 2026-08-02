@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { foodCategory } from "../lib/food-category.ts";
-import { FOOD_REFERENCE, searchFoodReference } from "../lib/food-reference.ts";
+import { FOOD_REFERENCE, parseNutrient, searchFoodReference } from "../lib/food-reference.ts";
 
 /**
  * Главная проверка справочника — сходимость по Атуотеру: 4 ккал на грамм
@@ -105,5 +105,37 @@ test("крупы и макароны даны в отварном виде", () 
     const food = FOOD_REFERENCE.find((f) => f.name === name);
     assert.ok(food, `нет продукта «${name}»`);
     assert.ok(food.kcal < 200, `${name}: ${food.kcal} ккал — похоже на сухую крупу, а не на отварную`);
+  }
+});
+
+test("числа с упаковки: запятая, пустое поле, мусор, минус", () => {
+  assert.equal(parseNutrient("12.5", 100), 12.5);
+  // На телефоне цифровая клавиатура даёт запятую, а не точку.
+  assert.equal(parseNutrient("12,5", 100), 12.5);
+  assert.equal(parseNutrient("  7 ", 100), 7);
+  // Прочерк в строке клетчатки на упаковке означает ноль, а не «не знаю».
+  assert.equal(parseNutrient("", 100), 0);
+  assert.equal(parseNutrient("—", 100), 0);
+  assert.equal(parseNutrient("много", 100), 0);
+  // Отрицательной калорийности не бывает — это опечатка, а не ввод.
+  assert.equal(parseNutrient("-5", 100), 0);
+});
+
+test("числа с упаковки обрезаются по потолку, а не отвергаются", () => {
+  // Промах на разряд (170 г белка вместо 17) не должен ни ронять форму, ни
+  // утекать в базу: форма с одним подсвеченным полем на середине ввода
+  // раздражает сильнее, чем срезанное число, которое видно сразу.
+  assert.equal(parseNutrient("170", 100), 100);
+  assert.equal(parseNutrient("9000", 900), 900);
+  assert.equal(parseNutrient("100", 100), 100);
+});
+
+test("потолки формы не выше тех, что примет сервер", () => {
+  // lib/meals.ts клампит клетчатку до 50 на 100 г, остальное — до 100 (вес до
+  // 3000, калорийность до 900). Если форма разрешит больше, человек увидит на
+  // экране одно число, а в дневнике окажется другое.
+  assert.equal(parseNutrient("80", 50), 50);
+  for (const food of FOOD_REFERENCE) {
+    assert.ok(food.fiber <= 50, `${food.name}: клетчатки больше серверного потолка`);
   }
 });
