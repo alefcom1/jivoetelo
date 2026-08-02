@@ -36,6 +36,23 @@ import { siteUrl } from "../site.ts";
  */
 
 /**
+ * Путь маршрута, отдающего снимок. Вынесен в константу, потому что о нём
+ * должны знать двое: сам маршрут и robots.txt.
+ *
+ * Про robots не догадаться, пока не столкнёшься: загрузчик картинок
+ * Anthropic его читает и отказывается ходить по закрытым путям —
+ *
+ *     400 invalid_request_error:
+ *     This URL is disallowed by the website's robots.txt file.
+ *
+ * У нас `/api/` закрыт целиком, и этот маршрут попал под общий запрет. Файл
+ * robots лежит в app/robots.ts, ссылку выписывает этот модуль, и связать
+ * одно с другим глазами невозможно — отсюда общая константа и тест, который
+ * сверяет их между собой (tests/photo-link.test.mjs).
+ */
+export const AI_PHOTO_PATH = "/api/ai-photo";
+
+/**
  * Пять минут. Ссылка нужна ровно на время одного запроса к модели: мы её
  * выписываем, отдаём в запрос, Anthropic скачивает картинку в ближайшие
  * секунды. Пять минут — это запас на медленный канал, а не срок хранения.
@@ -117,5 +134,5 @@ export function photoLinkFor(photoKey: string, now: number = Date.now()): string
     return null;
   }
   if (base.protocol !== "https:") return null;
-  return `${base.origin}/api/ai-photo/${signPhotoLink(photoKey, now)}`;
+  return `${base.origin}${AI_PHOTO_PATH}/${signPhotoLink(photoKey, now)}`;
 }

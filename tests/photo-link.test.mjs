@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { photoLinkFor, signPhotoLink, verifyPhotoLink } from "../lib/ai/photo-link.ts";
+import { AI_PHOTO_PATH, photoLinkFor, signPhotoLink, verifyPhotoLink } from "../lib/ai/photo-link.ts";
+import { AI_PHOTO_PATH as PATH_FROM_LINK } from "../lib/ai/photo-link.ts";
+import { ROBOTS_DISALLOW, robotsAllows } from "../lib/robots.ts";
 import { isPhotoKey } from "../lib/storage.ts";
 
 /**
@@ -93,4 +95,44 @@ test("ключ файла в адресе не читается открытым
   // адресе, который уйдёт в чужие логи, незачем.
   const link = signPhotoLink(KEY);
   assert.ok(!link.includes(KEY), "ключ не должен лежать в адресе как есть");
+});
+
+/**
+ * Самая дорогая ошибка этой пары файлов: ссылку выписывает lib/ai/photo-link,
+ * а ходить по ней разрешает app/robots.ts — и они не знают друг о друге.
+ *
+ * `/api/` закрыт целиком и правильно, но под общий запрет попал и путь к
+ * снимку. Загрузчик картинок Anthropic читает robots.txt и отказался:
+ * «This URL is disallowed by the website's robots.txt file». Снаружи это
+ * выглядело как «сервис разбора недоступен», и найти виновника без строки в
+ * логе было бы нечем.
+ */
+test("robots.txt разрешает путь, по которому модель забирает снимок", () => {
+  // Ровно эта проверка стоила боевого разбора: /api/ закрыт целиком, и путь
+  // к снимку попал под общий запрет. Anthropic читает robots.txt и ответил
+  // «This URL is disallowed by the website's robots.txt file», а снаружи это
+  // выглядело как «сервис разбора недоступен».
+  assert.ok(
+    robotsAllows(`${AI_PHOTO_PATH}/любой-токен`),
+    `robots.txt закрывает ${AI_PHOTO_PATH}/ — Anthropic откажется скачивать снимок`,
+  );
+});
+
+test("прочее под /api/ остаётся закрытым: открыт один маршрут, а не весь раздел", () => {
+  assert.ok(ROBOTS_DISALLOW.includes("/api/"), "общий запрет на /api/ снимать нельзя");
+  assert.equal(robotsAllows("/api/tg/analyze"), false, "остальные маршруты API должны быть закрыты");
+  assert.equal(robotsAllows("/app/dnevnik"), false, "кабинет закрыт");
+});
+
+test("ссылка ведёт именно на тот путь, который открыт в robots", () => {
+  const before = process.env.SITE_URL;
+  try {
+    process.env.SITE_URL = "https://jivoetelo.ru";
+    const link = photoLinkFor(KEY);
+    assert.ok(link.startsWith(`https://jivoetelo.ru${PATH_FROM_LINK}/`), `неожиданный адрес: ${link}`);
+    assert.ok(robotsAllows(new URL(link).pathname), "выписанная ссылка закрыта robots.txt");
+  } finally {
+    if (before === undefined) delete process.env.SITE_URL;
+    else process.env.SITE_URL = before;
+  }
 });
