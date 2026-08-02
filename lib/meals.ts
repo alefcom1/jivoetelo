@@ -322,12 +322,17 @@ export async function getMealDetailForUser(userId: number, mealId: number): Prom
  * для пары delete/insert в одном обработчике риск рассинхронизации ничтожен,
  * а транзакция потребовала бы отдельно прокидывать соединение через getDb().
  * Возвращает false, если записи не было или она принадлежит другому пользователю.
+ *
+ * `eatenTime` необязательно: Mini App время не правит, а веб-кабинет правит.
+ * Формат проверяется здесь, а не у вызывающего, — значение приходит от
+ * клиента, и «25:99» не должно доехать до базы.
  */
 export async function replaceMealItemsForUser(
   userId: number,
   mealId: number,
   mealType: string,
   items: SaveMealItem[],
+  eatenTime?: string | null,
 ): Promise<boolean> {
   const db = getDb();
   const owned = await db.select({ id: meals.id }).from(meals).where(and(eq(meals.id, mealId), eq(meals.userId, userId))).limit(1);
@@ -335,8 +340,18 @@ export async function replaceMealItemsForUser(
 
   await db.delete(mealItems).where(eq(mealItems.mealId, mealId));
   await db.insert(mealItems).values(withDishKeys(items).map((item) => ({ ...item, mealId })));
-  await db.update(meals).set({ mealType: MEAL_TYPES.includes(mealType) ? mealType : "other" }).where(eq(meals.id, mealId));
+  await db
+    .update(meals)
+    .set({
+      mealType: MEAL_TYPES.includes(mealType) ? mealType : "other",
+      ...(isValidTime(eatenTime) ? { eatenTime } : {}),
+    })
+    .where(eq(meals.id, mealId));
   return true;
+}
+
+function isValidTime(value: unknown): value is string {
+  return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
 /**

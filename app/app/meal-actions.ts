@@ -8,7 +8,7 @@ import { mealItems, meals, users } from "@/db/schema";
 import { ANALYSIS_ERRORS, getMealProvider, MealAnalysisError, type MealAnalysis } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { getPendingItem, markProcessed } from "@/lib/inbox";
-import { withDishKeys } from "@/lib/meals";
+import { normalizeMealItems, replaceMealItemsForUser, withDishKeys } from "@/lib/meals";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import {
   ALLOWED_PHOTO_TYPES,
@@ -180,6 +180,45 @@ export async function saveMeal(input: SaveMealInput): Promise<{ ok: false; error
     return { ok: false, error: "Не получилось сохранить. Попробуйте ещё раз." };
   }
   redirect(`/app?date=${eatenOn}&saved=meal`);
+}
+
+/**
+ * Правка уже сохранённой записи из кабинета: состав, вес, КБЖУ на 100 г, тип
+ * приёма и время.
+ *
+ * Раньше в кабинете этого не было вовсе — только «Удалить запись». Разбор по
+ * фото иногда ошибается (в том числе выдаёт позицию с нулевой калорийностью),
+ * и единственным способом исправить одну цифру было удалить приём пищи
+ * целиком и завести заново, потратив ещё один разбор. В Mini App правка была,
+ * в вебе — нет; расхождение чинится здесь.
+ *
+ * Числа проходят через ту же `normalizeMealItems`, что и запись из Telegram:
+ * значения с клиента недоверенные, и правила обрезки должны быть одни на оба
+ * клиента, иначе через веб в базу попадёт то, что через бот не попадает.
+ */
+export async function updateMealItems(input: {
+  mealId: number;
+  mealType: string;
+  eatenTime: string;
+  items: unknown;
+}): Promise<{ ok: boolean; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const items = normalizeMealItems(input.items);
+  if (items.length === 0) return { ok: false, error: "Добавьте хотя бы одну позицию." };
+
+  try {
+    const updated = await replaceMealItemsForUser(user.id, input.mealId, input.mealType, items, input.eatenTime);
+    if (!updated) return { ok: false, error: "Запись не найдена." };
+  } catch (error) {
+    console.error("updateMealItems failed", error);
+    return { ok: false, error: "Не получилось сохранить. Попробуйте ещё раз." };
+  }
+
+  revalidatePath(`/app/meals/${input.mealId}`);
+  revalidatePath("/app");
+  return { ok: true };
 }
 
 export async function deleteMeal(mealId: number): Promise<void> {

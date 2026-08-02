@@ -5,8 +5,8 @@ import { getDb } from "@/db";
 import { mealItems, meals } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDayRu, MEAL_TYPE_LABELS } from "@/lib/dates";
-import { itemTotals, sumTotals } from "@/lib/nutrition";
 import { MealDetailActions } from "./meal-detail-actions";
+import { MealItemsPanel } from "./meal-items-panel";
 
 export default async function MealDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -26,7 +26,6 @@ export default async function MealDetailPage({ params }: { params: Promise<{ id:
   if (!meal) notFound();
 
   const items = await db.select().from(mealItems).where(eq(mealItems.mealId, meal.id));
-  const totals = sumTotals(items);
 
   return <main className="meal-detail">
     <Link className="back-link" href={`/app?date=${meal.eatenOn}`}>← {formatDayRu(meal.eatenOn)}</Link>
@@ -38,24 +37,22 @@ export default async function MealDetailPage({ params }: { params: Promise<{ id:
     )}
     {meal.sourceText && <p className="meal-source">«{meal.sourceText}»</p>}
 
-    <table className="meal-items">
-      <thead><tr><th>Позиция</th><th>Вес</th>{user.showCalories && <th>ккал</th>}<th>Белок</th><th>Клетчатка</th></tr></thead>
-      <tbody>
-        {items.map((item) => {
-          const t = itemTotals(item);
-          return <tr key={item.id}>
-            <td>{item.name}{item.confidence === "low" && <i> · неточно</i>}</td>
-            <td>{item.grams} г</td>
-            {user.showCalories && <td>{t.kcal}</td>}
-            <td>{t.protein} г</td>
-            <td>{t.fiber} г</td>
-          </tr>;
-        })}
-      </tbody>
-      <tfoot>
-        <tr><td>Итого</td><td /> {user.showCalories && <td>{totals.kcal}</td>}<td>{totals.protein} г</td><td>{totals.fiber} г</td></tr>
-      </tfoot>
-    </table>
+    <MealItemsPanel
+      mealId={meal.id}
+      showCalories={user.showCalories}
+      initialMealType={meal.mealType}
+      initialTime={meal.eatenTime}
+      initialItems={items.map((item) => ({
+        name: item.name,
+        grams: item.grams,
+        kcalPer100: item.kcalPer100,
+        proteinPer100: item.proteinPer100,
+        fatPer100: item.fatPer100,
+        carbsPer100: item.carbsPer100,
+        fiberPer100: item.fiberPer100,
+        confidence: item.confidence,
+      }))}
+    />
 
     <MealDetailActions mealId={meal.id} hasPhoto={!!meal.photoKey} />
   </main>;

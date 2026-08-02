@@ -188,7 +188,11 @@ footer>.footer-links:first-child{margin-top:0;padding-top:0;border-top:0}.footer
 .meal-items th,.meal-items td{padding:11px 14px;border-bottom:1px solid var(--line)}
 .meal-items td i{font-style:normal;font-size:12px;color:var(--coral)}
 .meal-items tfoot td{font-weight:700;border-bottom:0}
-.meal-detail-actions{display:flex;gap:18px;align-items:center}
+.meal-detail-actions{display:flex;gap:18px;align-items:center;margin-bottom:22px}
+/* Правка состава прямо на странице записи: разметка и стили те же, что у
+   черновика при сохранении (.draft-item выше), — здесь только отступ,
+   чтобы форма не липла к заголовку. */
+.meal-edit{margin-bottom:22px}
 
 /* Настройки */
 .settings h1{font:500 34px/1 var(--serif);letter-spacing:-.03em;margin:0 0 20px}
@@ -276,9 +280,11 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
 .consent-list li:last-child{border:0}
 .consent-list b{display:block;font-size:12px;font-weight:700}
 .consent-list span{display:block;margin-top:3px;color:var(--muted);font-size:12px}
-.shell-footer{max-width:760px;margin:0 auto;padding:34px 24px 46px}
-.shell-footer p{margin:0;color:#8a8b84;font-size:12px;line-height:1.65}
-.shell-footer .legal-links{margin-top:14px}
+/* Подвал кабинета — общий с сайтом, но по ширине контента кабинета (960px),
+   а не сайта (1280px): иначе колонки ссылок уезжали бы шире дневника. */
+.shell>footer{padding:52px max(20px,calc((100% - 960px)/2)) 25px}
+.shell>footer .footer-bottom{margin-top:64px}
+.shell>footer .footer-disclaimer{margin-top:48px}
 
 /* Множители порции в черновике разбора еды */
 .portion-multipliers{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px}
