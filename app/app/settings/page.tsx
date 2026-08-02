@@ -2,15 +2,17 @@ import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db";
-import { userConsents, users } from "@/db/schema";
+import { reportPreferences, userConsents, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
 import { getBotPreferences } from "@/lib/bot/store";
 import { DEFAULT_DIGEST_HOUR } from "@/lib/reminders";
+import { DEFAULT_REPORT_PREFERENCES, isChannelSetting } from "@/lib/report-prefs";
 import { setShowCalories } from "../meal-actions";
 import { CameraSettings } from "../../camera-settings";
 import { BotReminders } from "./bot-reminders";
 import { DangerZone } from "./danger-zone";
+import { ReportSettings } from "./report-settings";
 import { TelegramLink } from "./telegram-link";
 import { UsagePanel } from "./usage-panel";
 
@@ -21,12 +23,28 @@ export default async function SettingsPage() {
   if (!user) redirect("/login");
 
   const db = getDb();
+  // Настройки отчётов читаются здесь, а не серверным действием: действие в
+  // «use server»-модуле вызывается кем угодно с любым аргументом, и функция
+  // вида getReportPreferences(userId) стала бы способом прочитать чужие
+  // настройки. Читать своё — работа страницы, которая уже знает, чья она.
   const rows = await db
-    .select({ telegramUserId: users.telegramUserId })
+    .select({
+      telegramUserId: users.telegramUserId,
+      email: users.email,
+      weekly: reportPreferences.weekly,
+      monthly: reportPreferences.monthly,
+      weightNumbers: reportPreferences.weightNumbers,
+    })
     .from(users)
+    .leftJoin(reportPreferences, eq(reportPreferences.userId, users.id))
     .where(eq(users.id, user.id))
     .limit(1);
   const linked = !!rows[0]?.telegramUserId;
+  const reportPrefs = {
+    weekly: isChannelSetting(rows[0]?.weekly) ? rows[0].weekly : DEFAULT_REPORT_PREFERENCES.weekly,
+    monthly: isChannelSetting(rows[0]?.monthly) ? rows[0].monthly : DEFAULT_REPORT_PREFERENCES.monthly,
+    weightNumbers: rows[0]?.weightNumbers ?? DEFAULT_REPORT_PREFERENCES.weightNumbers,
+  };
 
   const preferences = linked ? await getBotPreferences(user.id) : null;
 
@@ -67,6 +85,10 @@ export default async function SettingsPage() {
           snoozedUntil={preferences?.snoozedUntil ?? null}
         />
       </section>}
+    <section className="settings-block">
+      <p className="settings-label">Недельный и месячный отчёты</p>
+      <ReportSettings prefs={reportPrefs} hasEmail={!!rows[0]?.email} hasTelegram={linked} />
+    </section>
     <section className="settings-block">
       <p className="settings-label">Видимость калорий</p>
       <p>

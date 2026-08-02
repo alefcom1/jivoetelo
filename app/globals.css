@@ -194,6 +194,16 @@ footer>.footer-links:first-child{margin-top:0;padding-top:0;border-top:0}.footer
    чтобы форма не липла к заголовку. */
 .meal-edit{margin-bottom:22px}
 
+/* Настройки отчётов. Два выпадающих списка и флажок — форма маленькая, но
+   каждое поле нуждается в подписи под ним: «автоматически» без объяснения
+   читается как «сервис решит за вас». */
+.report-settings{display:flex;flex-direction:column;gap:16px;max-width:460px}
+.report-field{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.report-field select{padding:10px;border:1px solid var(--line);background:var(--white);font-size:14px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--black)}
+.report-field small{font-size:12px;font-weight:400;letter-spacing:0;text-transform:none;line-height:1.5;color:var(--muted)}
+.report-settings .field-note{margin:0}
+.report-settings .black-button{align-self:flex-start}
+
 /* Настройки */
 .settings h1{font:500 34px/1 var(--serif);letter-spacing:-.03em;margin:0 0 20px}
 .settings-block{background:var(--white);border:1px solid var(--line);padding:20px;margin-bottom:14px;max-width:560px}

@@ -500,3 +500,59 @@ export const passwordResets = pgTable(
   // По пользователю — чтобы ограничивать частоту запросов, не сканируя таблицу.
   (table) => [index("password_resets_user").on(table.userId, table.createdAt)],
 );
+
+/**
+ * Настройки недельных и месячных отчётов. Строки может не быть — это
+ * нормально и означает «всё по умолчанию» (lib/report-prefs.ts). Заводить её
+ * каждому при регистрации незачем: большинство настройки не трогает.
+ */
+export const reportPreferences = pgTable("report_preferences", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** auto | email | telegram | both | off */
+  weekly: text("weekly").notNull().default("auto"),
+  monthly: text("monthly").notNull().default("auto"),
+  weightNumbers: boolean("weight_numbers").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Журнал отправленных отчётов — он же защита от повторной отправки.
+ *
+ * Отдельно от `email_deliveries`: та привязана к анонимным подписчикам
+ * почтовой серии (`email_subscribers`), у которых нет `user_id`, и её
+ * обработчик при неожиданном содержимом навсегда прекращает попытки.
+ *
+ * Строки не создаются заранее, как у серии писем: период сначала должен
+ * закончиться. Планировщик вставляет строку через ON CONFLICT DO NOTHING —
+ * выигравший гонку получает право отправить, остальные не получают ничего.
+ */
+export const reportDeliveries = pgTable(
+  "report_deliveries",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** weekly | monthly */
+    kind: text("kind").notNull(),
+    /**
+     * Последний день периода. Именно он определяет тождество отчёта: отправка
+     * может сдвинуться на сутки из-за перезапуска, отчёт от этого другим не
+     * станет.
+     */
+    periodEnd: date("period_end").notNull(),
+    /** email | telegram */
+    channel: text("channel").notNull(),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    attempts: integer("attempts").notNull().default(0),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("report_deliveries_once").on(table.userId, table.kind, table.periodEnd, table.channel),
+    index("report_deliveries_due").on(table.sentAt, table.createdAt),
+  ],
+);

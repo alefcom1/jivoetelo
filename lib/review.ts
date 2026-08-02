@@ -3,7 +3,12 @@
 // собирается из посчитанной статистики без обращения к модели.
 
 import { describePeriod, type PeriodStats } from "./meal-stats.ts";
+import { pluralRu, type PluralForms } from "./plural.ts";
 import type { Targets } from "./targets.ts";
+import { formatKgChange } from "./trend.ts";
+
+/** «1 дня», «2 дней», «5 дней» — форма после «из N». */
+const DAY_GENITIVE: PluralForms = ["дня", "дней", "дней"];
 
 export type DayStat = {
   day: string;
@@ -14,6 +19,16 @@ export type DayStat = {
 
 export type WeekReviewInput = {
   dayStats: DayStat[]; // только дни, где есть записи
+  /**
+   * Длина периода в днях. По умолчанию семь — обзор на экране всегда
+   * недельный. Месячному отчёту (lib/report.ts) нужен тот же текст, но про
+   * тридцать дней, и разводить два набора формулировок нельзя: они разойдутся
+   * при первой же правке, и человек получит на почту не то, что видит в
+   * кабинете.
+   */
+  periodDays?: number;
+  /** Как называется горизонт в разделе «Фокус»: «на неделю», «на месяц». */
+  focusHorizon?: string;
   weeklyTrendChangeKg: number | null;
   targets: Targets | null;
   showCalories: boolean;
@@ -41,6 +56,15 @@ function avg(values: number[]): number | null {
 
 export function buildWeekReview(input: WeekReviewInput): WeekReview {
   const daysLogged = input.dayStats.length;
+  const periodDays = input.periodDays ?? 7;
+  const horizon = input.focusHorizon ?? "на неделю";
+  // «Устойчивый ритм» — это доля периода, а не число дней: пять из семи и
+  // пять из тридцати это разные вещи, и хвалить второе за устойчивость
+  // значило бы врать.
+  const steady = daysLogged >= Math.ceil(periodDays * 5 / 7);
+  // «из 31 дня», а не «из 31 дней»: форма согласуется с последней цифрой, и в
+  // месяце с 31 днём разница видна сразу.
+  const of = `из ${periodDays} ${pluralRu(periodDays, DAY_GENITIVE)}`;
   const avgKcal = avg(input.dayStats.map((d) => d.kcal));
   const avgProtein = avg(input.dayStats.map((d) => d.protein));
   const avgFiber = avg(input.dayStats.map((d) => d.fiber));
@@ -50,16 +74,16 @@ export function buildWeekReview(input: WeekReviewInput): WeekReview {
   if (daysLogged === 0) {
     sections.push({
       title: "Главное",
-      text: "На этой неделе записей не было — так бывает, и ничего компенсировать не нужно. Начните с ближайшего приёма пищи: одна запись уже вернёт картину дня.",
+      text: "За этот период записей не было — так бывает, и ничего компенсировать не нужно. Начните с ближайшего приёма пищи: одна запись уже вернёт картину дня.",
     });
     return { daysLogged, avgKcal, avgProtein, avgFiber, sections };
   }
   sections.push({
     title: "Главное",
     text:
-      daysLogged >= 5
-        ? `Вы вели дневник ${daysLogged} из 7 дней — это устойчивый ритм, на который можно опираться.`
-        : `Вы вели дневник ${daysLogged} из 7 дней. Регулярность важнее полноты: даже одна запись в день сохраняет картину.`,
+      steady
+        ? `Вы вели дневник ${daysLogged} ${of} — это устойчивый ритм, на который можно опираться.`
+        : `Вы вели дневник ${daysLogged} ${of}. Регулярность важнее полноты: даже одна запись в день сохраняет картину.`,
   });
 
   // Приёмы пищи — сколько их было и когда. Это факт о ритме, а не о питании,
@@ -98,7 +122,7 @@ export function buildWeekReview(input: WeekReviewInput): WeekReview {
   // Тело
   if (input.weeklyTrendChangeKg !== null) {
     const change = input.weeklyTrendChangeKg;
-    const formatted = `${change > 0 ? "+" : ""}${change} кг`;
+    const formatted = `${formatKgChange(change)} кг`;
     sections.push({
       title: "Тело",
       text:
@@ -111,11 +135,11 @@ export function buildWeekReview(input: WeekReviewInput): WeekReview {
   // Фокус на неделю
   const focus =
     avgProtein !== null && input.targets && avgProtein < input.targets.proteinTarget * 0.9
-      ? "Один фокус на неделю: источник белка в каждый основной приём пищи. Больше ничего менять не нужно."
-      : daysLogged < 5
-        ? "Один фокус на неделю: записывать хотя бы один приём пищи в день. Этого достаточно."
-        : "Один фокус на неделю: сохранить текущий ритм. Он работает.";
-  sections.push({ title: "Фокус на неделю", text: focus });
+      ? `Один фокус ${horizon}: источник белка в каждый основной приём пищи. Больше ничего менять не нужно.`
+      : !steady
+        ? `Один фокус ${horizon}: записывать хотя бы один приём пищи в день. Этого достаточно.`
+        : `Один фокус ${horizon}: сохранить текущий ритм. Он работает.`;
+  sections.push({ title: `Фокус ${horizon}`, text: focus });
 
   return { daysLogged, avgKcal, avgProtein, avgFiber, sections };
 }

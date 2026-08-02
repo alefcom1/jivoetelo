@@ -6,12 +6,15 @@
  * счётчик попыток. Отдельный контейнер с pg-boss дал бы те же гарантии,
  * но занял бы ещё сотню мегабайт на VPS, где их не так много.
  *
- * Идемпотентность держится на двух вещах:
+ * Идемпотентность держится на трёх вещах:
  *  - письма: строка `email_deliveries` захватывается через SKIP LOCKED и
  *    получает `sent_at` только после успешной отправки;
  *  - напоминания: дата в `bot_preferences.last_reminder_on` записывается
  *    ДО отправки. Потерять сообщение при перезапуске не страшно, отправить
- *    второе за день — куда неприятнее.
+ *    второе за день — куда неприятнее;
+ *  - отчёты: уникальный индекс на (пользователь, вид, конец периода, канал).
+ *    Строка вставляется через ON CONFLICT DO NOTHING, и право отправить
+ *    получает тот, кто выиграл гонку (lib/report-dispatch.ts).
  */
 
 import { sql } from "drizzle-orm";
@@ -22,6 +25,7 @@ import { unsubscribePostUrl, unsubscribeUrl } from "./email-subscribe.ts";
 import { countPendingOnDay } from "./inbox.ts";
 import { getMailer } from "./mailer.ts";
 import { planReminder, QUIET_HOURS_END, QUIET_HOURS_START } from "./reminders.ts";
+import { dispatchDueReports, enqueueDueReports } from "./report-dispatch.ts";
 import { siteUrl } from "./site.ts";
 import { botToken, createTelegramClient, trySend } from "./telegram-api.ts";
 import { digestKeyboard } from "./bot/handle-update.ts";
@@ -245,6 +249,11 @@ export async function tick(now: Date = new Date()): Promise<void> {
   try {
     await dispatchDueEmails(now);
     await dispatchDueReminders(now);
+    // Отчёты: сначала ставим в очередь то, у чего кончился период, потом
+    // отправляем очередь. Порядок именно такой — поставленное в этот же заход
+    // уходит сразу, а не ждёт следующей минуты.
+    await enqueueDueReports(now);
+    await dispatchDueReports(now);
   } catch (error) {
     console.error("scheduler tick failed", error);
   } finally {
