@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { formatKcalChange } from "@/lib/adaptive";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDayRu } from "@/lib/dates";
+import { getReviewData } from "@/lib/review-data";
 import { applyProposedAdjustment } from "../profile-actions";
-import { getReviewData } from "./data";
 
 export default async function ReviewPage() {
   const user = await getCurrentUser();
@@ -42,7 +43,7 @@ export default async function ReviewPage() {
       </p>
       <form action={applyProposedAdjustment}>
         <button className="black-button" type="submit">
-          Применить {proposal.deltaKcal > 0 ? "+" : ""}{proposal.deltaKcal} ккал
+          Применить {formatKcalChange(proposal.deltaKcal)} ккал
         </button>
       </form>
     </section>}

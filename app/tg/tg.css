@@ -828,3 +828,24 @@
 .tg-consent{display:flex;gap:10px;align-items:flex-start;text-align:left;margin:4px 0 18px;font-size:13px;line-height:1.5;color:var(--tg-hint)}
 .tg-consent input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--brand-coral)}
 .tg-consent a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+
+/* Недельный обзор (app/tg/review-screen.tsx). Вход с «Плана» — строка того же
+   устройства, что .tg-inbox-banner на «Сегодня»: одно действие, стрелка
+   справа, вся строка нажимается. */
+.tg-review-entry {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  border: 0; border-radius: var(--radius); padding: 14px 16px; cursor: pointer; text-align: left;
+  background: var(--tg-surface); color: var(--tg-text); font: inherit;
+}
+.tg-review-entry:active { opacity: 0.85; }
+.tg-review-entry > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.tg-review-entry b { font-size: 14px; font-weight: 700; }
+.tg-review-entry i { font-style: normal; font-size: 12px; line-height: 1.4; color: var(--tg-hint); }
+.tg-review-entry > b { flex: none; font-size: 16px; color: var(--tg-hint); }
+
+/* Секции обзора: заголовок-кикер как у .tg-section, но с текстом абзацем, а
+   не карточками — обзор читают подряд, сверху вниз. */
+.tg-review-section p { margin: 0; font-size: 14px; line-height: 1.6; }
+.tg-review-proposal { display: flex; flex-direction: column; gap: 10px; }
+.tg-review-proposal p { margin: 0; font-size: 14px; line-height: 1.6; }
+.tg-review-proposal .tg-hint { font-size: 12.5px; }

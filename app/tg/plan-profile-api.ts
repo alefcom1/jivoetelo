@@ -8,6 +8,7 @@
 
 import type { PlanData } from "@/lib/plan";
 import type { ProfileData } from "@/lib/profile";
+import type { ReviewData } from "@/lib/review-data";
 import { getWebApp } from "./telegram.ts";
 
 export class PlanProfileApiError extends Error {
@@ -40,9 +41,19 @@ async function handle<T>(response: Response): Promise<T> {
 // после Response.json() соответствует им один в один — переиспользуем как есть.
 export type PlanResponse = PlanData;
 export type ProfileResponse = ProfileData;
+export type ReviewResponse = ReviewData;
 
 export async function fetchPlan(): Promise<PlanResponse> {
   return handle<PlanResponse>(await fetch("/api/tg/plan", { headers: initDataHeader(), cache: "no-store" }));
+}
+
+export async function fetchReview(): Promise<ReviewResponse> {
+  return handle<ReviewResponse>(await fetch("/api/tg/review", { headers: initDataHeader(), cache: "no-store" }));
+}
+
+/** Подтвердить предложенную поправку. Величину считает сервер — отсюда не шлём. */
+export async function applyPlanProposal(): Promise<{ ok: true; applied: number | null }> {
+  return handle(await fetch("/api/tg/review", { method: "POST", headers: initDataHeader() }));
 }
 
 export async function fetchProfile(): Promise<ProfileResponse> {

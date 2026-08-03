@@ -238,7 +238,7 @@ export default function MiniApp() {
               onSaved={handleCameraSaved}
               onDraft={handleDraft}
             />}
-            {tab === "plan" && <PlanTab />}
+            {tab === "plan" && <PlanTab showCalories={today.showCalories} />}
             {tab === "profile" && <ProfileTab />}
           </>}
     </div>

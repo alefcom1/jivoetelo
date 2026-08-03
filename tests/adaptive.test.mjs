@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { proposeAdjustment } from "../lib/adaptive.ts";
+import { formatKcalChange, proposeAdjustment } from "../lib/adaptive.ts";
 
 const base = {
   goal: "lose",
@@ -44,4 +44,14 @@ test("поддержание: дрейф вверх — минус 150, дрей
   const down = proposeAdjustment({ ...base, goal: "maintain", weeklyTrendChangeKg: -0.5 });
   assert.equal(up.deltaKcal, -150);
   assert.equal(down.deltaKcal, 150);
+});
+
+// Кнопку «Применить» показывают оба клиента — кабинет и Mini App. Знак минуса
+// здесь настоящий, а не дефис: рядом с «+150» из соседнего состояния дефис
+// читается как другой знак.
+test("поправка со знаком: настоящий минус, плюс у прибавки, ноль без знака", () => {
+  assert.equal(formatKcalChange(150), "+150");
+  assert.equal(formatKcalChange(-150), "−150");
+  assert.equal(formatKcalChange(0), "0");
+  assert.ok(!formatKcalChange(-150).includes("-"), "дефис вместо минуса");
 });

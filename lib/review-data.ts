@@ -1,15 +1,24 @@
+// Сбор данных недельного обзора. Лежит в lib/, а не рядом со страницей
+// кабинета, потому что тот же обзор показывает Mini App (app/api/tg/review):
+// пока модуль жил в app/app/review/, обзор существовал только в вебе, и
+// человек, живущий в Telegram, вместо разбора недели видел ссылку «в
+// веб-версии». Один сбор на оба клиента — иначе они разойдутся числами.
+
 import { and, asc, eq, gte, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { mealItems, meals, profiles, weightEntries } from "@/db/schema";
-import { localToday, shiftDay } from "@/lib/dates";
-import { sumTotals } from "@/lib/nutrition";
-import { proposeAdjustment, type AdjustmentProposal } from "@/lib/adaptive";
-import { getDishImpact } from "@/lib/dish-impact";
-import { computeMealStats, type PeriodStats } from "@/lib/meal-stats";
-import type { PaceKey } from "@/lib/pace";
-import { buildWeekReview, type DayStat, type WeekReview } from "@/lib/review";
-import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
-import { weeklyTrendChange, weightTrend } from "@/lib/trend";
+import { proposeAdjustment, type AdjustmentProposal } from "./adaptive.ts";
+import { localToday, shiftDay } from "./dates.ts";
+import { getDishImpact } from "./dish-impact.ts";
+import { computeMealStats, type PeriodStats } from "./meal-stats.ts";
+import { sumTotals } from "./nutrition.ts";
+import type { PaceKey } from "./pace.ts";
+import { buildWeekReview, type DayStat, type WeekReview } from "./review.ts";
+import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
+import { weeklyTrendChange, weightTrend } from "./trend.ts";
+
+/** Границы накопленной адаптивной поправки (раздел 14.2 спецификации). */
+const ADJUSTMENT_LIMIT = 450;
 
 export type ReviewData = {
   review: WeekReview;
@@ -98,4 +107,32 @@ export async function getReviewData(userId: number, showCalories: boolean): Prom
   const impact = await getDishImpact(userId, weekEnd);
 
   return { review, targets, proposal, weekStart, weekEnd, mealStats, impact: impact.section };
+}
+
+/**
+ * Применить предложенную поправку к плану.
+ *
+ * Предложение сюда не передаётся, а пересчитывается: между показом обзора и
+ * нажатием кнопки могут пройти сутки и появиться новые замеры веса. Клиент,
+ * которому разрешили бы прислать своё число, применил бы устаревшее — или
+ * любое другое, какое захочет.
+ *
+ * Возвращает применённую дельту, либо null, если предложения уже нет.
+ */
+export async function applyProposal(userId: number, showCalories: boolean): Promise<number | null> {
+  const { proposal } = await getReviewData(userId, showCalories);
+  if (!proposal) return null;
+
+  const db = getDb();
+  const rows = await db
+    .select({ kcalAdjustment: profiles.kcalAdjustment })
+    .from(profiles)
+    .where(eq(profiles.userId, userId))
+    .limit(1);
+  const current = rows[0]?.kcalAdjustment ?? 0;
+  const next = Math.min(ADJUSTMENT_LIMIT, Math.max(-ADJUSTMENT_LIMIT, current + proposal.deltaKcal));
+  await db.update(profiles).set({ kcalAdjustment: next, updatedAt: new Date() }).where(eq(profiles.userId, userId));
+  // Реально применённая разница, а не предложенная: у края диапазона они
+  // расходятся, и показать человеку «+50 ккал», прибавив 20, значит соврать.
+  return next - current;
 }

@@ -11,6 +11,8 @@ import { pointsToArea } from "@/lib/sparkline";
 import { buildWeightChart } from "@/lib/weight-chart";
 import { ArtTrend } from "./illustrations";
 import { fetchPlan, type PlanResponse } from "./plan-profile-api";
+import { ReviewScreen } from "./review-screen";
+import { haptic } from "./telegram";
 
 const CHART_WIDTH = 320;
 const CHART_HEIGHT = 120;
@@ -114,12 +116,15 @@ function formatDecimalRu(value: number | null): string {
   return value === null ? "—" : value.toFixed(1).replace(".", ",");
 }
 
-export function PlanTab() {
+export function PlanTab({ showCalories }: { showCalories: boolean }) {
   const [data, setData] = useState<PlanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Какой период показывают счётчики приёмов пищи. Неделя первой: месяц
    * отвечает на вопрос «как я живу вообще», а неделя — «как я живу сейчас». */
   const [period, setPeriod] = useState<"week" | "month">("week");
+  /** Обзор — подэкран вкладки, как правка записи внутри «Дневника»: он
+   * продолжает разговор про план, а шестой вкладки для него заводить незачем. */
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -128,6 +133,19 @@ export function PlanTab() {
       .catch(() => { if (!cancelled) setError("Не получилось загрузить план."); });
     return () => { cancelled = true; };
   }, []);
+
+  if (reviewOpen) {
+    return <ReviewScreen
+      showCalories={showCalories}
+      onBack={() => {
+        haptic("tap");
+        setReviewOpen(false);
+        // Поправку могли применить прямо в обзоре — цель на этом экране
+        // должна показать новое число, а не то, с которым сюда пришли.
+        fetchPlan().then(setData).catch(() => {});
+      }}
+    />;
+  }
 
   if (!data) {
     return <div className="tg-page">
@@ -167,7 +185,6 @@ export function PlanTab() {
               {targets.adjusted && <p className="tg-hint">
                 Число скорректировано с учётом безопасных ограничений (минимальный возраст для цели «снижение веса» или нижний порог калорийности) — поэтому точная сумма формулы и поправки выше не сходится один в один.
               </p>}
-              <p className="tg-hint">Полный недельный обзор с предложением по корректировке — в <a className="tg-link" href="/app/review" target="_blank" rel="noreferrer">веб-версии</a>.</p>
             </div>
           </details>
         </section>
@@ -175,6 +192,17 @@ export function PlanTab() {
           <p>Настройте стартовый план в веб-версии — здесь появится цель по энергии и её объяснение.</p>
           <a className="tg-link" href="/app/onboarding" target="_blank" rel="noreferrer">Настроить план →</a>
         </section>}
+
+    {/* Вход в недельный обзор. Отдельной строкой, а не сноской в «Почему
+        столько?»: именно там живёт предложение по корректировке цели, и
+        прятать его внутри раскрывающегося объяснения значит не показывать. */}
+    <button className="tg-review-entry" onClick={() => { haptic("tap"); setReviewOpen(true); }}>
+      <span>
+        <b>Недельный обзор</b>
+        <i>Разбор недели и предложение по плану</i>
+      </span>
+      <b aria-hidden="true">→</b>
+    </button>
 
     {/* Приёмы пищи: сколько и когда */}
     <section className="tg-section">
