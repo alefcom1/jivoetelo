@@ -8,7 +8,7 @@ import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
 import { getBotPreferences } from "@/lib/bot/store";
 import { DEFAULT_DIGEST_HOUR } from "@/lib/reminders";
 import { DEFAULT_REPORT_PREFERENCES, isChannelSetting } from "@/lib/report-prefs";
-import { setShowCalories } from "../meal-actions";
+import { setShowCalories, setSimpleMode } from "../meal-actions";
 import { CameraSettings } from "../../camera-settings";
 import { BotReminders } from "./bot-reminders";
 import { DangerZone } from "./danger-zone";
@@ -55,6 +55,7 @@ export default async function SettingsPage() {
     .orderBy(asc(userConsents.acceptedAt));
 
   const toggle = setShowCalories.bind(null, !user.showCalories);
+  const toggleSimple = setSimpleMode.bind(null, !user.simpleMode);
 
   return <main className="settings">
     <h1>Настройки</h1>
@@ -98,6 +99,26 @@ export default async function SettingsPage() {
       </p>
       <form action={toggle}>
         <button className="black-button" type="submit">{user.showCalories ? "Скрыть калории" : "Показывать калории"}</button>
+      </form>
+    </section>
+    <section className="settings-block">
+      <p className="settings-label">Как записывать еду</p>
+      <p>
+        {user.simpleMode
+          ? "Сейчас упрощённый режим: вы отмечаете, что было на тарелке и сколько её было, — без чисел. Состав считается внутри, и его видно в записи."
+          : "Сейчас подробный режим: состав и вес каждой позиции. Если это отнимает много сил, есть упрощённый — отметить тарелку в два нажатия."}
+      </p>
+      {/* Довод, а не уговоры: у упрощённого учёта приверженность 97% против
+          49% при той же потере веса на шести месяцах. Человек вправе знать,
+          что теряет и что приобретает, — и решить сам. */}
+      <p className="field-note">
+        В исследованиях упрощённый учёт дают доводить до конца почти все, а подробный — половина,
+        и вес при этом снижается одинаково. Точность записи от упрощённого режима падает, ритм — растёт.
+      </p>
+      <form action={toggleSimple}>
+        <button className="black-button" type="submit">
+          {user.simpleMode ? "Вернуть подробный режим" : "Включить упрощённый режим"}
+        </button>
       </form>
     </section>
     <section className="settings-block">

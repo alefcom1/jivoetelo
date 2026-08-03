@@ -15,6 +15,14 @@ export type CurrentUser = {
   showCalories: boolean;
   /** Тариф. Сейчас у всех "free" — все функции доступны бесплатно. */
   plan: Plan;
+  /**
+   * Привязан ли Telegram. Именно флаг, а не сам идентификатор: он нужен
+   * интерфейсу и аналитике, а таскать по коду чужой числовой идентификатор
+   * ради ответа «да/нет» незачем.
+   */
+  telegramLinked: boolean;
+  /** Упрощённый режим учёта: тарелка вместо чисел (lib/simple-log.ts). */
+  simpleMode: boolean;
 };
 
 function hashToken(token: string): string {
@@ -52,12 +60,21 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   if (!token) return null;
 
   const rows = await getDb()
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan })
+    .select({
+      id: users.id,
+      email: users.email,
+      showCalories: users.showCalories,
+      plan: users.plan,
+      simpleMode: users.simpleMode,
+      telegramUserId: users.telegramUserId,
+    })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
     .where(and(eq(sessions.tokenHash, hashToken(token)), gt(sessions.expiresAt, new Date())))
     .limit(1);
 
   const row = rows[0];
-  return row ? { ...row, plan: normalizePlan(row.plan) } : null;
+  if (!row) return null;
+  const { telegramUserId, ...user } = row;
+  return { ...user, plan: normalizePlan(row.plan), telegramLinked: telegramUserId !== null };
 }

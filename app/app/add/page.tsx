@@ -22,5 +22,5 @@ export default async function AddMealPage({
     if (!inbox) redirect("/app/inbox");
   }
 
-  return <AddMealFlow showCalories={user.showCalories} inbox={inbox} />;
+  return <AddMealFlow showCalories={user.showCalories} simpleMode={user.simpleMode} inbox={inbox} />;
 }

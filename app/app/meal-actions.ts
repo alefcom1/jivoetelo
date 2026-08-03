@@ -275,3 +275,13 @@ export async function setShowCalories(show: boolean): Promise<void> {
   revalidatePath("/app");
   revalidatePath("/app/settings");
 }
+
+/** Упрощённый режим учёта (lib/simple-log.ts): тарелка вместо чисел. */
+export async function setSimpleMode(simple: boolean): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await getDb().update(users).set({ simpleMode: simple }).where(eq(users.id, user.id));
+  revalidatePath("/app");
+  revalidatePath("/app/add");
+  revalidatePath("/app/settings");
+}

@@ -124,7 +124,7 @@
 .pro-field textarea{line-height:1.5;resize:vertical}
 .pro-consent{flex-direction:row}
 .pro-consent label{display:flex;gap:10px;align-items:flex-start;font-size:12px;font-weight:500;line-height:1.5;color:#5c5e57}
-.pro-consent input{width:15px;height:15px;margin:2px 0 0;flex:none;accent-color:var(--coral)}
+.pro-consent input{margin:0;flex:none}
 .pro-consent a{text-decoration:underline;text-underline-offset:2px}
 .pro-consent a:hover{color:var(--coral)}
 .pro-submit{align-self:flex-start;border:0;border-radius:3px;padding:13px 22px;background:var(--black);color:var(--white);font-size:12px;font-weight:800}

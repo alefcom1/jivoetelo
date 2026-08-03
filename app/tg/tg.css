@@ -915,3 +915,27 @@
 .tg-scan-open { align-self: flex-start; min-height: 40px; padding: 10px 16px; font-size: 13px; }
 /* Подпись над подсказками из базы товаров — см. .add-food-source в globals.css. */
 .tg-add-item-source { margin: 2px 0 -2px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* Согласие в Mini App: тот же порог 24×24, что и в вебе (globals.css).
+   Правило здесь, потому что .tg-consent input специфичнее общего. */
+.tg-consent input { width: 24px; height: 24px; }
+
+/* Тарелка вместо чисел: компонент общий с вебом (app/plate-input.tsx), его
+   стили — в globals.css. Здесь только то, что должно взять тему Telegram. */
+.tg-root .plate-part,
+.tg-root .plate-portion {
+  background: var(--tg-surface); color: var(--tg-text); border-radius: var(--radius);
+  border-color: color-mix(in srgb, var(--tg-hint) 24%, transparent);
+}
+.tg-root .plate-part span,
+.tg-root .plate-question,
+.tg-root .plate-range,
+.tg-root .plate-note { color: var(--tg-hint); }
+.tg-root .plate-part--on,
+.tg-root .plate-portion--on {
+  background: var(--tg-button); color: var(--tg-button-text); border-color: var(--tg-button);
+}
+.tg-root .plate-part--on span { color: color-mix(in srgb, var(--tg-button-text) 75%, transparent); }
+.tg-root .plate-save {
+  width: 100%; background: var(--tg-button); color: var(--tg-button-text); border-radius: var(--radius);
+}

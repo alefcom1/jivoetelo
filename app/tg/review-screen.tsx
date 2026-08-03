@@ -70,6 +70,7 @@ export function ReviewScreen({ showCalories, onBack }: { showCalories: boolean; 
     <div className="tg-card tg-draft-total-row">
       <div><strong>{review.daysLogged}</strong><span>дней с записями</span></div>
       <div><strong>{mealStats.mealCount}</strong><span>приёмов пищи</span></div>
+      <div><strong>{mealStats.daysWithTwoMeals}</strong><span>дней с двумя+</span></div>
       {showCalories && review.avgKcal !== null && <div><strong>{review.avgKcal}</strong><span>ккал в среднем</span></div>}
       {review.avgProtein !== null && <div><strong>{review.avgProtein}</strong><span>белок, г</span></div>}
     </div>

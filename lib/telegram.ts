@@ -25,12 +25,13 @@ const LINK_CODE_TTL_MINUTES = 15;
 /** Находит пользователя сервиса по привязанному Telegram-аккаунту. */
 export async function findUserByTelegram(telegramUserId: string): Promise<CurrentUser | null> {
   const rows = await getDb()
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan })
+    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan, simpleMode: users.simpleMode })
     .from(users)
     .where(eq(users.telegramUserId, telegramUserId))
     .limit(1);
   const row = rows[0];
-  return row ? { ...row, plan: normalizePlan(row.plan) } : null;
+  // Пользователь найден по самой привязке — она заведомо есть.
+  return row ? { ...row, plan: normalizePlan(row.plan), telegramLinked: true } : null;
 }
 
 /** Разбирает initData и возвращает пользователя; бросает not_linked, если привязки нет. */
@@ -86,10 +87,11 @@ export async function consumeLinkCode(code: string, telegramUserId: string): Pro
   await db.update(telegramLinkCodes).set({ usedAt: new Date() }).where(eq(telegramLinkCodes.code, normalized));
 
   const linked = await db
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan })
+    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan, simpleMode: users.simpleMode })
     .from(users)
     .where(eq(users.id, row.userId))
     .limit(1);
   const linkedRow = linked[0];
-  return linkedRow ? { ...linkedRow, plan: normalizePlan(linkedRow.plan) } : null;
+  // Код привязки только что применён к этому аккаунту — привязка есть.
+  return linkedRow ? { ...linkedRow, plan: normalizePlan(linkedRow.plan), telegramLinked: true } : null;
 }

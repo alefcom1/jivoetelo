@@ -8,6 +8,7 @@ import { scaleGrams } from "@/lib/portions";
 import { analyzeMeal, saveMeal } from "../meal-actions";
 import { AddFoodItem } from "../add-food-item";
 import { VoiceInput } from "../voice-input";
+import { PlateInput } from "../../plate-input";
 import { CameraCapture } from "./camera-capture";
 
 type DraftItem = {
@@ -82,9 +83,20 @@ export type InboxDraft = {
   takenTime: string;
 };
 
-export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; inbox?: InboxDraft | null }) {
+export function AddMealFlow({
+  showCalories,
+  simpleMode = false,
+  inbox,
+}: {
+  showCalories: boolean;
+  /** Упрощённый режим: тарелка вместо чисел (lib/simple-log.ts). */
+  simpleMode?: boolean;
+  inbox?: InboxDraft | null;
+}) {
   const now = new Date();
   const [mode, setMode] = useState<"text" | "photo">(inbox ? "photo" : "text");
+  /** Разовый выход в подробный режим: упрощённый — умолчание, а не запрет. */
+  const [detailed, setDetailed] = useState(false);
   const [text, setText] = useState("");
   const [note, setNote] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
@@ -209,7 +221,46 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
     }
   }
 
+  /**
+   * Запись из тарелки уходит в дневник сразу, без промежуточного черновика.
+   * В этом весь смысл режима: два нажатия и «записать». Приём пищи и время
+   * подставляются по часам и правятся потом — открыв запись, если нужно.
+   */
+  async function saveSimple(items: Array<{ name: string; grams: number; kcalPer100: number; proteinPer100: number; fatPer100: number; carbsPer100: number; fiberPer100: number; confidence: string }>) {
+    setError(null);
+    setBusy(true);
+    try {
+      const result = await saveMeal({
+        inboxId: null,
+        eatenOn: date,
+        eatenTime: time,
+        mealType: guessMealType(time),
+        sourceText: null,
+        photoKey: null,
+        analysis: null,
+        items,
+      });
+      if (result && !result.ok) setError(result.error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!draft) {
+    if (simpleMode && !detailed && !inbox) {
+      return <main className="addflow">
+        <h1>Что вы ели?</h1>
+        <PlateInput showCalories={showCalories} busy={busy} onSave={(items) => void saveSimple(items)} />
+        {error && <p className="form-error">{error}</p>}
+        {/* Выход в подробный режим на один раз: упрощённый — не запрет, а
+            умолчание. Иногда человек хочет записать точно, и заставлять его
+            лезть в настройки ради одной записи незачем. */}
+        <p className="field-note">
+          Нужно записать точнее? <button className="link-button" type="button" onClick={() => { setDetailed(true); setMode("text"); }}>Опишите словами</button> — разбор посчитает состав.
+        </p>
+      </main>;
+    }
+
     if (inbox) {
       // Запись голосом отличается от снимка только тем, что показывать нечего:
       // вместо фотографии — расшифровка, которую и будет разбирать модель.

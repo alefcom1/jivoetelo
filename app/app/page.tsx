@@ -63,7 +63,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   }
 
   return <main className="day">
-    <GoalReporter saved={saved} />
+    <GoalReporter saved={saved} loggedDays={streak.totalDays} telegramLinked={user.telegramLinked} />
     <div className="day-nav">
       <Link href={`/app?date=${shiftDay(day, -1)}`} aria-label="Предыдущий день">←</Link>
       <h1>{formatDayRu(day)}</h1>

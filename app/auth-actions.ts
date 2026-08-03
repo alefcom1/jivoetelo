@@ -57,7 +57,9 @@ export async function register(_prev: AuthState, formData: FormData): Promise<Au
     console.error("register failed", error);
     return { status: "error", ...typed };
   }
-  redirect("/app");
+  // Метка для цели Метрики: сама цель отправляется из браузера, а серверное
+  // действие заканчивается редиректом — см. app/app/goal-reporter.tsx.
+  redirect("/app?saved=signup");
 }
 
 export async function login(_prev: AuthState, formData: FormData): Promise<AuthState> {

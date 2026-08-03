@@ -28,6 +28,7 @@ export async function GET(request: Request) {
 
   return Response.json({
     showCalories: auth.user.showCalories,
+    simpleMode: auth.user.simpleMode,
     day: summary.day,
     totals: summary.totals,
     targets: summary.targets && macros ? { ...summary.targets, ...macros } : summary.targets,

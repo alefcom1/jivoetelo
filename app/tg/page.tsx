@@ -234,6 +234,7 @@ export default function MiniApp() {
             {tab === "camera" && <CameraTab
               key="manual"
               showCalories={today.showCalories}
+              simpleMode={today.simpleMode}
               forDay={cameraFrom.day}
               onSaved={handleCameraSaved}
               onDraft={handleDraft}

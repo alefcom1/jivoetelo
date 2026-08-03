@@ -21,6 +21,7 @@ import { ArtCamera } from "./illustrations";
 import { haptic, useInsideTelegram, useMainButton } from "./telegram";
 import { TgPhoto } from "./photo";
 import { VoiceInput } from "./voice-input";
+import { PlateInput } from "../plate-input";
 import { cameraGrantedThisSession, useCamera } from "../use-camera";
 import { useCameraPref } from "../camera-prefs";
 import { useFrameWatch } from "../use-frame-watch";
@@ -92,6 +93,7 @@ function guessMealType(): string {
  */
 export function CameraTab({
   showCalories,
+  simpleMode = false,
   onSaved,
   inbox,
   onCancelInbox,
@@ -99,6 +101,8 @@ export function CameraTab({
   forDay,
 }: {
   showCalories: boolean;
+  /** Упрощённый режим: тарелка вместо чисел (lib/simple-log.ts). */
+  simpleMode?: boolean;
   onSaved: () => void;
   /** Снимок из фото-инбокса, если разбор начат оттуда. */
   inbox?: InboxItemDto | null;
@@ -121,6 +125,8 @@ export function CameraTab({
   // из галереи в этот выбор не входит вовсе — он доступен кнопкой из любого
   // режима и сразу уходит на разбор, отдельного состояния ему не нужно.
   const [mode, setMode] = useState<"camera" | "text">("camera");
+  /** Разовый выход из упрощённого режима: он умолчание, а не запрет. */
+  const [detailed, setDetailed] = useState(false);
   const [text, setText] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   // Последний снимок — для повтора после сетевой ошибки: переснимать кадр или
@@ -371,6 +377,36 @@ export function CameraTab({
     setMode(next);
   }
 
+  /**
+   * Запись из тарелки уходит в дневник сразу, без черновика: в этом смысл
+   * упрощённого режима. Приём пищи и время подставляются по часам и правятся
+   * потом — открыв запись, если нужно.
+   */
+  async function saveSimple(plate: Array<{ name: string; grams: number; kcalPer100: number; proteinPer100: number; fatPer100: number; carbsPer100: number; fiberPer100: number; confidence: string }>) {
+    setError(null);
+    setBusy(true);
+    try {
+      const now = new Date();
+      await saveMeal({
+        inboxId: null,
+        eatenOn: forDay ?? now.toLocaleDateString("en-CA"),
+        eatenTime: now.toTimeString().slice(0, 5),
+        mealType: guessMealType(),
+        sourceText: null,
+        photoKey: null,
+        analysis: null,
+        items: plate,
+      });
+      haptic("success");
+      onSaved();
+    } catch (err) {
+      haptic("error");
+      setError(err instanceof Error && err.message !== "error" ? err.message : "Не получилось сохранить.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function updateItem(index: number, patch: Partial<DraftItem>) {
     setItems((current) => current && current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
@@ -419,6 +455,27 @@ export function CameraTab({
       </button>}
       {onCancelInbox &&
         <button className="tg-link-button" onClick={onCancelInbox} disabled={busy}>← В инбокс</button>}
+    </div>;
+  }
+
+  /**
+   * Упрощённый режим: тарелка вместо чисел, запись уходит сразу.
+   *
+   * Стоит перед видоискателем, а не рядом с ним: в этом режиме экран
+   * «Камера» — это экран записи еды, и предлагать сначала снять кадр значило
+   * бы вернуть ровно ту работу, ради избавления от которой режим и включают.
+   * Разовый выход в съёмку остаётся ссылкой внизу.
+   */
+  if (simpleMode && !inbox && !detailed) {
+    return <div className="tg-page tg-camera">
+      {forDay && <p className="tg-kicker">Запись за {formatDayRu(forDay)}</p>}
+      <h1 className="tg-camera-title">Что вы ели?</h1>
+      <PlateInput showCalories={showCalories} busy={busy} onSave={(plate) => void saveSimple(plate)} />
+      {error && <p className="tg-error">{error}</p>}
+      <div className="tg-ways">
+        <button className="tg-way" onClick={() => { haptic("tap"); setDetailed(true); switchMode("camera"); }}>Снять камерой</button>
+        <button className="tg-way" onClick={() => { haptic("tap"); setDetailed(true); switchMode("text"); }}>Записать точнее</button>
+      </div>
     </div>;
   }
 

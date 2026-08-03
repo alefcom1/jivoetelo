@@ -253,7 +253,7 @@ a.header-cta{display:inline-flex;align-items:center}
 /* Вариант ответа — кнопка, а не радиокнопка: выбор сразу ведёт к следующему
    вопросу, а навигация стрелками внутри радиогруппы этому мешала бы
    (объяснение в app/raschet/choice.tsx). */
-.radio-card{border:1px solid var(--line);background:var(--white);padding:10px 16px;font-size:14px;font-weight:600;text-align:left;cursor:pointer;color:inherit}
+.radio-card{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);background:var(--white);padding:8px 14px;font-size:14px;font-weight:600;text-align:left;cursor:pointer;color:inherit}
 .radio-card:hover{border-color:var(--black)}
 .radio-card[aria-pressed="true"]{background:var(--black);color:white;border-color:var(--black)}
 .radio-card:focus-visible{outline:2px solid var(--coral);outline-offset:1px}
@@ -299,7 +299,7 @@ a.header-cta{display:inline-flex;align-items:center}
 /* Селектор с label специально «тяжелее» правила .auth-card label — иначе
    галочка уезжает на отдельную строку от своего текста. */
 label.consent{display:flex;flex-direction:row;gap:9px;align-items:flex-start;margin:14px 0 4px;text-align:left;color:#5c5e57;font-size:12px;font-weight:400;line-height:1.5}
-label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;flex:0 0 auto;accent-color:var(--coral)}
+label.consent input{margin:0;padding:0;border:0;flex:0 0 auto}
 .consent a{text-decoration:underline;text-underline-offset:2px}
 .consent a:hover{color:var(--coral)}
 .footer-disclaimer{max-width:640px;margin:64px 0 0;color:#74766e;font-size:12px;line-height:1.65}
@@ -416,3 +416,33 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
 /* Подпись над подсказками из базы товаров: эти карточки завели люди, и
    отличать их от курируемого справочника человек должен глазами. */
 .add-food-source{margin:2px 0 -4px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+
+/* Цели нажатия: чекбоксы и переключатели.
+   Браузер рисует их 13×13, при норме WCAG 2.2 в 24×24 CSS-пикселя. В
+   калькуляторе энергии их десять штук подряд, и промахнуться по такому на
+   ходу — обычное дело. Меняем размер, а не оформление: своя отрисовка
+   потребовала бы дублировать состояния focus и disabled, а выигрыш
+   исчерпывается размером. accent-color красит галочку фирменным цветом, не
+   отбирая у элемента его собственное поведение. */
+input[type=checkbox],input[type=radio]{width:24px;height:24px;flex:none;margin:0;accent-color:var(--coral);cursor:pointer}
+
+/* Тарелка вместо чисел (app/plate-input.tsx) — общий экран веба и Mini App.
+   Стили здесь, потому что globals.css подключён в обоих клиентах; тему
+   Telegram доводит tg.css поверх. */
+.plate{display:flex;flex-direction:column;gap:12px}
+.plate-question{margin:6px 0 0;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.plate-parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+/* Цель нажатия крупная намеренно: в этом режиме она главная и единственная,
+   и попадать по ней человек должен на ходу, не глядя. */
+.plate-part{display:flex;flex-direction:column;gap:3px;min-height:64px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--white);text-align:left;color:inherit}
+.plate-part b{font-size:14px;font-weight:700}
+.plate-part span{font-size:12px;line-height:1.35;color:var(--muted)}
+.plate-part--on{border-color:var(--black);background:var(--black);color:var(--white)}
+.plate-part--on span{color:#cfd0c8}
+.plate-portions{display:flex;flex-wrap:wrap;gap:8px}
+.plate-portion{min-height:44px;padding:11px 16px;border:1px solid var(--line);border-radius:999px;background:var(--white);font-size:13px;font-weight:700;color:inherit}
+.plate-portion--on{border-color:var(--black);background:var(--black);color:var(--white)}
+.plate-range{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.plate-save{align-self:flex-start;min-height:48px;padding:14px 24px;border:0;border-radius:6px;background:var(--black);color:#fff;font-size:13px;font-weight:800}
+.plate-save:disabled{opacity:.45}
+.plate-note{margin:0;font-size:12px;color:var(--muted)}

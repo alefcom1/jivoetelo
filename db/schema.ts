@@ -57,6 +57,14 @@ export const users = pgTable("users", {
   // Режим «скрыть калории» (раздел 4.2 спеки): пользователь видит белок и
   // клетчатку, но не цифры энергии.
   showCalories: boolean("show_calories").notNull().default(true),
+  /**
+   * Упрощённый режим учёта (lib/simple-log.ts): тарелка вместо чисел.
+   *
+   * Отдельно от showCalories сознательно. Тот убирает цифры с экрана,
+   * оставляя полный ввод; этот упрощает саму работу. Человек может хотеть
+   * одно без другого — видеть калории, но не набирать состав руками.
+   */
+  simpleMode: boolean("simple_mode").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

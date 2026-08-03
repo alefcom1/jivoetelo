@@ -32,6 +32,8 @@ export type TgWeight = { entries: TgWeightPoint[]; weeklyChangeKg: number | null
 
 export type TodayResponse = {
   showCalories: boolean;
+  /** Упрощённый режим учёта: тарелка вместо чисел (lib/simple-log.ts). */
+  simpleMode: boolean;
   day: string;
   totals: TgTotals;
   targets: TgTargets | null;

@@ -59,6 +59,19 @@ export type PeriodStats = {
    * второе уже отвечает «Приверженность». null, если записей не было вовсе.
    */
   perLoggedDay: number | null;
+  /**
+   * Дни, в которые записано два и более приёма пищи.
+   *
+   * Из всех метрик дневника именно эта лучше всего предсказывает результат на
+   * шести месяцах — лучше, чем длина непрерывной серии
+   * (docs/research-2026-08.md, раздел 7.5). Причина понятная: один приём в
+   * день записывает и тот, кто просто отмечается; два и больше означают, что
+   * человек действительно ведёт день, а не ставит галочку.
+   *
+   * Серию мы не убираем — она хороший ежедневный повод. Но судить по ней об
+   * успехе нельзя, и в отчётах на первом месте должна стоять эта цифра.
+   */
+  daysWithTwoMeals: number;
   /** Типы приёмов по убыванию частоты; типы без записей не попадают. */
   byType: MealTypeStat[];
 };
@@ -129,6 +142,10 @@ function buildPeriod(key: PeriodKey, meals: StatMeal[], today: string, earliestD
   const inWindow = meals.filter((meal) => meal.eatenOn >= from && meal.eatenOn <= today);
   const loggedDays = new Set(inWindow.map((meal) => meal.eatenOn));
 
+  const perDay = new Map<string, number>();
+  for (const meal of inWindow) perDay.set(meal.eatenOn, (perDay.get(meal.eatenOn) ?? 0) + 1);
+  const daysWithTwoMeals = [...perDay.values()].filter((count) => count >= 2).length;
+
   const byTypeMap = new Map<string, string[]>();
   for (const meal of inWindow) {
     const list = byTypeMap.get(meal.mealType) ?? [];
@@ -156,6 +173,7 @@ function buildPeriod(key: PeriodKey, meals: StatMeal[], today: string, earliestD
     mealCount: inWindow.length,
     daysLogged: loggedDays.size,
     perLoggedDay: loggedDays.size > 0 ? Math.round((inWindow.length / loggedDays.size) * 10) / 10 : null,
+    daysWithTwoMeals,
     byType,
   };
 }
@@ -188,7 +206,16 @@ export function describePeriod(period: PeriodStats): string {
   ];
   const main = period.byType[0];
   if (main?.typicalTime) parts.push(`чаще всего это ${main.label.toLowerCase()}, обычно около ${main.typicalTime}`);
-  return `${parts.join(", ")}.`;
+  let text = `${parts.join(", ")}.`;
+
+  // Дни с двумя и более записями — лучший предиктор результата, лучше длины
+  // серии. Поэтому он идёт отдельной фразой, а не тонет в перечислении:
+  // человек должен понять, на что смотреть.
+  if (period.daysWithTwoMeals > 0) {
+    text += ` Дней с двумя и более записями: ${period.daysWithTwoMeals} из ${period.days}` +
+      ` — по опыту исследований именно это, а не длина серии, лучше всего говорит о результате.`;
+  }
+  return text;
 }
 
 function formatDecimal(value: number): string {
