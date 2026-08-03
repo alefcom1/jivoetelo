@@ -8,11 +8,14 @@ import { formatDayRu, isValidDay, localToday, MEAL_TYPE_LABELS, shiftDay } from 
 import { sumTotals } from "@/lib/nutrition";
 import type { PaceKey } from "@/lib/pace";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
+import { listLoggedDays } from "@/lib/meals";
+import { computeStreak } from "@/lib/streak";
 import { getLatestWeightKg } from "@/lib/weight";
 import { AppInvite } from "../app-invite";
 import { MealIcon } from "../food-icon";
 import { EnergyRing, MacroBar } from "./day-visuals";
 import { GoalReporter } from "./goal-reporter";
+import { StreakStrip } from "./streak-strip";
 
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ date?: string; saved?: string }> }) {
   const user = await getCurrentUser();
@@ -36,6 +39,11 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     itemsByMeal.set(item.mealId, list);
   }
   const dayTotals = sumTotals(items);
+
+  // Серия считается на сегодня, а не на просматриваемый день: листая вчера,
+  // человек смотрит вчерашние записи, но серия у него одна и она про сейчас.
+  const today = localToday();
+  const streak = computeStreak(await listLoggedDays(user.id), today);
 
   const profileRows = await db.select().from(profiles).where(eq(profiles.userId, user.id)).limit(1);
   const profile = profileRows[0];
@@ -67,11 +75,21 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       <Link className="black-button" href="/app/onboarding">Настроить план <b>↗</b></Link>
     </section>}
 
+    {/* Живело — только на сегодняшнем дне и только когда записи уже есть.
+        Листающему прошлую неделю серия ничего не сообщает, а человеку, у
+        которого записей нет вовсе, «серия: 0» на первом же экране читается
+        как упрёк за то, чего он ещё не делал. */}
+    {day === today && streak.totalDays > 0 && <StreakStrip streak={streak} />}
+
     {/* Те же пять чисел, что и раньше, — но кольцом и полосами, а не пятью
         одинаковыми прямоугольниками с рамкой. В Mini App итоги дня так
         выглядели с самого начала; веб-кабинет отставал, и это стало видно,
         как только на главную встал настоящий снимок вместо макета. */}
-    <section className="day-summary">
+    {/* У человека без плана и без единой записи этот блок показывал пустое
+        кольцо и четыре «0 г» на весь первый экран. Ноль — не число, а
+        отсутствие числа; место дорогое, и отдавать его пустоте, пока не
+        настроен план, незачем. */}
+    {(targets || dayMeals.length > 0) && <section className="day-summary">
       {user.showCalories && <EnergyRing value={dayTotals.kcal} target={targets?.kcalTarget ?? null} />}
       <div className="day-bars">
         <MacroBar label="Белок" value={dayTotals.protein} target={targets?.proteinTarget ?? null} unit="г" macro="protein" />
@@ -81,7 +99,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         <MacroBar label="Жиры" value={dayTotals.fat} target={null} unit="г" macro="fat" />
         <MacroBar label="Углеводы" value={dayTotals.carbs} target={null} unit="г" macro="carbs" />
       </div>
-    </section>
+    </section>}
 
     {targets && <Link className="next-card" href="/app/next">
       <b>Что съесть дальше?</b>

@@ -194,6 +194,33 @@ footer>.footer-links:first-child{margin-top:0;padding-top:0;border-top:0}.footer
    чтобы форма не липла к заголовку. */
 .meal-edit{margin-bottom:22px}
 
+/* Живело в кабинете. Полосой, а не карточкой: серия — повод открыть
+   приложение, но не главное, что человек пришёл увидеть. */
+.streak-strip{display:flex;gap:14px;align-items:center;background:var(--white);border:1px solid var(--line);padding:14px 16px;margin-bottom:20px}
+.streak-strip img{width:64px;height:64px;flex:none}
+.streak-strip div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.streak-strip b{font-size:16px}
+.streak-strip p{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
+.streak-strip em{font-style:normal;font-size:13px;font-weight:700;color:var(--coral)}
+
+/* Добавление позиции: поиск по справочнику, а под ним — ручной ввод.
+   Раньше кнопка «+ Добавить позицию» сразу давала форму с нулями, и записи
+   без единого числа заводились сами собой. */
+.add-food{width:100%;background:var(--white);border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:10px}
+.add-food-head{display:flex;align-items:center;justify-content:space-between}
+.add-food-search{width:100%;padding:11px;border:1px solid var(--line);background:var(--white);font-size:14px;outline-color:var(--coral)}
+.add-food-results{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;max-height:280px;overflow-y:auto;border:1px solid var(--line)}
+.add-food-results li+li{border-top:1px solid var(--line)}
+.add-food-results button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 11px;border:0;background:transparent;text-align:left;font-size:14px}
+.add-food-results button:hover{background:var(--paper)}
+.add-food-name{flex:1;min-width:0}
+.add-food-kcal{font-weight:700;white-space:nowrap}
+.add-food-kcal i{font-style:normal;font-weight:400;font-size:12px;color:var(--muted)}
+.add-food-manual{display:flex;flex-direction:column;gap:8px}
+.add-food-field{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700}
+.add-food-field input{padding:10px;border:1px solid var(--line);font-size:14px;font-weight:400}
+.add-food .black-button{align-self:flex-start}
+
 /* Настройки отчётов. Два выпадающих списка и флажок — форма маленькая, но
    каждое поле нуждается в подписи под ним: «автоматически» без объяснения
    читается как «сервис решит за вас». */

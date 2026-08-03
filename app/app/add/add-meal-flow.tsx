@@ -6,6 +6,7 @@ import { MEAL_TYPE_LABELS } from "@/lib/dates";
 import { isBlankNutrition, sumTotals } from "@/lib/nutrition";
 import { scaleGrams } from "@/lib/portions";
 import { analyzeMeal, saveMeal } from "../meal-actions";
+import { AddFoodItem } from "../add-food-item";
 import { CameraCapture } from "./camera-capture";
 
 type DraftItem = {
@@ -323,7 +324,7 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
           </details>
         </div>
       </div>)}
-      <button className="link-button" onClick={() => setDraft((d) => d && { ...d, items: [...d.items, emptyItem()] })}>+ Добавить позицию</button>
+      <AddFoodItem onAdd={(item) => setDraft((d) => d && { ...d, items: [...d.items, { ...item, suggestedGrams: item.grams }] })} />
     </div>
 
     <div className="draft-summary">

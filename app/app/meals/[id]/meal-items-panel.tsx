@@ -17,6 +17,7 @@ import { CONFIDENCE_LABELS, type Confidence } from "@/lib/confidence";
 import { MEAL_TYPE_LABELS } from "@/lib/dates";
 import { isBlankNutrition, itemTotals, sumTotals } from "@/lib/nutrition";
 import { scaleGrams } from "@/lib/portions";
+import { AddFoodItem } from "../../add-food-item";
 import { updateMealItems } from "../../meal-actions";
 
 export type EditableItem = {
@@ -29,20 +30,6 @@ export type EditableItem = {
   fiberPer100: number;
   confidence: string;
 };
-
-function emptyItem(): EditableItem {
-  return {
-    name: "",
-    grams: 100,
-    kcalPer100: 0,
-    proteinPer100: 0,
-    fatPer100: 0,
-    carbsPer100: 0,
-    fiberPer100: 0,
-    // Позиция, введённая руками, — не догадка модели, а знание человека.
-    confidence: "high",
-  };
-}
 
 export function MealItemsPanel({
   mealId,
@@ -176,9 +163,9 @@ export function MealItemsPanel({
           </details>
         </div>
       </div>)}
-      <button className="link-button" onClick={() => setDraft((c) => c && { ...c, items: [...c.items, emptyItem()] })}>
-        + Добавить позицию
-      </button>
+      {/* Поиск по справочнику, а не пустая форма с нулями: именно из-за
+          пустой формы в дневнике заводились позиции без единого числа. */}
+      <AddFoodItem onAdd={(item) => setDraft((c) => c && { ...c, items: [...c.items, item] })} />
     </div>
 
     <div className="draft-summary">
