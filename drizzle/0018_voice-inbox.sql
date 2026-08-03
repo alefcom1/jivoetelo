@@ -14,5 +14,14 @@ ALTER TABLE photo_inbox ALTER COLUMN photo_key DROP NOT NULL;
 
 -- Запись без файла и без слов разобрать нечем: это строка, которая навсегда
 -- останется в инбоксе и будет мозолить глаза счётчиком «ждут разбора».
-ALTER TABLE photo_inbox ADD CONSTRAINT photo_inbox_has_content
-  CHECK (photo_key IS NOT NULL OR note IS NOT NULL);
+--
+-- Через DO, а не ADD CONSTRAINT напрямую: у табличных ограничений нет
+-- IF NOT EXISTS, а миграции здесь принято писать повторяемыми — упавший
+-- посреди дела деплой не должен превращаться в ручную работу.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'photo_inbox_has_content') THEN
+    ALTER TABLE photo_inbox ADD CONSTRAINT photo_inbox_has_content
+      CHECK (photo_key IS NOT NULL OR note IS NOT NULL);
+  END IF;
+END $$;

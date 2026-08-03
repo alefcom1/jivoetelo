@@ -32,7 +32,15 @@ CREATE TABLE IF NOT EXISTS barcodes (
 
 -- Название не бывает пустым: карточка без названия — это строка, которую
 -- человек увидит как пустое место и не поймёт, что нашлось.
-ALTER TABLE barcodes ADD CONSTRAINT barcodes_name_not_blank CHECK (btrim(name) <> '');
+--
+-- Через DO по той же причине, что и в 0018: у табличных ограничений нет
+-- IF NOT EXISTS, а миграции здесь принято писать повторяемыми.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'barcodes_name_not_blank') THEN
+    ALTER TABLE barcodes ADD CONSTRAINT barcodes_name_not_blank CHECK (btrim(name) <> '');
+  END IF;
+END $$;
 
 -- Поиск по названию: «что у нас вообще есть про творог» — и в подсказках
 -- ручного ввода, и чтобы не заводить пятую карточку того же продукта.
