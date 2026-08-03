@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { Agent as UndiciAgent, fetch as undiciFetch } from "undici";
-import type { AiOperation } from "../quota-policy.ts";
+import type { ModelOperation } from "../quota-policy.ts";
 
 /**
  * Единая точка создания клиента Anthropic для всех AI-функций.
@@ -74,7 +74,7 @@ export const upstreamFetch = ((input: unknown, init?: unknown) =>
  * Клиентский предел (ANALYZE_TIMEOUT_MS в app/tg/api.ts) держится выше
  * серверного, чтобы человек увидел настоящую ошибку сервера, а не свою.
  */
-const TIMEOUTS: Record<AiOperation, number> = {
+const TIMEOUTS: Record<ModelOperation, number> = {
   analyze_photo: 120_000,
   analyze_text: 40_000,
   suggest: 40_000,
@@ -100,17 +100,17 @@ const TIMEOUTS: Record<AiOperation, number> = {
  * случайного обрыва связи, а двухминутный запрос обрывается не случайно —
  * чаще всего он просто долгий, и вторая попытка лишь удваивает ожидание.
  */
-const RETRIES: Record<AiOperation, number> = {
+const RETRIES: Record<ModelOperation, number> = {
   analyze_photo: 0,
   analyze_text: 1,
   suggest: 1,
 };
 
-export function timeoutFor(operation: AiOperation): number {
+export function timeoutFor(operation: ModelOperation): number {
   return TIMEOUTS[operation] ?? TIMEOUTS.analyze_photo;
 }
 
-export function retriesFor(operation: AiOperation): number {
+export function retriesFor(operation: ModelOperation): number {
   return RETRIES[operation] ?? 0;
 }
 
@@ -119,7 +119,7 @@ export function retriesFor(operation: AiOperation): number {
  * меньше `proxy_read_timeout` у nginx — проверяется тестом, потому что
  * увидеть расхождение глазами в двух разных файлах не получилось ни разу.
  */
-export function worstCaseMs(operation: AiOperation): number {
+export function worstCaseMs(operation: ModelOperation): number {
   return timeoutFor(operation) * (retriesFor(operation) + 1);
 }
 
@@ -160,13 +160,13 @@ export function hasAnthropicCredentials(): boolean {
  * ошибкой провайдера, а тест этого не ловил, потому что сверял константу
  * саму с собой (см. tests/ai-model.test.mjs).
  */
-const DEFAULT_MODEL_BY_OPERATION: Record<AiOperation, string> = {
+const DEFAULT_MODEL_BY_OPERATION: Record<ModelOperation, string> = {
   analyze_photo: "claude-sonnet-5",
   analyze_text: "claude-haiku-4-5-20251001",
   suggest: "claude-haiku-4-5-20251001",
 };
 
-const MODEL_ENV_BY_OPERATION: Record<AiOperation, string> = {
+const MODEL_ENV_BY_OPERATION: Record<ModelOperation, string> = {
   analyze_photo: "ANTHROPIC_MODEL_VISION",
   analyze_text: "ANTHROPIC_MODEL_TEXT",
   suggest: "ANTHROPIC_MODEL_SUGGEST",
@@ -181,7 +181,7 @@ const MODEL_ENV_BY_OPERATION: Record<AiOperation, string> = {
  *     ANTHROPIC_MODEL_TEXT, ANTHROPIC_MODEL_SUGGEST).
  *  3. Разумное умолчание для операции.
  */
-export function resolveModel(operation: AiOperation): string {
+export function resolveModel(operation: ModelOperation): string {
   const legacy = process.env.ANTHROPIC_MODEL?.trim();
   if (legacy) return legacy;
   const perOperation = process.env[MODEL_ENV_BY_OPERATION[operation]]?.trim();

@@ -20,6 +20,7 @@ import { FoodIcon } from "../food-icon";
 import { ArtCamera } from "./illustrations";
 import { haptic, useInsideTelegram, useMainButton } from "./telegram";
 import { TgPhoto } from "./photo";
+import { VoiceInput } from "./voice-input";
 import { cameraGrantedThisSession, useCamera } from "../use-camera";
 import { useCameraPref } from "../camera-prefs";
 import { useFrameWatch } from "../use-frame-watch";
@@ -515,6 +516,12 @@ export function CameraTab({
         <h1 className="tg-camera-title">Что вы ели?</h1>
         <textarea className="tg-input" rows={3} value={text} onChange={(e) => setText(e.target.value)}
           placeholder="Например: два сырника, ложка сметаны и капучино" />
+        {/* Расшифровка дописывается к набранному, а не затирает его: человек
+            мог начать печатать и досказать остальное голосом. */}
+        <VoiceInput
+          disabled={busy}
+          onText={(spoken) => setText((current) => (current.trim() ? `${current.trim()}, ${spoken}` : spoken))}
+        />
         {/* Своя кнопка нужна ТОЛЬКО вне Telegram: там нативной главной
             кнопки не существует. Внутри Telegram она была лишней и стояла
             второй такой же «Разобрать» — одна над панелью вкладок, другая
@@ -550,8 +557,11 @@ export function CameraTab({
           <input type="file" accept="image/*" onChange={handlePhotoChange} />
           Из галереи
         </label>
+        {/* «Или голосом» — не украшение подписи: запись живёт на этом экране,
+            и без упоминания её здесь человек, знающий про голосовые из бота,
+            искал бы кнопку среди вкладок. */}
         {mode !== "text" && <button className="tg-way" onClick={() => switchMode("text")}>
-          Описать словами
+          Словами или голосом
         </button>}
       </div>
 

@@ -365,3 +365,18 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
    слова человека, а не текст сервиса, и отличать одно от другого он должен
    до того, как прочтёт. */
 .addflow-transcript{margin:0 0 18px;padding:14px 16px;border-left:3px solid var(--coral);background:var(--white);font-size:15px;font-style:italic;line-height:1.6}
+
+/* Запись голосом в кабинете (app/app/voice-input.tsx). Кнопка второстепенная
+   по весу: главное действие тут «Разобрать», голос — способ заполнить поле
+   быстрее, чем набором. Во время записи она становится заметной, иначе
+   человек не поймёт, что микрофон включён. */
+.voice-input{display:flex;flex-direction:column;gap:8px;margin:12px 0 0}
+.voice-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;align-self:flex-start;min-height:44px;padding:11px 18px;border:1px solid var(--line);border-radius:999px;background:transparent;font-size:13px;font-weight:700}
+.voice-button:disabled{opacity:.5;cursor:not-allowed}
+.voice-button:hover:not(:disabled){border-color:var(--black)}
+.voice-button--live{border-color:var(--coral);color:var(--coral)}
+.voice-dot{width:9px;height:9px;border-radius:50%;background:var(--coral);animation:voice-pulse 1.1s ease-in-out infinite}
+@keyframes voice-pulse{0%,100%{opacity:1}50%{opacity:.25}}
+/* Мигание — единственная анимация на форме, и тем, кому движение мешает, она
+   не нужна: точка и без неё остаётся видимой. */
+@media(prefers-reduced-motion:reduce){.voice-dot{animation:none}}

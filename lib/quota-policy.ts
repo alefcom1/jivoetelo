@@ -11,21 +11,34 @@
  * добавить сюда строку с другими числами, не трогая остальной код.
  */
 
-export type AiOperation = "analyze_photo" | "analyze_text" | "suggest";
+/**
+ * Операции, которые обслуживает языковая модель Anthropic. Отдельно от
+ * AiOperation, потому что у них есть то, чего нет у расшифровки: модель,
+ * таймаут, число повторов и цена за токен (lib/ai/client.ts).
+ */
+export type ModelOperation = "analyze_photo" | "analyze_text" | "suggest";
+
+/**
+ * Всё, что считает предохранитель расхода. Расшифровка речи денег не стоит —
+ * она идёт на нашем же сервере, — но лимит частоты ей нужен не меньше:
+ * точка приёма мегабайтных файлов без ограничения занимает сервер целиком.
+ */
+export type AiOperation = ModelOperation | "transcribe";
 export type Plan = "free" | "premium";
 export type PlanLimits = Record<AiOperation, number>;
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   // Сейчас все пользователи здесь.
-  free: { analyze_photo: 20, analyze_text: 40, suggest: 15 },
+  free: { analyze_photo: 20, analyze_text: 40, suggest: 15, transcribe: 60 },
   // Заготовка: тариф существует в коде, но никому не выдаётся.
-  premium: { analyze_photo: 100, analyze_text: 200, suggest: 60 },
+  premium: { analyze_photo: 100, analyze_text: 200, suggest: 60, transcribe: 300 },
 };
 
 export const OPERATION_LABELS: Record<AiOperation, string> = {
   analyze_photo: "разборов по фото",
   analyze_text: "разборов по описанию",
   suggest: "подборов «что съесть дальше»",
+  transcribe: "расшифровок голосом",
 };
 
 /**
@@ -50,6 +63,9 @@ const PRICE_PER_MTOK: Record<AiOperation, { input: number; output: number }> = {
   analyze_photo: { input: 3, output: 15 }, // Sonnet 5
   analyze_text: { input: 1, output: 5 }, // Haiku 4.5
   suggest: { input: 1, output: 5 }, // Haiku 4.5
+  // Своя установка на нашем же сервере: денег наружу не уходит вовсе, и
+  // токенов у неё нет. Ноль здесь — не заглушка, а точная цена.
+  transcribe: { input: 0, output: 0 },
 };
 
 /** Самая дорогая из ставок — умолчание, когда операция неизвестна. */

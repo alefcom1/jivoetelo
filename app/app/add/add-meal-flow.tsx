@@ -7,6 +7,7 @@ import { isBlankNutrition, sumTotals } from "@/lib/nutrition";
 import { scaleGrams } from "@/lib/portions";
 import { analyzeMeal, saveMeal } from "../meal-actions";
 import { AddFoodItem } from "../add-food-item";
+import { VoiceInput } from "../voice-input";
 import { CameraCapture } from "./camera-capture";
 
 type DraftItem = {
@@ -240,8 +241,16 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
       </div>
 
       {mode === "text"
-        ? <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3}
-            placeholder="Например: два сырника, ложка сметаны и капучино без сахара" autoFocus />
+        ? <>
+            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3}
+              placeholder="Например: два сырника, ложка сметаны и капучино без сахара" autoFocus />
+            {/* Расшифровка дописывается к набранному, а не затирает его:
+                человек мог начать печатать и досказать остальное голосом. */}
+            <VoiceInput
+              disabled={busy}
+              onText={(spoken) => setText((current) => (current.trim() ? `${current.trim()}, ${spoken}` : spoken))}
+            />
+          </>
         : <div className="addflow-photo">
             {/* Камера первой: человек с ноутбуком чаще хочет снять тарелку
                 сейчас, а не искать готовый файл. Кнопки нет вовсе, если

@@ -862,3 +862,27 @@
   border-radius: 0 var(--radius) var(--radius) 0; background: var(--tg-surface);
   font-size: 15px; font-style: italic; line-height: 1.55;
 }
+
+/* Запись голосом (app/tg/voice-input.tsx). Кнопка второстепенная по весу:
+   главное действие на этом экране — съёмка, голос и текст выручают, когда
+   снять нельзя. Во время записи она становится заметной — иначе человек не
+   поймёт, что микрофон включён. */
+.tg-voice { display: flex; flex-direction: column; gap: 8px; }
+.tg-voice-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  align-self: flex-start; min-height: 44px; padding: 11px 18px;
+  border: 1px solid color-mix(in srgb, var(--tg-hint) 40%, transparent); border-radius: 999px;
+  background: transparent; color: var(--tg-text); font: 600 14px var(--font-body), sans-serif;
+  cursor: pointer;
+}
+.tg-voice-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.tg-voice-button:active:not(:disabled) { opacity: 0.8; }
+.tg-voice-button--live { border-color: var(--brand-coral); color: var(--brand-coral); }
+.tg-voice-dot {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--brand-coral);
+  animation: tg-voice-pulse 1.1s ease-in-out infinite;
+}
+@keyframes tg-voice-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+/* Мигание — единственная анимация на экране, и для тех, кому движение мешает,
+   она не нужна: точка и без неё остаётся видимой. */
+@media (prefers-reduced-motion: reduce) { .tg-voice-dot { animation: none; } }
