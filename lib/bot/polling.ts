@@ -24,7 +24,7 @@
 import { networkDetail } from "../ai/failure.ts";
 import { handleUpdate } from "./handle-update.ts";
 import { botLinks } from "./links.ts";
-import { botStore } from "./store.ts";
+import { botStore, botTranscriber } from "./store.ts";
 import { botToken, createTelegramClient, type TelegramUpdate } from "../telegram-api.ts";
 
 /**
@@ -88,6 +88,7 @@ export function startPolling(): void {
           await handleUpdate(update, {
             client,
             store: botStore,
+            transcribe: botTranscriber(),
             now: new Date(),
             links: botLinks(),
           });

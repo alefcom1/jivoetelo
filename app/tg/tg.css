@@ -849,3 +849,16 @@
 .tg-review-proposal { display: flex; flex-direction: column; gap: 10px; }
 .tg-review-proposal p { margin: 0; font-size: 14px; line-height: 1.6; }
 .tg-review-proposal .tg-hint { font-size: 12.5px; }
+
+/* Расшифровка голосового: в списке инбокса — значком вместо превью, на
+   экране разбора — цитатой вместо снимка. */
+.tg-inbox-voice {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%; font-size: 32px;
+  background: color-mix(in srgb, var(--tg-hint) 14%, var(--tg-bg));
+}
+.tg-transcript {
+  margin: 0; padding: 12px 14px; border-left: 3px solid var(--brand-coral);
+  border-radius: 0 var(--radius) var(--radius) 0; background: var(--tg-surface);
+  font-size: 15px; font-style: italic; line-height: 1.55;
+}

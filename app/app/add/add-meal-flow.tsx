@@ -59,7 +59,8 @@ function formatTakenAt(inbox: InboxDraft): string {
   const day = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(
     new Date(`${inbox.takenOn}T12:00:00Z`),
   );
-  return `Снято ${day} в ${inbox.takenTime}`;
+  // «Снято» про голосовое не скажешь — там ничего не снимали.
+  return `${inbox.photoKey ? "Снято" : "Записано"} ${day} в ${inbox.takenTime}`;
 }
 
 function guessMealType(time: string): string {
@@ -73,7 +74,8 @@ function guessMealType(time: string): string {
 /** Снимок из фото-инбокса, если разбор начат оттуда. */
 export type InboxDraft = {
   id: number;
-  photoKey: string;
+  /** null у записи голосом: показывать нечего, разбирать надо `note`. */
+  photoKey: string | null;
   note: string | null;
   takenOn: string;
   takenTime: string;
@@ -208,14 +210,19 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
 
   if (!draft) {
     if (inbox) {
+      // Запись голосом отличается от снимка только тем, что показывать нечего:
+      // вместо фотографии — расшифровка, которую и будет разбирать модель.
+      const isVoice = !inbox.photoKey;
       return <main className="addflow">
-        <h1>Снимок из инбокса</h1>
-        <p className="addflow-hint">{formatTakenAt(inbox)}. Разберём его и подставим это же время в приём пищи.</p>
-        <div className="addflow-photo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/api/photos/${inbox.photoKey}`} alt="Снимок еды из инбокса" />
-          {inbox.note && <p className="addflow-hint">Ваша подпись: «{inbox.note}»</p>}
-        </div>
+        <h1>{isVoice ? "Запись голосом" : "Снимок из инбокса"}</h1>
+        <p className="addflow-hint">{formatTakenAt(inbox)}. Разберём и подставим это же время в приём пищи.</p>
+        {isVoice
+          ? <blockquote className="addflow-transcript">«{inbox.note}»</blockquote>
+          : <div className="addflow-photo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/photos/${inbox.photoKey}`} alt="Снимок еды из инбокса" />
+              {inbox.note && <p className="addflow-hint">Ваша подпись: «{inbox.note}»</p>}
+            </div>}
         {error && <p className="form-error">{error}</p>}
         <div className="addflow-actions">
           <button className="black-button" onClick={handleAnalyze} disabled={busy}>{busy ? "Разбираем…" : "Разобрать"}</button>

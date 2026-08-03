@@ -43,21 +43,32 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
       // Фото уже лежит на диске: его прислали боту раньше. Здесь мы его
       // только читаем — заново загружать и заново класть на диск не нужно.
       const item = await getPendingItem(user.id, Number(formData.get("inboxId")));
-      if (!item) return { ok: false, error: "Этот снимок уже разобран или удалён." };
-      const data = await readPhoto(item.photoKey);
-      if (!data) return { ok: false, error: "Файл снимка не найден. Попробуйте отклонить его в инбоксе." };
+      if (!item) return { ok: false, error: "Эта запись уже разобрана или удалена." };
 
-      photoKey = item.photoKey;
-      sourceText = item.note;
-      const result = await getMealProvider().analyseMeal({
-        kind: "photo",
-        data,
-        mediaType: photoMimeType(item.photoKey) as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
-        note: item.note ?? undefined,
-        photoKey: item.photoKey,
-      });
-      analysis = result.analysis;
-      await recordUsage(user.id, operation, result.usage);
+      // Запись голосом: файла нет, в note лежит расшифровка. Разбираем её как
+      // обычный текст — тем же разбором, что и описание еды словами.
+      if (!item.photoKey) {
+        if (!item.note) return { ok: false, error: "В этой записи нечего разбирать." };
+        sourceText = item.note;
+        const result = await getMealProvider().analyseMeal({ kind: "text", text: item.note });
+        analysis = result.analysis;
+        await recordUsage(user.id, "analyze_text", result.usage);
+      } else {
+        const data = await readPhoto(item.photoKey);
+        if (!data) return { ok: false, error: "Файл снимка не найден. Попробуйте отклонить его в инбоксе." };
+
+        photoKey = item.photoKey;
+        sourceText = item.note;
+        const result = await getMealProvider().analyseMeal({
+          kind: "photo",
+          data,
+          mediaType: photoMimeType(item.photoKey) as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
+          note: item.note ?? undefined,
+          photoKey: item.photoKey,
+        });
+        analysis = result.analysis;
+        await recordUsage(user.id, operation, result.usage);
+      }
     } else if (mode === "photo") {
       const file = formData.get("photo");
       if (!(file instanceof File) || file.size === 0) {

@@ -394,15 +394,21 @@ export function CameraTab({
     return <div className="tg-page">
       <header className="tg-hero">
         <p className="tg-kicker">Из инбокса</p>
-        <h1>Снимок за {inbox.takenTime}</h1>
+        <h1>{inbox.photoKey ? "Снимок" : "Запись"} за {inbox.takenTime}</h1>
       </header>
 
-      <div className="tg-photo">
-        <div className="tg-photo-drop">
-          <TgPhoto photoKey={inbox.photoKey} alt="Снимок еды из инбокса" variant="wide" />
-        </div>
-      </div>
-      {inbox.note && <p className="tg-hint">Ваша подпись: «{inbox.note}»</p>}
+      {/* У записи голосом показывать нечего, кроме расшифровки, — она же и
+          есть то, что сейчас разбирает модель. */}
+      {inbox.photoKey
+        ? <>
+            <div className="tg-photo">
+              <div className="tg-photo-drop">
+                <TgPhoto photoKey={inbox.photoKey} alt="Снимок еды из инбокса" variant="wide" />
+              </div>
+            </div>
+            {inbox.note && <p className="tg-hint">Ваша подпись: «{inbox.note}»</p>}
+          </>
+        : <blockquote className="tg-transcript">«{inbox.note}»</blockquote>}
 
       {error ? <p className="tg-error">{error}</p> : <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
 

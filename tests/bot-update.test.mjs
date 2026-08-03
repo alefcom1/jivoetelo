@@ -7,6 +7,7 @@ import {
   photoSavedText,
 } from "../lib/bot/handle-update.ts";
 import { resetWelcomeCard } from "../lib/bot/media.ts";
+import { SpeechError } from "../lib/speech/types.ts";
 
 const NOW = new Date("2026-07-28T15:40:00Z"); // 18:40 в Москве
 
@@ -21,6 +22,8 @@ function makeDeps(overrides = {}) {
   const saved = [];
   const inbox = [];
   const prefs = [];
+  const downloads = [];
+  const transcribed = [];
 
   // Кэш file_id и счётчик отказов в lib/bot/media.ts живут в модуле, а не в
   // клиенте: без сброса тесты начинали бы зависеть от порядка запуска.
@@ -73,9 +76,10 @@ function makeDeps(overrides = {}) {
     async answerCallbackQuery(id, text) {
       answered.push({ id, text });
     },
-    async downloadFile() {
+    async downloadFile(fileId, maxBytes) {
+      downloads.push({ fileId, maxBytes });
       if (overrides.downloadFails) throw new Error("network down");
-      return { data: Buffer.from("jpegdata"), mime: "image/jpeg" };
+      return overrides.file ?? { data: Buffer.from("jpegdata"), mime: "image/jpeg" };
     },
   };
 
@@ -90,6 +94,11 @@ function makeDeps(overrides = {}) {
         miniAppUrl: overrides.miniAppUrl ?? null,
         planUrl: "https://jivoetelo.ru/raschet/plan",
       },
+      // undefined — расшифровка выключена: ровно то состояние, в котором бот
+      // работает до появления SPEECH_URL, и остальные проверки исходят из него.
+      transcribe: overrides.transcribe
+        ? async (input) => { transcribed.push(input); return await overrides.transcribe(input); }
+        : undefined,
     },
     sent,
     photos,
@@ -97,6 +106,8 @@ function makeDeps(overrides = {}) {
     saved,
     inbox,
     prefs,
+    downloads,
+    transcribed,
   };
 }
 
@@ -279,11 +290,133 @@ function textUpdate(text, tgId = 100) {
   return { message: { from: { id: tgId }, chat: { id: tgId }, text } };
 }
 
-test("голосовое: честно говорим, что не расшифровываем, и даём рабочий путь", async () => {
-  const { deps, sent } = makeDeps();
-  await handleUpdate({ message: { from: { id: 100 }, chat: { id: 100 }, voice: { file_id: "v" } } }, deps);
+function voiceUpdate(extra = {}, tgId = 100) {
+  return {
+    message: {
+      from: { id: tgId },
+      chat: { id: tgId },
+      voice: { file_id: "voice-1", mime_type: "audio/ogg", duration: 6, ...extra },
+    },
+  };
+}
+
+/** Расшифровка, которая всегда слышит одно и то же. */
+const hears = (text) => async () => ({ text });
+
+test("голосовое без расшифровки: честный отказ и рабочий путь", async () => {
+  const { deps, sent, downloads } = makeDeps();
+  await handleUpdate(voiceUpdate(), deps);
   assert.equal(sent[0].text, TEXTS.voice);
   assert.match(sent[0].text, /фотограф/i, "должен предложить фото как замену");
+  assert.equal(downloads.length, 0, "качать файл, который некому разобрать, незачем");
+});
+
+test("голосовое: расшифровка попадает в инбокс текстом", async () => {
+  const { deps, inbox, transcribed } = makeDeps({ transcribe: hears("овсянка на воде двести грамм") });
+  await handleUpdate(voiceUpdate(), deps);
+
+  assert.equal(inbox.length, 1);
+  assert.equal(inbox[0].userId, 7);
+  assert.equal(inbox[0].photoKey, null, "у записи голосом файла нет");
+  assert.equal(inbox[0].note, "овсянка на воде двести грамм");
+  // Момент фиксируется при получении, как и у фото: сказанное в 23:50 должно
+  // остаться во вчерашнем дне.
+  assert.equal(inbox[0].takenOn, "2026-07-28");
+  assert.equal(inbox[0].takenTime, "18:40");
+  assert.equal(transcribed[0].mime, "audio/ogg");
+  assert.equal(transcribed[0].durationSec, 6);
+});
+
+test("голосовое: расшифровку показываем человеку целиком", async () => {
+  // Распознавание ошибается, и «сто» вместо «сто пятьдесят» человек заметит
+  // глазами мгновенно — а в посчитанных калориях уже нет.
+  const { deps, sent } = makeDeps({ transcribe: hears("куриная грудка сто пятьдесят грамм") });
+  await handleUpdate(voiceUpdate(), deps);
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].text, /куриная грудка сто пятьдесят грамм/);
+});
+
+test("голосовое: разметка в расшифровке не ломает сообщение", async () => {
+  // Расшифровка уходит внутрь HTML, а её текст мы не контролируем.
+  const { deps, sent } = makeDeps({ transcribe: hears("салат <b>с сыром</b> & хлеб") });
+  await handleUpdate(voiceUpdate(), deps);
+  assert.match(sent[0].text, /&lt;b&gt;/, "угловые скобки должны быть экранированы");
+  assert.match(sent[0].text, /&amp; хлеб/);
+});
+
+test("голосовое: аудиофайл разбирается так же", async () => {
+  const { deps, inbox } = makeDeps({ transcribe: hears("два яйца") });
+  await handleUpdate(
+    { message: { from: { id: 100 }, chat: { id: 100 }, audio: { file_id: "a", mime_type: "audio/mpeg", duration: 4 } } },
+    deps,
+  );
+  assert.equal(inbox.length, 1);
+  assert.equal(inbox[0].note, "два яйца");
+});
+
+test("голосовое: длинная запись отсекается до загрузки файла", async () => {
+  const { deps, sent, downloads, inbox } = makeDeps({ transcribe: hears("что-то") });
+  await handleUpdate(voiceUpdate({ duration: 400 }), deps);
+  assert.equal(downloads.length, 0, "длительность известна из апдейта — платить за неё трафиком незачем");
+  assert.equal(inbox.length, 0);
+  assert.match(sent[0].text, /короче/i);
+});
+
+test("голосовое без привязки: объясняем, чего не хватает", async () => {
+  const { deps, sent, inbox, downloads } = makeDeps({ transcribe: hears("творог") });
+  await handleUpdate(voiceUpdate({}, 999), deps);
+  assert.equal(inbox.length, 0);
+  assert.equal(downloads.length, 0, "качать запись, которую некуда сохранить, незачем");
+  assert.match(sent[0].text, /аккаунт не привязан/i);
+});
+
+test("голосовое: дневной потолок инбокса общий с фото", async () => {
+  const { deps, sent, inbox } = makeDeps({
+    transcribe: hears("творог"),
+    inboxToday: MAX_INBOX_PHOTOS_PER_DAY,
+  });
+  await handleUpdate(voiceUpdate(), deps);
+  assert.equal(inbox.length, 0);
+  assert.equal(sent[0].text, TEXTS.dailyLimit);
+});
+
+test("голосовое: отказ расшифровки объясняется своей причиной", async () => {
+  const cases = [
+    ["empty", /не слышно/i],
+    ["provider_error", /недоступна/i],
+    ["unsupported_format", /формат/i],
+    ["too_large", /больш/i],
+  ];
+  for (const [reason, expected] of cases) {
+    const { deps, sent, inbox } = makeDeps({
+      transcribe: async () => { throw new SpeechError("нет", reason); },
+    });
+    await handleUpdate(voiceUpdate(), deps);
+    assert.equal(inbox.length, 0, reason);
+    assert.match(sent[0].text, expected, `не тот текст для ${reason}`);
+  }
+});
+
+test("голосовое: сбой сети не роняет апдейт и не молчит", async () => {
+  const { deps, sent, inbox } = makeDeps({ transcribe: hears("творог"), downloadFails: true });
+  await handleUpdate(voiceUpdate(), deps);
+  assert.equal(inbox.length, 0);
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].text, /не получилось/i);
+});
+
+test("голосовое: пустая расшифровка без ошибки в инбокс не идёт", async () => {
+  // Разбирать пустую строку нечем, а строка навсегда осталась бы в инбоксе.
+  const { deps, sent, inbox } = makeDeps({ transcribe: hears("   ") });
+  await handleUpdate(voiceUpdate(), deps);
+  assert.equal(inbox.length, 0);
+  assert.match(sent[0].text, /не слышно/i);
+});
+
+test("голосовое: расшифровка обрезается до предела заметки", async () => {
+  const { deps, inbox } = makeDeps({ transcribe: hears("а".repeat(500)) });
+  await handleUpdate(voiceUpdate(), deps);
+  assert.equal(inbox[0].note.length, 300);
 });
 
 test("видео и кружок получают ответ про фотографии", async () => {

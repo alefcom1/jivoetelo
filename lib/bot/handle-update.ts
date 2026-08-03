@@ -13,6 +13,8 @@ import { localMoment } from "../dates.ts";
 import { snoozeUntil } from "../reminders.ts";
 import { foodCategory } from "../food-category.ts";
 import { isStartPayload } from "../bot-public.ts";
+import { MAX_AUDIO_BYTES, MAX_DURATION_SEC } from "../speech/limits.ts";
+import { SPEECH_ERRORS, SpeechError, type SpeechInput, type TranscriptResult } from "../speech/types.ts";
 import { inboxButton, openAppButton, planButton, type BotLinks } from "./links.ts";
 import { sendWelcome } from "./media.ts";
 import {
@@ -24,6 +26,8 @@ import {
   PHOTO,
   TEXT_LOOKS_LIKE_FOOD,
   UNSUPPORTED,
+  VOICE,
+  voiceSavedText,
 } from "./texts.ts";
 import {
   pickPhotoSize,
@@ -94,7 +98,8 @@ export type BotStore = {
   savePhoto(userId: number, data: Buffer, mime: string): Promise<string>;
   addToInbox(input: {
     userId: number;
-    photoKey: string;
+    /** null — расшифрованное голосовое: файла нет, содержимое в `note`. */
+    photoKey: string | null;
     note: string | null;
     takenOn: string;
     takenTime: string;
@@ -109,6 +114,15 @@ export type BotDeps = {
   now: Date;
   timeZone?: string;
   links: BotLinks;
+  /**
+   * Расшифровка голосовых. Как и всё остальное в BotDeps — зависимость, а не
+   * прямой вызов: сценарии бота проверяются без сети и без модели.
+   *
+   * `null` означает «расшифровка выключена» (SPEECH_URL не задан или
+   * SPEECH_PROVIDER=off). Тогда бот отвечает прежним честным отказом — и,
+   * что важнее, не качает файл, который всё равно некому разобрать.
+   */
+  transcribe?: ((input: SpeechInput) => Promise<TranscriptResult>) | null;
 };
 
 /**
@@ -219,13 +233,18 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     return;
   }
 
-  // Вложения, которые бот не разбирает. Отвечаем до общей справки и по
-  // отдельности: человек прислал не мусор, а попытку записать еду, и «голос
-  // не расшифровываю» полезнее, чем «присылайте фото».
-  if (message.voice || message.audio) {
-    await say(deps.client, chatId, UNSUPPORTED.voice);
+  // Голосовое — второй способ записать еду, после фото. Аудиофайл считаем тем
+  // же самым: разницы для расшифровки нет, а человек мог переслать себе же
+  // надиктованное.
+  const voice = message.voice ?? message.audio;
+  if (voice) {
+    await saveVoiceToInbox(voice, tgId, chatId, deps);
     return;
   }
+
+  // Вложения, которые бот не разбирает. Отвечаем до общей справки и по
+  // отдельности: человек прислал не мусор, а попытку записать еду, и «видео
+  // не разбираю» полезнее, чем «присылайте фото».
   if (message.video || message.video_note) {
     await say(deps.client, chatId, UNSUPPORTED.video);
     return;
@@ -379,6 +398,101 @@ async function savePhotoToInbox(
   if (!shouldConfirmAlbum(mediaGroupId, deps.now.getTime())) return;
 
   await say(deps.client, chatId, photoSavedText(already + 1), {
+    replyMarkup: inboxKeyboard(deps.links),
+    disablePreview: true,
+  });
+}
+
+/**
+ * Голосовое: расшифровать и положить в инбокс текстом.
+ *
+ * Почему в инбокс, а не сразу в дневник. Тот же довод, что и у фото: разбор
+ * задаёт уточняющие вопросы и открывает черновик с порциями, для этого нужен
+ * экран. Плюс распознавание ошибается, и запись, попавшая в дневник без
+ * подтверждения, обнаружилась бы неделю спустя чужими калориями.
+ *
+ * Расшифровка ложится в `note` — то же поле, где у фото лежит подпись. Для
+ * разбора это одно и то же: «что человек сказал про эту еду словами».
+ */
+async function saveVoiceToInbox(
+  voice: { file_id?: string; mime_type?: string; file_size?: number; duration?: number },
+  tgId: string,
+  chatId: number,
+  deps: BotDeps,
+): Promise<void> {
+  // Ничего не качаем, если расшифровывать некому: файл всё равно некуда деть.
+  if (!deps.transcribe) {
+    await say(deps.client, chatId, UNSUPPORTED.voice);
+    return;
+  }
+  if (!voice.file_id) {
+    await say(deps.client, chatId, VOICE.failed);
+    return;
+  }
+
+  // Длительность Telegram сообщает в самом апдейте — длинную запись видно до
+  // загрузки файла, и платить за неё трафиком незачем.
+  if ((voice.duration ?? 0) > MAX_DURATION_SEC) {
+    await say(deps.client, chatId, SPEECH_ERRORS.too_long);
+    return;
+  }
+
+  const user = await deps.store.findUserByTelegram(tgId);
+  if (!user) {
+    await say(deps.client, chatId, VOICE.needLink);
+    return;
+  }
+
+  const moment = localMoment(deps.now, deps.timeZone);
+  // Тот же дневной потолок, что у снимков: инбокс общий, и защищать его от
+  // заливки надо целиком, а не по каждому виду записей отдельно.
+  const already = await deps.store.countInboxToday(user.id, moment.day);
+  if (already >= MAX_INBOX_PHOTOS_PER_DAY) {
+    await say(deps.client, chatId, TEXTS.dailyLimit);
+    return;
+  }
+
+  let transcript: string;
+  try {
+    const file = await deps.client.downloadFile(voice.file_id, MAX_AUDIO_BYTES);
+    const result = await deps.transcribe({
+      data: file.data,
+      // Telegram отдаёт голосовые как audio/ogg, но у пересланного аудиофайла
+      // тип может быть любым. Что из этого мы принимаем, решает checkAudio.
+      mime: voice.mime_type || file.mime,
+      durationSec: voice.duration,
+    });
+    transcript = result.text.trim();
+  } catch (error) {
+    if (error instanceof SpeechError) {
+      await say(deps.client, chatId, SPEECH_ERRORS[error.reason]);
+      return;
+    }
+    if (error instanceof TelegramApiError && /too large/.test(error.message)) {
+      await say(deps.client, chatId, SPEECH_ERRORS.too_large);
+      return;
+    }
+    console.error("bot voice failed", error);
+    await say(deps.client, chatId, VOICE.failed);
+    return;
+  }
+
+  // Пустая расшифровка без ошибки — провайдер счёл запись речью, но слов не
+  // нашёл. Класть в инбокс пустую строку нельзя: разбирать её нечем.
+  if (!transcript) {
+    await say(deps.client, chatId, SPEECH_ERRORS.empty);
+    return;
+  }
+
+  await deps.store.addToInbox({
+    userId: user.id,
+    photoKey: null,
+    note: transcript.slice(0, 300),
+    takenOn: moment.day,
+    takenTime: moment.time,
+  });
+
+  await say(deps.client, chatId, voiceSavedText(transcript.slice(0, 300)), {
     replyMarkup: inboxKeyboard(deps.links),
     disablePreview: true,
   });

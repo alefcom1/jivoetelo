@@ -104,10 +104,16 @@ export type TelegramUpdate = {
     document?: { file_id?: string; mime_type?: string; file_size?: number };
     /** Общий идентификатор у снимков одного альбома — см. handle-update.ts. */
     media_group_id?: string;
+    /**
+     * Голосовое сообщение: качаем, расшифровываем и кладём в инбокс текстом.
+     * `duration` Telegram сообщает всегда — по нему длинную запись видно до
+     * загрузки файла.
+     */
+    voice?: { file_id?: string; mime_type?: string; file_size?: number; duration?: number };
+    /** Аудиофайл. Для нас это то же самое, что голосовое. */
+    audio?: { file_id?: string; mime_type?: string; file_size?: number; duration?: number };
     // Вложения, которые бот не разбирает. Нужны не для обработки, а для
-    // осмысленного ответа: «не умею голос» полезнее, чем общая справка.
-    voice?: unknown;
-    audio?: unknown;
+    // осмысленного ответа: «не умею видео» полезнее, чем общая справка.
     video?: unknown;
     video_note?: unknown;
     sticker?: unknown;

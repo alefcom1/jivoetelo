@@ -8,9 +8,10 @@ import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { botPreferences } from "@/db/schema";
 import { addToInbox, countInboxToday } from "../inbox.ts";
+import { getSpeechProvider, isSpeechEnabled } from "../speech/index.ts";
 import { savePhoto } from "../storage.ts";
 import { consumeLinkCode, findUserByTelegram } from "../telegram.ts";
-import type { BotStore } from "./handle-update.ts";
+import type { BotDeps, BotStore } from "./handle-update.ts";
 
 /**
  * Создаёт строку настроек, если её ещё нет, и применяет изменение. Настройки
@@ -56,6 +57,19 @@ export const botStore: BotStore = {
     await upsertPreferences(userId, { snoozedUntil: until });
   },
 };
+
+/**
+ * Расшифровка голосовых для бота — или `null`, когда её нет.
+ *
+ * Возвращать `null`, а не провайдера, который всегда отказывает: бот по этому
+ * значению решает, качать ли файл. Отличать «выключено» от «сломалось» после
+ * загрузки мегабайта — значит тратить трафик на заведомо известный ответ.
+ */
+export function botTranscriber(): BotDeps["transcribe"] {
+  if (!isSpeechEnabled()) return null;
+  const provider = getSpeechProvider();
+  return (input) => provider.transcribe(input);
+}
 
 /** Настройки бота для веб-интерфейса. Отсутствие строки — это умолчания. */
 export async function getBotPreferences(userId: number) {

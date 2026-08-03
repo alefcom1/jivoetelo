@@ -195,7 +195,8 @@ export async function saveMeal(payload: unknown): Promise<{ ok: true; id: number
 
 export type InboxItemDto = {
   id: number;
-  photoKey: string;
+  /** null у записи голосом: показывать нечего, вся суть в `note`. */
+  photoKey: string | null;
   note: string | null;
   takenOn: string;
   takenTime: string;

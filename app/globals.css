@@ -360,3 +360,8 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
   .invite-qr{display:none}
   .invite-enter .invite-button{display:inline-flex;align-items:center;gap:14px;width:100%;justify-content:center}
 }
+
+/* Расшифровка голосового в черновике разбора. Цитатой, а не абзацем: это
+   слова человека, а не текст сервиса, и отличать одно от другого он должен
+   до того, как прочтёт. */
+.addflow-transcript{margin:0 0 18px;padding:14px 16px;border-left:3px solid var(--coral);background:var(--white);font-size:15px;font-style:italic;line-height:1.6}
