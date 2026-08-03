@@ -20,7 +20,16 @@
  */
 
 import { execSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { launchBrowser } from "./browser.mjs";
+
+// Однопиксельный валидный JPEG: сценарий не должен зависеть от файлов,
+// оставшихся от чужих прогонов, — фикстуру он приносит с собой.
+const TINY_JPEG = Buffer.from(
+  "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a" +
+  "HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAA" +
+  "AAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==",
+  "base64");
 
 const BASE = "http://127.0.0.1:3111";
 const UPLOADS = process.env.UPLOADS_DIR;
@@ -56,7 +65,8 @@ try {
   step("2. Записываем приём пищи со снимком (через БД + файл)");
   const uid = sql(`SELECT id FROM users WHERE email = '${user}'`);
   const key = `${uid}/0f8e1c2a-4b5d-6e7f-8a9b-0c1d2e3f4a5b.jpg`;
-  execSync(`mkdir -p "${UPLOADS}/${uid}" && cp "${UPLOADS}/9001/test.jpg" "${UPLOADS}/${key}"`, { shell: "/bin/bash" });
+  mkdirSync(`${UPLOADS}/${uid}`, { recursive: true });
+  writeFileSync(`${UPLOADS}/${key}`, TINY_JPEG);
   const mealId = sql(`INSERT INTO meals (user_id, eaten_on, eaten_time, meal_type, photo_key) VALUES (${uid}, CURRENT_DATE, '13:00', 'lunch', '${key}') RETURNING id`);
   sql(`INSERT INTO meal_items (meal_id, name, grams, kcal_per_100, protein_per_100, fat_per_100, carbs_per_100, fiber_per_100, confidence) VALUES (${mealId}, 'Гречка отварная', 180, 110, 4.2, 1.1, 21.3, 2.7, 'high')`);
 

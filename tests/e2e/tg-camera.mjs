@@ -47,6 +47,16 @@ function signInitData(userId) {
   return search.toString();
 }
 
+/**
+ * Сохранение черновика. Внутри Telegram экранной кнопки «Сохранить» нет —
+ * приложение вешает её на MainButton, поэтому жмём через заглушку: сверяем
+ * подпись и зовём записанный обработчик.
+ */
+async function saveViaMainButton(page) {
+  await page.waitForFunction(() => window.__mainShown && window.__mainText === "Сохранить", { timeout: 20000 });
+  await page.evaluate(() => window.__mainCb && window.__mainCb());
+}
+
 const stamp = Date.now();
 const userId = Number(one(
   `INSERT INTO users (email, password_hash, telegram_user_id)
@@ -166,8 +176,11 @@ try {
       colorScheme: "light",
       themeParams: { bg_color: "#ffffff", secondary_bg_color: "#f4f1ea", text_color: "#171917",
         hint_color: "#75766f", link_color: "#2946c6", button_color: "#171917", button_text_color: "#ffffff" },
-      MainButton: { text: "", show(){}, hide(){}, setText(){}, showProgress(){}, hideProgress(){},
-        enable(){}, disable(){}, onClick(){}, offClick(){}, setParams(){} },
+      MainButton: { text: "",
+        show(){ window.__mainShown = true; }, hide(){ window.__mainShown = false; },
+        setText(t){ window.__mainText = t; },
+        onClick(cb){ window.__mainCb = cb; }, offClick(){ window.__mainCb = null; },
+        showProgress(){}, hideProgress(){}, enable(){}, disable(){}, setParams(){} },
       BackButton: {
         isVisible: false,
         show(){ this.isVisible = true; },
@@ -270,7 +283,7 @@ try {
   if (liveTracks !== 0) problems.push("видоискатель остался жив на экране черновика");
 
   console.log("7. Черновик сохраняется приёмом пищи");
-  await page.click('.tg-button-block:has-text("Сохранить")');
+  await saveViaMainButton(page);
   await page.waitForSelector(".tg-today, .tg-hero", { timeout: 20000 });
   const saved = one(`SELECT count(*) FROM meals WHERE user_id = ${userId}`);
   if (saved !== "2") problems.push(`ожидали две записи в дневнике, в базе ${saved}`);
@@ -289,7 +302,7 @@ try {
   // а не съёмку.
   await page.click(".tg-shutter");
   await page.waitForSelector(".tg-draft", { timeout: 30000 });
-  await page.click('.tg-button-block:has-text("Сохранить")');
+  await saveViaMainButton(page);
   await page.waitForSelector(".tg-today, .tg-hero", { timeout: 20000 });
   await page.evaluate(() => window.localStorage.removeItem("jt.camera.autoShot"));
 
@@ -343,7 +356,7 @@ try {
   await page.waitForSelector(".tg-usual-list button", { timeout: 15000 });
   await page.click('.tg-usual-list button:has-text("Плов с бараниной")');
   await page.waitForSelector(".tg-draft", { timeout: 15000 });
-  await page.click('.tg-button-block:has-text("Сохранить")');
+  await saveViaMainButton(page);
   await page.waitForSelector(".tg-today, .tg-hero", { timeout: 20000 });
   const afterRepeat = one(`SELECT count(*) FROM meals WHERE user_id = ${userId}`);
   if (afterRepeat !== "4") problems.push(`после повтора ожидали четыре записи, в базе ${afterRepeat}`);
