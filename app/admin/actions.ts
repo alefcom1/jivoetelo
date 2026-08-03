@@ -14,6 +14,7 @@
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
+import { reviewPhoto } from "@/lib/catalog-photos-store";
 import { createSpecialistByEmail, setSpecialistStatus } from "@/lib/pro/store";
 import type { SpecialistStatus } from "@/lib/pro/access";
 
@@ -81,4 +82,27 @@ export async function setSpecialistStatusAction(formData: FormData): Promise<voi
 
   await setSpecialistStatus(userId, status, new Date());
   revalidatePath("/admin");
+}
+
+/**
+ * Решение по снимку каталога. Так же, как и выше: `requireAdmin()` первым
+ * шагом, потому что server action вызывается запросом, которого макет не
+ * видит.
+ *
+ * Отказ требует причины и не даёт её пропустить: снимок отклоняют, когда в
+ * кадр попало лишнее, и человеку надо будет что-то ответить.
+ */
+export async function reviewCatalogPhotoAction(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  if (!admin) notFound();
+
+  const id = Number(formData.get("id"));
+  const decision = String(formData.get("decision") ?? "");
+  if (!Number.isInteger(id) || id <= 0) notFound();
+  if (decision !== "approved" && decision !== "rejected") notFound();
+
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 500);
+  await reviewPhoto(id, decision, decision === "rejected" ? reason || "Без указания причины" : undefined);
+
+  revalidatePath("/admin/photos");
 }

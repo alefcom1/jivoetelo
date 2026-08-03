@@ -2,9 +2,9 @@
 // чтобы подпись к снимку можно было покрыть юнит-тестами: этот модуль тянет
 // `next/cache` и алиас `@/db`, которые в node:test не разрешаются.
 
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { catalogPhotos, userConsents } from "@/db/schema";
+import { catalogPhotos, users, userConsents } from "@/db/schema";
 import { getDb } from "@/db";
 import { photoMimeType, readPhoto } from "./storage.ts";
 import type { CatalogPhoto, PhotoStatus } from "./catalog-photos.ts";
@@ -129,4 +129,69 @@ export async function reviewPhoto(id: number, status: Exclude<PhotoStatus, "pend
 
   const slug = rows[0]?.productSlug;
   if (slug) revalidatePath(`/produkty/${slug}`);
+}
+
+export type PendingPhoto = CatalogPhoto & {
+  productSlug: string;
+  /** Почта автора — модератору надо понимать, кому отвечать при отказе. */
+  authorEmail: string | null;
+  /** Согласие на публикацию действует прямо сейчас. */
+  consentActive: boolean;
+};
+
+/**
+ * Очередь модерации.
+ *
+ * Согласие здесь не фильтрует, а показывается флагом: снимок, у которого
+ * согласие отозвано между отправкой и разбором, модератор должен увидеть и
+ * отклонить осознанно, а не искать, куда он делся. Показывать такой кадр
+ * на сайте всё равно нельзя — за это отвечает `approvedPhotosFor`.
+ */
+export async function pendingPhotos(limit = 50): Promise<PendingPhoto[]> {
+  return getDb()
+    .select({
+      id: catalogPhotos.id,
+      photoKey: catalogPhotos.photoKey,
+      caption: catalogPhotos.caption,
+      createdAt: catalogPhotos.createdAt,
+      productSlug: catalogPhotos.productSlug,
+      authorEmail: users.email,
+      consentActive: sql<boolean>`exists (
+        select 1 from ${userConsents}
+        where ${userConsents.userId} = ${catalogPhotos.userId}
+          and ${userConsents.kind} = 'photo_publication'
+          and ${userConsents.withdrawnAt} is null
+      )`,
+    })
+    .from(catalogPhotos)
+    .innerJoin(users, eq(users.id, catalogPhotos.userId))
+    .where(eq(catalogPhotos.status, "pending"))
+    .orderBy(desc(catalogPhotos.createdAt))
+    .limit(limit);
+}
+
+/**
+ * Снимок для модератора — до одобрения его нельзя отдать публичным
+ * маршрутом, а посмотреть надо: иначе модерация сводится к чтению подписи.
+ */
+export async function photoForReview(id: number): Promise<{ data: Buffer; mime: string } | null> {
+  const rows = await getDb()
+    .select({ photoKey: catalogPhotos.photoKey })
+    .from(catalogPhotos)
+    .where(eq(catalogPhotos.id, id))
+    .limit(1);
+
+  const key = rows[0]?.photoKey;
+  if (!key) return null;
+  const data = await readPhoto(key);
+  return data ? { data, mime: photoMimeType(key) } : null;
+}
+
+/** Уже отправленные снимки этого человека — чтобы не предлагать отправить дважды. */
+export async function submittedSlugsFor(userId: number): Promise<Set<string>> {
+  const rows = await getDb()
+    .select({ productSlug: catalogPhotos.productSlug, photoKey: catalogPhotos.photoKey })
+    .from(catalogPhotos)
+    .where(eq(catalogPhotos.userId, userId));
+  return new Set(rows.map((row) => `${row.photoKey}::${row.productSlug}`));
 }

@@ -1,0 +1,19 @@
+
+/* Отправка снимка в каталог. Блок свёрнут по умолчанию и разворачивается
+   по нажатию: публиковать собственный рацион — не то действие, к которому
+   стоит подталкивать оформлением. */
+.share-photo {
+  display: flex; flex-direction: column; gap: 12px;
+  margin-top: 20px; padding: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 16px;
+}
+.share-photo h3 { margin: 0; font-size: 17px; }
+.share-photo select {
+  width: 100%; padding: 10px 12px; border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 10px; font: inherit; background: #fff;
+}
+.share-photo .check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.5; }
+.share-photo .check input { margin-top: 3px; width: 18px; height: 18px; flex-shrink: 0; }
+.share-photo-done { margin-top: 20px; }
+
+.photo-consent { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; margin-top: 12px; }

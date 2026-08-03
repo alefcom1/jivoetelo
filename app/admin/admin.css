@@ -280,3 +280,28 @@
     min-width: 0;
   }
 }
+
+/* Очередь модерации снимков. Кадр крупно и первым: модерация по подписи —
+   это не модерация, смотреть надо на то, что попало в кадр помимо еды. */
+.admin-photo-queue { list-style: none; margin: 24px 0 0; padding: 0; display: flex; flex-direction: column; gap: 28px; }
+.admin-photo-queue > li {
+  display: grid; gap: 18px; align-items: start;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  padding: 18px; border: 1px solid rgba(0, 0, 0, 0.12); border-radius: 16px;
+}
+.admin-photo-queue img { width: 100%; border-radius: 12px; background: rgba(0, 0, 0, 0.05); }
+.admin-photo-body h2 { margin: 0 0 10px; font-size: 20px; }
+.admin-photo-meta { margin: 0 0 14px; display: grid; gap: 4px; }
+.admin-photo-meta > div { display: flex; gap: 10px; font-size: 14px; }
+.admin-photo-meta dt { margin: 0; opacity: 0.6; min-width: 96px; }
+.admin-photo-meta dd { margin: 0; }
+.admin-photo-actions { display: flex; flex-direction: column; gap: 10px; }
+.admin-photo-actions input[type="text"] {
+  width: 100%; padding: 9px 12px; border: 1px solid rgba(0, 0, 0, 0.2); border-radius: 10px; font: inherit;
+}
+.admin-empty { opacity: 0.6; }
+
+/* На узком экране кадр встаёт над текстом: два столбца по 200 px не читаются. */
+@media (max-width: 720px) {
+  .admin-photo-queue > li { grid-template-columns: 1fr; }
+}

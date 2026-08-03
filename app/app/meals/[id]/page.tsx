@@ -6,7 +6,9 @@ import { mealItems, meals } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDayRu, MEAL_TYPE_LABELS } from "@/lib/dates";
 import { itemTotals, sumTotals } from "@/lib/nutrition";
+import { PRODUCTS } from "@/lib/products";
 import { MealDetailActions } from "./meal-detail-actions";
+import { SharePhoto } from "../../share-photo";
 
 export default async function MealDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -58,5 +60,18 @@ export default async function MealDetailPage({ params }: { params: Promise<{ id:
     </table>
 
     <MealDetailActions mealId={meal.id} hasPhoto={!!meal.photoKey} />
+
+    {/* Поделиться можно только тем, что в каталоге и правда есть: снимок
+        привязывается к конкретной странице продукта, а не висит сам по себе.
+        Если ни одна позиция записи каталогу не известна, блока нет вовсе. */}
+    {meal.photoKey && <SharePhoto
+      mealId={meal.id}
+      candidates={items
+        .map((item) => {
+          const product = PRODUCTS.find((candidate) => candidate.name === item.name);
+          return product ? { slug: product.slug, name: product.name, grams: item.grams } : null;
+        })
+        .filter((candidate): candidate is NonNullable<typeof candidate> => Boolean(candidate))}
+    />}
   </main>;
 }
