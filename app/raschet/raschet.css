@@ -533,3 +533,50 @@
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+
+/* Карточки словаря. Сетка сама решает, сколько влезает: на 360 px — один
+   столбец, на широком — два. Вся карточка нажимаема, не только «Читать». */
+.glossary-grid {
+  display: grid; gap: 14px;
+  /* min(280px,100%) — чтобы на экранах уже 280px колонка сжималась,
+     а не распирала страницу горизонтальным скроллом. */
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+}
+.glossary-card {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 20px; background: var(--white); border: 1px solid var(--line);
+  text-decoration: none; color: inherit;
+}
+.glossary-card h2 { margin: 0; font: 500 22px var(--serif); }
+.glossary-card p { margin: 0; font-size: 14px; line-height: 1.6; opacity: 0.85; }
+.glossary-card span { margin-top: auto; font-size: 13px; font-weight: 700; }
+.glossary-card:hover { border-color: var(--black); }
+
+/* Виджеты-пересчёты: сухое↔варёное и порция без весов. */
+.converter {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 20px; margin: 24px 0; background: var(--white); border: 1px solid var(--line);
+}
+.converter select, .converter input[type="number"] {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--line); font: inherit; background: var(--white);
+}
+.converter-row { display: flex; align-items: flex-end; gap: 10px; }
+.converter-row .field { flex: 1; }
+.converter-arrows { padding-bottom: 12px; font-size: 18px; opacity: 0.5; }
+.converter-answer { margin: 0; font-size: 16px; line-height: 1.55; }
+
+.measure-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.measure-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--line);
+}
+.measure-name { display: flex; flex-direction: column; gap: 2px; font-size: 14px; font-weight: 600; }
+.measure-name i { font-style: normal; font-size: 12px; font-weight: 500; opacity: 0.6; }
+.measure-stepper { display: flex; align-items: center; gap: 4px; }
+.measure-stepper b { min-width: 28px; text-align: center; font-variant-numeric: tabular-nums; }
+.measure-stepper button {
+  /* 44px — минимальная тач-цель, на которую договорились по всему сайту. */
+  width: 44px; height: 44px; border: 1px solid var(--line); background: var(--white);
+  font-size: 18px; cursor: pointer;
+}
+.measure-stepper button:active { background: var(--line); }
