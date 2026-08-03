@@ -12,6 +12,7 @@ import {
   type Dish,
 } from "@/lib/dishes";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
+import { breadcrumbsJsonLd, jsonLdScript } from "@/lib/schema-org";
 import { dishSubscribeSource } from "@/lib/subscribe-source";
 
 type Params = { params: Promise<{ dish: string }> };
@@ -186,6 +187,21 @@ export default async function DishPage({ params }: Params) {
       {NOT_MEDICAL_DISCLAIMER} <Link href="/legal/health">Подробнее о границах сервиса →</Link>
     </p>
 
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(nutritionJsonLd(dish)) }} />
+    {/* `FAQPage` оставлен сознательно: сниппетов он больше не даёт, но из
+        него извлекают ответ Алиса и языковые модели. Рядом — цепочка,
+        которую Яндекс поддерживает официально и которой у нас не было. */}
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: jsonLdScript([
+          nutritionJsonLd(dish),
+          breadcrumbsJsonLd([
+            { name: "Калорийность блюд", path: "/skolko-kalorij" },
+            { name: DISH_CATEGORIES[dish.category], path: `/skolko-kalorij#${dish.category}` },
+            { name: dish.name, path: `/skolko-kalorij/${dish.slug}` },
+          ]),
+        ]),
+      }}
+    />
   </article>;
 }

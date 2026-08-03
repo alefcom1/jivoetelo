@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { breadcrumbsJsonLd, jsonLdScript, webApplicationJsonLd } from "@/lib/schema-org";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import PaceForm from "./pace-form";
 
@@ -151,6 +152,19 @@ export default function PaceCalculatorPage() {
       {NOT_MEDICAL_DISCLAIMER} <Link href="/legal/health">Подробнее о границах сервиса →</Link>
     </p>
 
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+    <script type="application/ld+json" dangerouslySetInnerHTML={{
+        __html: jsonLdScript([
+          faqJsonLd,
+          webApplicationJsonLd({
+            name: "Калькулятор темпа снижения веса",
+            description: "Считает реалистичный темп снижения веса и срок с границами безопасности.",
+            path: "/raschet/temp",
+          }),
+          breadcrumbsJsonLd([
+            { name: "Расчёты", path: "/raschet" },
+            { name: "Расчёт темпа", path: "/raschet/temp" },
+          ]),
+        ]),
+      }} />
   </article>;
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { jsonLdScript, organizationJsonLd, webSiteJsonLd } from "@/lib/schema-org";
 import { YandexMetrika } from "./metrika";
 import "./fonts.css";
 import "./globals.css";
@@ -63,6 +64,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           начать их загрузку сразу, не дожидаясь разбора CSS. */}
       <link rel="preload" href="/fonts/cormorant-garamond-cyrillic.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       <link rel="preload" href="/fonts/manrope-cyrillic.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+      {/* Брендовые узлы — один раз на весь сайт. На них по `@id` ссылаются
+          `publisher` со страниц, чтобы не повторять описание организации в
+          разметке каждой страницы. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([organizationJsonLd(), webSiteJsonLd()]) }}
+      />
     </head>
     <body>
       {children}

@@ -1,0 +1,128 @@
+name: Ночной конвейер контента
+
+# Берёт одну позицию из очереди `docs/seo-pipeline.md`, поручает её агенту и
+# кладёт результат в отдельную ветку. Ничего не публикует.
+#
+# Почему ветка, а не пуш в main. Агент пишет числа. Ошибка в калорийности —
+# это не опечатка, а неверные данные на сервисе о питании, которые попадут в
+# выдачу и будут там жить. Автопубликация экономит десять минут проверки и
+# создаёт риск, который стоит несопоставимо дороже (`docs/seo-pipeline.md`).
+#
+# Почему одна позиция за ночь. Пять текстов, написанных за один присест, —
+# это пять одинаковых текстов. И утренняя проверка тоже имеет пропускную
+# способность, причём она у человека.
+on:
+  # 03:20 UTC — раннее утро по Москве: к началу рабочего дня ветка готова.
+  # Не ровно в час: в :00 в очередь GitHub встаёт половина мира, и запуск
+  # сдвигается непредсказуемо.
+  schedule:
+    - cron: "20 3 * * *"
+  # Кнопкой — чтобы можно было прогнать проверку, не дожидаясь ночи.
+  workflow_dispatch:
+
+# Два конвейера одновременно взяли бы одну и ту же первую позицию очереди и
+# сделали бы работу дважды.
+concurrency:
+  group: content-pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  write:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Забрать код
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Установить зависимости
+        run: npm ci
+
+      # До запуска агента: если ключа нет, честно сказать это здесь, а не
+      # получить непонятную ошибку в середине работы.
+      - name: Проверить ключ агента
+        run: |
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "::error::Не задан секрет ANTHROPIC_API_KEY — конвейеру нечем писать."
+            echo "Задать: Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Выбрать позицию очереди
+        id: pick
+        run: |
+          ITEM=$(node scripts/content-queue.mjs)
+          echo "item=$ITEM" >> "$GITHUB_OUTPUT"
+          EMPTY=$(echo "$ITEM" | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).empty))")
+          echo "empty=$EMPTY" >> "$GITHUB_OUTPUT"
+          if [ "$EMPTY" = "true" ]; then
+            echo "Очередь пуста — всё написано. Это не ошибка."
+          else
+            echo "$ITEM" | node -e "process.stdin.on('data',d=>{const i=JSON.parse(d);console.log('Берём:',i.title,'('+i.kind+'), осталось',i.remaining)})"
+          fi
+
+      - name: Ветка под работу
+        if: steps.pick.outputs.empty == 'false'
+        id: branch
+        run: |
+          SLUG=$(echo '${{ steps.pick.outputs.item }}' | node -e "process.stdin.on('data',d=>process.stdout.write(JSON.parse(d).slug))")
+          BRANCH="content/$(date -u +%Y-%m-%d)-$SLUG"
+          git config user.name "Ночной конвейер"
+          git config user.email "noreply@jivoetelo.ru"
+          git checkout -b "$BRANCH"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Написать
+        if: steps.pick.outputs.empty == 'false'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Ты — ночной агент контента «Живого Тела». Тебе досталась ровно
+            одна позиция очереди:
+
+            ${{ steps.pick.outputs.item }}
+
+            Прочитай `docs/seo-pipeline.md` целиком и соблюдай все восемь
+            правил оттуда — они не про стиль, а про то, из-за чего страницу
+            пришлось бы снимать. Особенно: диапазон вместо точки, сходимость
+            калорийности с БЖУ по Атуотеру, никаких медицинских утверждений,
+            никаких выдуманных источников.
+
+            Прежде чем писать, прочитай `app/skolko-kalorij/borshch` как
+            образец тона — он задан существующими страницами, а не описан
+            словами.
+
+            Для блюда: добавь запись в `lib/dishes.ts`. Ничего существующего
+            не трогай, только добавление. Посчитай числа сам, не надейся на
+            тест.
+
+            Для статьи глоссария или методологии: если раздела ещё нет,
+            остановись и напиши об этом в итоге, а не выдумывай структуру.
+
+            Закончив, прогони `npm test`, `npm run lint` и `npx tsc --noEmit`
+            и убедись, что они зелёные. Затем вычеркни свою строку в очереди
+            `docs/seo-pipeline.md`, поставив `[x]`.
+
+      - name: Отправить ветку
+        if: steps.pick.outputs.empty == 'false'
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "::warning::Агент не внёс изменений — ветку не отправляем."
+            exit 0
+          fi
+          git add -A
+          git commit -m "Черновик: $(echo '${{ steps.pick.outputs.item }}' | node -e "process.stdin.on('data',d=>process.stdout.write(JSON.parse(d).title))")
+
+          Подготовлено ночным конвейером (docs/seo-pipeline.md).
+          Не публиковать без утренней проверки: числа и тон проверяет человек."
+          git push -u origin "${{ steps.branch.outputs.name }}"
+          echo "Ветка ${{ steps.branch.outputs.name }} готова к утренней проверке."

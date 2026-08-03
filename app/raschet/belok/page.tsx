@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { breadcrumbsJsonLd, jsonLdScript, webApplicationJsonLd } from "@/lib/schema-org";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import ProteinForm from "./protein-form";
 
@@ -206,7 +207,20 @@ export default function ProteinCalculatorPage() {
 
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      dangerouslySetInnerHTML={{
+        __html: jsonLdScript([
+          faqJsonLd,
+          webApplicationJsonLd({
+            name: "Калькулятор нормы белка",
+            description: "Считает коридор суточной нормы белка по весу и цели — от 1,2 до 2,0 г на килограмм.",
+            path: "/raschet/belok",
+          }),
+          breadcrumbsJsonLd([
+            { name: "Расчёты", path: "/raschet" },
+            { name: "Расчёт белка", path: "/raschet/belok" },
+          ]),
+        ]),
+      }}
     />
   </article>;
 }

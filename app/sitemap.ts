@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { DISHES } from "@/lib/dishes";
+import { DISHES, dishUpdatedAt } from "@/lib/dishes";
 import { LEGAL_UPDATED_AT } from "@/lib/legal";
 
 /**
@@ -48,7 +48,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
     ...DISHES.map((dish) => ({
       url: `${SITE_URL}/skolko-kalorij/${dish.slug}`,
-      lastModified,
+      // Дата содержимого блюда, а не дата правки оферты: см. DISHES_UPDATED_AT.
+      lastModified: dishUpdatedAt(dish),
       changeFrequency: "yearly" as const,
       priority: 0.7,
     })),
