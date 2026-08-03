@@ -28,8 +28,14 @@ export const LEGAL_VERSION = "1.2";
  *   разбором расчёта. Отдельно от `waitlist`: там ожидание приглашения,
  *   здесь рассылка, и отписаться от одного, оставшись в другом, человек
  *   должен иметь возможность.
+ * - `photo_publication` — публикация присланной фотографии еды в публичном
+ *   каталоге продуктов. Отдельно от `ai_processing` намеренно: там снимок
+ *   обрабатывается, чтобы посчитать еду этого же человека, и остаётся в его
+ *   дневнике; здесь он уходит на страницу, которую увидит кто угодно. Это
+ *   разные цели обработки, и согласие на первую не покрывает вторую.
+ *   Отзывается отдельно, и отзыв убирает снимки с публичных страниц.
  */
-export const CONSENT_KINDS = ["terms", "ai_processing", "waitlist", "email_series"] as const;
+export const CONSENT_KINDS = ["terms", "ai_processing", "waitlist", "email_series", "photo_publication"] as const;
 export type ConsentKind = (typeof CONSENT_KINDS)[number];
 
 export const CONSENT_LABELS: Record<ConsentKind, string> = {
@@ -37,6 +43,7 @@ export const CONSENT_LABELS: Record<ConsentKind, string> = {
   ai_processing: "Согласие на обработку данных о питании, весе и фотографий еды",
   waitlist: "Согласие на обработку e-mail для приглашения в сервис",
   email_series: "Согласие на обработку e-mail для получения разбора расчёта",
+  photo_publication: "Согласие на публикацию присланной фотографии еды в каталоге продуктов",
 };
 
 export function isConsentKind(value: string): value is ConsentKind {
