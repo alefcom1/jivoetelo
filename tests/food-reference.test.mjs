@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { DISHES } from "../lib/dishes.ts";
 import { foodCategory } from "../lib/food-category.ts";
 import { FOOD_REFERENCE, searchFoodReference } from "../lib/food-reference.ts";
 import { atwaterKcal } from "../lib/nutrition-sanity.ts";
@@ -28,7 +29,10 @@ test("калорийность сходится с белками, жирами 
     // Почти нулевые по калорийности (чай, кофе) через отношение не проверить:
     // там и числитель, и знаменатель — шум.
     if (food.kcal < 15) continue;
-    const computed = atwaterKcal({ ...food, alcohol: 0 });
+    // Спирт передаём тот, что заявлен у продукта: у пива и вина энергия
+    // идёт почти целиком из него, и с нулём здесь проверка объявляла бы
+    // верные числа ошибкой.
+    const computed = atwaterKcal({ ...food, alcohol: food.alcohol ?? 0 });
     const ratio = computed / food.kcal;
     assert.ok(
       ratio > 0.75 && ratio < 1.25,
@@ -68,8 +72,13 @@ test("поиск находит по началу и по середине на�
   assert.ok(byStart.length >= 2, "должно найтись оба творога");
   assert.ok(byStart[0].name.startsWith("Творог"), `первым ожидали творог, получили ${byStart[0]?.name}`);
 
+  // «Греческий» стоит вторым словом сразу у нескольких позиций, и какая из
+  // них окажется первой — вопрос длины названия, а не правильности. Важно
+  // другое: наверх не должна вылезти «Гречка», у которой с запросом общие
+  // только четыре буквы корня.
   const byMiddle = searchFoodReference("греческ");
-  assert.equal(byMiddle[0].name, "Йогурт греческий 2%");
+  assert.ok(/греческ/i.test(byMiddle[0].name), `первым ожидали греческое, получили ${byMiddle[0]?.name}`);
+  assert.ok(byMiddle.some((f) => f.name === "Йогурт греческий 2%"), "греческий йогурт должен найтись");
 });
 
 test("совпадение с начала названия важнее совпадения в середине", () => {
@@ -118,4 +127,39 @@ test("крупы и макароны даны в отварном виде", () 
     assert.ok(food, `нет продукта «${name}»`);
     assert.ok(food.kcal < 200, `${name}: ${food.kcal} ккал — похоже на сухую крупу, а не на отварную`);
   }
+});
+
+/**
+ * Одно и то же блюдо не может показывать на публичной странице «сколько
+ * калорий» одно, а в дневнике — другое. Числа справочника обязаны лежать
+ * внутри опубликованных диапазонов.
+ *
+ * Связь по названию, а не по отдельному полю-ссылке: поле пришлось бы
+ * заполнять руками при каждом новом блюде, и первое же забытое оставило бы
+ * расхождение незамеченным. Название и так совпадает — оно одно и то же
+ * блюдо.
+ */
+test("числа блюд не расходятся с публичными страницами", () => {
+  // Название в справочнике бывает уточнённым: «Солянка мясная», «Салат
+  // «Цезарь» с курицей». Сопоставляем по вхождению основы.
+  const key = (value) => value.toLowerCase().replace(/ё/g, "е").replace(/[«»"]/g, "");
+
+  let checked = 0;
+  for (const dish of DISHES) {
+    const food = FOOD_REFERENCE.find((item) => key(item.name).startsWith(key(dish.name)));
+    if (!food) continue;
+    checked += 1;
+    for (const [field, range] of [
+      ["kcal", dish.kcal], ["protein", dish.protein], ["fat", dish.fat], ["carbs", dish.carbs],
+    ]) {
+      const [min, max] = range;
+      assert.ok(
+        food[field] >= min && food[field] <= max,
+        `${food.name}: ${field} = ${food[field]}, а на странице /skolko-kalorij/${dish.slug} заявлено ${min}–${max}`,
+      );
+    }
+  }
+  // Проверка бессмысленна, если совпадений не нашлось вовсе: тогда она
+  // молча проходит на пустом множестве и ничего не сторожит.
+  assert.ok(checked >= 5, `сопоставилось всего ${checked} блюд — проверка ничего не сторожит`);
 });

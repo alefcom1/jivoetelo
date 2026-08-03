@@ -120,3 +120,50 @@ export async function confirmBarcode(rawCode: string): Promise<void> {
     .set({ confirmations: sql`${barcodes.confirmations} + 1` })
     .where(eq(barcodes.code, code));
 }
+
+/**
+ * Поиск товаров базы по названию.
+ *
+ * Зачем он рядом со справочником в бандле. Справочник (lib/food-reference.ts)
+ * — курируемая основа рациона, три сотни позиций, и он специально небольшой:
+ * поиск по нему идёт мгновенно и без сети. База штрихкодов растёт от людей и
+ * ограничения по размеру не имеет вовсе — её в бандл не положишь. Отсюда
+ * разделение: маленькая курируемая часть на клиенте, растущая — здесь.
+ *
+ * Без этого поиска заведённый по штрихкоду «Кефир 1%» находился бы только
+ * повторным сканированием: набрать его название было негде.
+ */
+export async function searchBarcodesByName(query: string, limit = 5): Promise<BarcodeProduct[]> {
+  const needle = query.trim();
+  // Две буквы — порог тот же, что у справочника: по одной букве выпадает
+  // половина базы, и подсказка перестаёт быть подсказкой.
+  if (needle.length < 2) return [];
+
+  // Экранируем %, _ и обратный слэш: без этого запрос «100%» превращается в
+  // «найди что угодно», и человек видит случайный список вместо продукта.
+  const pattern = `%${needle.replace(/[\\%_]/g, "\\$&")}%`;
+
+  // DISTINCT ON по названию: один товар люди заводят под разными штрихкодами
+  // — разный объём упаковки, смена штрихкода производителем, — и три строки
+  // «Кефир 1%» подряд человек читает как поломку, а не как выбор. Оставляем
+  // ту, которой пользовались чаще: она вернее.
+  const result = await getDb().execute(sql`
+    SELECT DISTINCT ON (lower(name))
+      code, name,
+      kcal_per_100 AS "kcalPer100", protein_per_100 AS "proteinPer100",
+      fat_per_100 AS "fatPer100", carbs_per_100 AS "carbsPer100",
+      fiber_per_100 AS "fiberPer100", portion_g AS "portionG", confirmations
+    FROM barcodes
+    WHERE name ILIKE ${pattern}
+    ORDER BY lower(name), confirmations DESC, code
+  `);
+
+  // `execute` возвращает результат драйвера, а не массив: строки лежат в
+  // `rows` (так же читает их lib/scheduler.ts).
+  return ((result.rows ?? []) as unknown as BarcodeProduct[])
+    // Подтверждённые выше: карточка, которой пользовались, вернее той, что
+    // завели однажды и наугад. Сортируем здесь, а не в запросе: там порядок
+    // задан требованием DISTINCT ON.
+    .sort((a, b) => b.confirmations - a.confirmations || a.name.localeCompare(b.name, "ru"))
+    .slice(0, limit);
+}

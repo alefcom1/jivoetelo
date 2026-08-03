@@ -27,6 +27,15 @@ export type ReferenceFood = {
   fiber: number;
   /** Типичная порция, г — подставляется в поле веса, чтобы не считать в уме. */
   portionG: number;
+  /**
+   * Спирт, г на 100 г. Есть только у алкоголя и в дневник не сохраняется —
+   * там его колонки нет, энергия уже учтена в `kcal`. Нужен единственно
+   * затем, чтобы проверка по Атуотеру не объявила пиво ошибкой: без этого
+   * слагаемого у него «не сходятся» три четверти калорийности, и справочник
+   * пришлось бы оставить без единственного напитка, который люди пьют и
+   * записывают.
+   */
+  alcohol?: number;
 };
 
 export const FOOD_REFERENCE: ReferenceFood[] = [
@@ -222,6 +231,196 @@ export const FOOD_REFERENCE: ReferenceFood[] = [
   { name: "Сок яблочный", kcal: 46, protein: 0.1, fat: 0.1, carbs: 11.3, fiber: 0.2, portionG: 200 },
   { name: "Компот из сухофруктов", kcal: 60, protein: 0.3, fat: 0, carbs: 15, fiber: 0.2, portionG: 200 },
   { name: "Кола", kcal: 42, protein: 0, fat: 0, carbs: 10.6, fiber: 0, portionG: 330 },
+
+  // ------------------------------------------------------------------
+  // Русская повседневная еда: готовые блюда, а не сырьё.
+  //
+  // Первая версия справочника была таблицей продуктов — курица, гречка,
+  // творог. По ней нельзя записать обед: люди едят не «говядину отварную», а
+  // борщ и котлету с пюре, и каждый раз упирались либо в разбор моделью, либо
+  // в ручной ввод пяти чисел. Здесь то, что реально лежит в тарелке.
+  //
+  // Числа блюд, которые есть и на публичных страницах «сколько калорий»
+  // (lib/dishes.ts), выбраны внутри опубликованных там диапазонов — тест
+  // сверяет это. Одно и то же блюдо не может показывать на сайте одно, а в
+  // дневнике другое.
+
+  // Супы и первые блюда
+  { name: "Борщ", kcal: 55, protein: 2.5, fat: 2.5, carbs: 5.5, fiber: 1.2, portionG: 350 },
+  { name: "Щи из свежей капусты", kcal: 40, protein: 1.8, fat: 2, carbs: 3.5, fiber: 1.2, portionG: 350 },
+  { name: "Солянка мясная", kcal: 90, protein: 6, fat: 6, carbs: 3, fiber: 0.6, portionG: 350 },
+  { name: "Суп куриный с лапшой", kcal: 55, protein: 3.5, fat: 2, carbs: 5.5, fiber: 0.4, portionG: 350 },
+  { name: "Уха", kcal: 45, protein: 5, fat: 1.5, carbs: 2.5, fiber: 0.3, portionG: 350 },
+  { name: "Гороховый суп", kcal: 66, protein: 4, fat: 1.7, carbs: 9, fiber: 2, portionG: 350 },
+  { name: "Грибной суп", kcal: 40, protein: 2, fat: 2, carbs: 3.5, fiber: 0.8, portionG: 350 },
+  { name: "Окрошка на кефире", kcal: 55, protein: 3, fat: 2.4, carbs: 5, fiber: 0.7, portionG: 350 },
+  { name: "Крем-суп тыквенный", kcal: 60, protein: 1.6, fat: 3.2, carbs: 6.5, fiber: 1.4, portionG: 300 },
+  { name: "Бульон куриный", kcal: 20, protein: 2.5, fat: 1, carbs: 0.3, fiber: 0, portionG: 250 },
+
+  // Вторые блюда
+  { name: "Плов с курицей", kcal: 165, protein: 8, fat: 6, carbs: 20, fiber: 0.9, portionG: 250 },
+  { name: "Пельмени отварные", kcal: 245, protein: 12, fat: 11, carbs: 25, fiber: 1, portionG: 250 },
+  { name: "Вареники с картофелем", kcal: 185, protein: 5, fat: 6, carbs: 27, fiber: 1.5, portionG: 250 },
+  { name: "Голубцы", kcal: 120, protein: 6, fat: 6.5, carbs: 9, fiber: 1.4, portionG: 250 },
+  { name: "Котлета из свинины и говядины", kcal: 250, protein: 14, fat: 18, carbs: 8, fiber: 0.5, portionG: 100 },
+  { name: "Котлета куриная", kcal: 200, protein: 15, fat: 12, carbs: 8, fiber: 0.4, portionG: 100 },
+  { name: "Тефтели в соусе", kcal: 175, protein: 11, fat: 10, carbs: 10, fiber: 0.6, portionG: 200 },
+  { name: "Гуляш говяжий", kcal: 180, protein: 14, fat: 11, carbs: 6, fiber: 0.4, portionG: 200 },
+  { name: "Отбивная свиная", kcal: 280, protein: 20, fat: 20, carbs: 5, fiber: 0.2, portionG: 130 },
+  { name: "Шницель куриный", kcal: 245, protein: 17, fat: 15, carbs: 11, fiber: 0.5, portionG: 130 },
+  { name: "Рыба жареная", kcal: 190, protein: 18, fat: 11, carbs: 5, fiber: 0.2, portionG: 150 },
+  { name: "Запеканка творожная", kcal: 170, protein: 12, fat: 6, carbs: 17, fiber: 0.3, portionG: 150 },
+  { name: "Сырники", kcal: 220, protein: 14, fat: 9, carbs: 21, fiber: 0.3, portionG: 150 },
+  { name: "Блины на молоке", kcal: 190, protein: 6, fat: 6.5, carbs: 27, fiber: 0.9, portionG: 150 },
+  { name: "Оладьи", kcal: 230, protein: 6, fat: 9, carbs: 32, fiber: 1, portionG: 130 },
+  { name: "Омлет с молоком", kcal: 165, protein: 10, fat: 12, carbs: 3, fiber: 0, portionG: 150 },
+  { name: "Яичница глазунья", kcal: 195, protein: 12, fat: 15, carbs: 1, fiber: 0, portionG: 120 },
+  { name: "Каша рисовая на молоке", kcal: 97, protein: 2.7, fat: 2.5, carbs: 16, fiber: 0.4, portionG: 250 },
+  { name: "Каша гречневая на молоке", kcal: 105, protein: 4.2, fat: 2.8, carbs: 15.5, fiber: 1.8, portionG: 250 },
+  { name: "Макароны по-флотски", kcal: 195, protein: 11, fat: 9, carbs: 18, fiber: 0.9, portionG: 250 },
+  { name: "Картофель жареный", kcal: 195, protein: 2.8, fat: 9.5, carbs: 24, fiber: 2.2, portionG: 200 },
+  { name: "Картофель тушёный", kcal: 105, protein: 2.2, fat: 3.5, carbs: 16, fiber: 1.8, portionG: 200 },
+  { name: "Овощи тушёные", kcal: 70, protein: 1.6, fat: 3.6, carbs: 8, fiber: 2.2, portionG: 200 },
+  { name: "Овощи на пару", kcal: 45, protein: 2, fat: 0.5, carbs: 7.5, fiber: 2.6, portionG: 200 },
+
+  // Салаты
+  { name: "Оливье", kcal: 200, protein: 5, fat: 15, carbs: 11, fiber: 1.2, portionG: 150 },
+  { name: "Винегрет", kcal: 105, protein: 1.6, fat: 7, carbs: 9, fiber: 2, portionG: 150 },
+  { name: "Салат «Цезарь» с курицей", kcal: 190, protein: 12, fat: 13, carbs: 6, fiber: 0.6, portionG: 200 },
+  { name: "Салат «Мимоза»", kcal: 200, protein: 7, fat: 16, carbs: 7, fiber: 0.5, portionG: 150 },
+  { name: "Сельдь под шубой", kcal: 185, protein: 6, fat: 14, carbs: 8, fiber: 1.2, portionG: 150 },
+  { name: "Салат из огурцов и помидоров", kcal: 60, protein: 1.1, fat: 4.5, carbs: 3.6, fiber: 1, portionG: 150 },
+  { name: "Салат «Греческий»", kcal: 120, protein: 3.6, fat: 9.5, carbs: 4.5, fiber: 1.2, portionG: 180 },
+
+  // Фастфуд и уличная еда
+  { name: "Шаурма с курицей", kcal: 195, protein: 11, fat: 10, carbs: 15, fiber: 1, portionG: 300 },
+  { name: "Пицца «Маргарита»", kcal: 245, protein: 11, fat: 9.5, carbs: 29, fiber: 1.6, portionG: 200 },
+  { name: "Пицца «Пепперони»", kcal: 285, protein: 12, fat: 13.5, carbs: 29, fiber: 1.6, portionG: 200 },
+  { name: "Бургер с говядиной", kcal: 265, protein: 13, fat: 14, carbs: 21, fiber: 1.2, portionG: 200 },
+  { name: "Хот-дог", kcal: 250, protein: 9, fat: 14, carbs: 21, fiber: 1, portionG: 150 },
+  { name: "Наггетсы куриные", kcal: 290, protein: 15, fat: 18, carbs: 16, fiber: 0.8, portionG: 120 },
+  { name: "Чебурек", kcal: 265, protein: 8, fat: 15, carbs: 24, fiber: 1.1, portionG: 130 },
+  { name: "Беляш", kcal: 275, protein: 9, fat: 15, carbs: 26, fiber: 1.2, portionG: 110 },
+  { name: "Пирожок с картошкой", kcal: 250, protein: 5, fat: 10, carbs: 35, fiber: 1.7, portionG: 100 },
+  { name: "Хачапури", kcal: 285, protein: 12, fat: 15, carbs: 26, fiber: 1.1, portionG: 200 },
+  { name: "Суши-ролл с лососем", kcal: 165, protein: 7, fat: 4.5, carbs: 24, fiber: 0.6, portionG: 200 },
+  { name: "Роллы «Филадельфия»", kcal: 200, protein: 8, fat: 9, carbs: 22, fiber: 0.6, portionG: 200 },
+
+  // Выпечка и десерты
+  { name: "Круассан", kcal: 400, protein: 8, fat: 21, carbs: 45, fiber: 2, portionG: 60 },
+  { name: "Булочка с маком", kcal: 335, protein: 7.5, fat: 8, carbs: 57, fiber: 1.8, portionG: 80 },
+  { name: "Пончик", kcal: 380, protein: 6, fat: 19, carbs: 47, fiber: 1.5, portionG: 70 },
+  { name: "Кекс", kcal: 385, protein: 6, fat: 17, carbs: 52, fiber: 1.2, portionG: 80 },
+  { name: "Торт бисквитный с кремом", kcal: 350, protein: 4.5, fat: 17, carbs: 45, fiber: 0.8, portionG: 120 },
+  { name: "Чизкейк", kcal: 320, protein: 6, fat: 20, carbs: 28, fiber: 0.4, portionG: 120 },
+  { name: "Эклер", kcal: 330, protein: 6, fat: 20, carbs: 31, fiber: 0.5, portionG: 80 },
+  { name: "Печенье песочное", kcal: 460, protein: 6, fat: 22, carbs: 60, fiber: 1.6, portionG: 40 },
+  { name: "Вафли", kcal: 435, protein: 6, fat: 20, carbs: 58, fiber: 1.5, portionG: 40 },
+  { name: "Шоколад горький 70%", kcal: 545, protein: 8, fat: 36, carbs: 46, fiber: 10, portionG: 30 },
+  { name: "Мармелад", kcal: 305, protein: 0.4, fat: 0.1, carbs: 76, fiber: 0.5, portionG: 40 },
+  { name: "Пастила", kcal: 320, protein: 0.5, fat: 0.1, carbs: 79, fiber: 0.6, portionG: 40 },
+  { name: "Сгущёнка варёная", kcal: 320, protein: 7, fat: 8.5, carbs: 55, fiber: 0, portionG: 40 },
+  { name: "Творожный сырок глазированный", kcal: 400, protein: 8, fat: 23, carbs: 40, fiber: 0.5, portionG: 45 },
+  { name: "Батончик шоколадный", kcal: 480, protein: 6, fat: 24, carbs: 60, fiber: 1.5, portionG: 50 },
+  { name: "Протеиновый батончик", kcal: 350, protein: 30, fat: 10, carbs: 33, fiber: 4, portionG: 50 },
+  { name: "Чипсы картофельные", kcal: 525, protein: 6, fat: 32, carbs: 52, fiber: 4, portionG: 40 },
+  { name: "Сухарики ржаные", kcal: 385, protein: 11, fat: 5, carbs: 74, fiber: 4.5, portionG: 40 },
+  { name: "Попкорн солёный", kcal: 480, protein: 8, fat: 24, carbs: 58, fiber: 10, portionG: 40 },
+
+  // Молочное
+  { name: "Творог 2%", kcal: 95, protein: 18, fat: 2, carbs: 3.3, fiber: 0, portionG: 150 },
+  { name: "Кефир 2,5%", kcal: 53, protein: 2.9, fat: 2.5, carbs: 4, fiber: 0, portionG: 250 },
+  { name: "Йогурт питьевой", kcal: 70, protein: 2.8, fat: 1.6, carbs: 11.5, fiber: 0, portionG: 250 },
+  { name: "Йогурт натуральный без сахара", kcal: 60, protein: 4.2, fat: 3, carbs: 4.2, fiber: 0, portionG: 150 },
+  { name: "Молоко 3,2%", kcal: 60, protein: 2.9, fat: 3.2, carbs: 4.7, fiber: 0, portionG: 250 },
+  { name: "Молоко обезжиренное", kcal: 33, protein: 3, fat: 0.1, carbs: 4.8, fiber: 0, portionG: 250 },
+  { name: "Сметана 20%", kcal: 205, protein: 2.5, fat: 20, carbs: 3.4, fiber: 0, portionG: 30 },
+  { name: "Сливочный сыр", kcal: 260, protein: 6, fat: 24, carbs: 4.5, fiber: 0, portionG: 30 },
+  { name: "Сыр «Гауда»", kcal: 355, protein: 25, fat: 27, carbs: 2, fiber: 0, portionG: 30 },
+  { name: "Сыр «Пармезан»", kcal: 390, protein: 33, fat: 28, carbs: 1.5, fiber: 0, portionG: 20 },
+  { name: "Сыр «Адыгейский»", kcal: 240, protein: 19, fat: 18, carbs: 1.5, fiber: 0, portionG: 50 },
+  { name: "Творожная масса с изюмом", kcal: 340, protein: 7, fat: 21, carbs: 30, fiber: 0.4, portionG: 100 },
+  { name: "Айран", kcal: 30, protein: 1.7, fat: 1.5, carbs: 2.5, fiber: 0, portionG: 250 },
+  { name: "Простокваша", kcal: 58, protein: 2.9, fat: 3.2, carbs: 4.1, fiber: 0, portionG: 250 },
+
+  // Мясо, птица, рыба
+  { name: "Куриное филе жареное", kcal: 195, protein: 27, fat: 9, carbs: 1, fiber: 0, portionG: 150 },
+  { name: "Курица гриль с кожей", kcal: 235, protein: 24, fat: 15, carbs: 1, fiber: 0, portionG: 150 },
+  { name: "Индейка запечённая", kcal: 165, protein: 26, fat: 6, carbs: 0.5, fiber: 0, portionG: 150 },
+  { name: "Свинина тушёная", kcal: 230, protein: 17, fat: 17, carbs: 2, fiber: 0.1, portionG: 150 },
+  { name: "Баранина отварная", kcal: 265, protein: 22, fat: 19, carbs: 0, fiber: 0, portionG: 130 },
+  { name: "Печень куриная", kcal: 165, protein: 20, fat: 8, carbs: 2, fiber: 0, portionG: 120 },
+  { name: "Сердце куриное", kcal: 155, protein: 16, fat: 10, carbs: 0.8, fiber: 0, portionG: 120 },
+  { name: "Колбаса сырокопчёная", kcal: 460, protein: 20, fat: 42, carbs: 1, fiber: 0, portionG: 30 },
+  { name: "Карбонад", kcal: 240, protein: 16, fat: 19, carbs: 1, fiber: 0, portionG: 60 },
+  { name: "Сало солёное", kcal: 780, protein: 2, fat: 85, carbs: 0, fiber: 0, portionG: 20 },
+  { name: "Форель запечённая", kcal: 190, protein: 21, fat: 11, carbs: 0, fiber: 0, portionG: 150 },
+  { name: "Горбуша отварная", kcal: 160, protein: 22, fat: 8, carbs: 0, fiber: 0, portionG: 150 },
+  { name: "Сайра консервированная", kcal: 280, protein: 19, fat: 23, carbs: 0, fiber: 0, portionG: 80 },
+  { name: "Килька в томате", kcal: 155, protein: 13, fat: 8, carbs: 5, fiber: 0.4, portionG: 100 },
+  { name: "Кальмар отварной", kcal: 110, protein: 21, fat: 2.5, carbs: 0.5, fiber: 0, portionG: 120 },
+  { name: "Мидии отварные", kcal: 90, protein: 15, fat: 2.5, carbs: 3.5, fiber: 0, portionG: 120 },
+  { name: "Печень трески", kcal: 615, protein: 4, fat: 65, carbs: 1.2, fiber: 0, portionG: 30 },
+
+  // Крупы, гарниры, хлеб
+  { name: "Пшеничная каша на воде", kcal: 105, protein: 3.2, fat: 0.4, carbs: 22, fiber: 1.6, portionG: 200 },
+  { name: "Ячневая каша на воде", kcal: 96, protein: 2.5, fat: 0.4, carbs: 20, fiber: 2.2, portionG: 200 },
+  { name: "Полба отварная", kcal: 125, protein: 5.5, fat: 0.9, carbs: 24, fiber: 3.5, portionG: 200 },
+  { name: "Рис для суши", kcal: 130, protein: 2.4, fat: 0.3, carbs: 29, fiber: 0.5, portionG: 200 },
+  { name: "Лапша гречневая соба", kcal: 100, protein: 5, fat: 0.2, carbs: 20, fiber: 1.5, portionG: 200 },
+  { name: "Хлеб бородинский", kcal: 205, protein: 6.5, fat: 1.3, carbs: 40, fiber: 5.8, portionG: 35 },
+  { name: "Хлеб цельнозерновой", kcal: 230, protein: 9, fat: 3.5, carbs: 39, fiber: 6.5, portionG: 35 },
+  { name: "Багет", kcal: 265, protein: 8.5, fat: 1.5, carbs: 53, fiber: 2.5, portionG: 50 },
+  { name: "Тортилья пшеничная", kcal: 300, protein: 8, fat: 7, carbs: 50, fiber: 2.5, portionG: 60 },
+  { name: "Мюсли с орехами", kcal: 400, protein: 10, fat: 13, carbs: 60, fiber: 7, portionG: 50 },
+  { name: "Гранола", kcal: 430, protein: 9, fat: 15, carbs: 63, fiber: 6, portionG: 50 },
+  { name: "Каша быстрого приготовления с сахаром", kcal: 355, protein: 9, fat: 4, carbs: 70, fiber: 5, portionG: 40 },
+
+  // Овощи, фрукты, бобовые
+  { name: "Помидоры черри", kcal: 20, protein: 0.9, fat: 0.2, carbs: 3.5, fiber: 1.2, portionG: 100 },
+  { name: "Огурцы малосольные", kcal: 15, protein: 0.8, fat: 0.1, carbs: 2.2, fiber: 0.8, portionG: 100 },
+  { name: "Кабачки жареные", kcal: 90, protein: 1.2, fat: 6.5, carbs: 6.5, fiber: 1.2, portionG: 150 },
+  { name: "Морковь по-корейски", kcal: 130, protein: 1.2, fat: 9, carbs: 11, fiber: 2.5, portionG: 100 },
+  { name: "Свёкла запечённая", kcal: 50, protein: 1.7, fat: 0.2, carbs: 10, fiber: 2.6, portionG: 150 },
+  { name: "Спаржа", kcal: 22, protein: 2.2, fat: 0.1, carbs: 3, fiber: 2.1, portionG: 150 },
+  { name: "Стручковая фасоль", kcal: 30, protein: 1.8, fat: 0.2, carbs: 5, fiber: 2.6, portionG: 150 },
+  { name: "Брюссельская капуста", kcal: 43, protein: 3.4, fat: 0.3, carbs: 6, fiber: 3.8, portionG: 150 },
+  { name: "Сельдерей стеблевой", kcal: 14, protein: 0.7, fat: 0.2, carbs: 2.5, fiber: 1.6, portionG: 100 },
+  { name: "Батат запечённый", kcal: 100, protein: 2, fat: 0.2, carbs: 22, fiber: 3.3, portionG: 200 },
+  { name: "Кукуруза отварная", kcal: 105, protein: 3.5, fat: 1.5, carbs: 20, fiber: 2.5, portionG: 150 },
+  { name: "Маш отварной", kcal: 105, protein: 7, fat: 0.4, carbs: 18, fiber: 7.5, portionG: 150 },
+  { name: "Горох отварной", kcal: 115, protein: 8, fat: 0.5, carbs: 19, fiber: 6, portionG: 150 },
+  { name: "Соя отварная", kcal: 145, protein: 14, fat: 6, carbs: 8, fiber: 5, portionG: 100 },
+  { name: "Голубика", kcal: 45, protein: 0.7, fat: 0.3, carbs: 9, fiber: 2.4, portionG: 100 },
+  { name: "Крыжовник", kcal: 44, protein: 0.7, fat: 0.2, carbs: 9, fiber: 3.4, portionG: 100 },
+  { name: "Облепиха", kcal: 82, protein: 1.2, fat: 5.4, carbs: 5.5, fiber: 2, portionG: 50 },
+  { name: "Клюква", kcal: 46, protein: 0.4, fat: 0.1, carbs: 12, fiber: 4.6, portionG: 50 },
+  { name: "Кокос свежий", kcal: 354, protein: 3.3, fat: 33, carbs: 15, fiber: 9, portionG: 40 },
+  { name: "Инжир свежий", kcal: 74, protein: 0.7, fat: 0.3, carbs: 16, fiber: 2.9, portionG: 80 },
+
+  // Орехи и масла
+  { name: "Пекан", kcal: 691, protein: 9.2, fat: 72, carbs: 14, fiber: 9.6, portionG: 25 },
+  { name: "Бразильский орех", kcal: 656, protein: 14, fat: 66, carbs: 12, fiber: 7.5, portionG: 25 },
+  { name: "Семена льна", kcal: 534, protein: 18, fat: 42, carbs: 29, fiber: 27, portionG: 15 },
+  { name: "Семена тыквенные", kcal: 559, protein: 24, fat: 46, carbs: 15, fiber: 6, portionG: 25 },
+  { name: "Масло подсолнечное", kcal: 899, protein: 0, fat: 99.9, carbs: 0, fiber: 0, portionG: 10 },
+  { name: "Масло кокосовое", kcal: 890, protein: 0, fat: 99, carbs: 0, fiber: 0, portionG: 10 },
+  { name: "Паста кунжутная тахини", kcal: 595, protein: 17, fat: 54, carbs: 10, fiber: 9, portionG: 20 },
+
+  // Напитки
+  { name: "Кофе с молоком без сахара", kcal: 30, protein: 1.6, fat: 1.6, carbs: 2.4, fiber: 0, portionG: 200 },
+  { name: "Капучино без сахара", kcal: 40, protein: 2.2, fat: 2.1, carbs: 3.2, fiber: 0, portionG: 200 },
+  { name: "Латте без сахара", kcal: 48, protein: 2.7, fat: 2.5, carbs: 4, fiber: 0, portionG: 250 },
+  { name: "Какао на молоке", kcal: 70, protein: 3, fat: 2.8, carbs: 8.5, fiber: 0.4, portionG: 200 },
+  { name: "Чай с сахаром", kcal: 28, protein: 0, fat: 0, carbs: 7, fiber: 0, portionG: 200 },
+  { name: "Морс ягодный", kcal: 42, protein: 0.1, fat: 0, carbs: 10.4, fiber: 0.1, portionG: 250 },
+  { name: "Квас", kcal: 27, protein: 0.2, fat: 0, carbs: 6.5, fiber: 0, portionG: 250 },
+  { name: "Лимонад", kcal: 40, protein: 0, fat: 0, carbs: 10, fiber: 0, portionG: 250 },
+  { name: "Сок томатный", kcal: 20, protein: 1, fat: 0.1, carbs: 3.5, fiber: 0.5, portionG: 250 },
+  { name: "Пиво светлое", kcal: 43, protein: 0.5, fat: 0, carbs: 3.6, fiber: 0, portionG: 250, alcohol: 3.9 },
+  { name: "Вино сухое красное", kcal: 68, protein: 0.2, fat: 0, carbs: 2.6, fiber: 0, portionG: 150, alcohol: 8.6 },
+  { name: "Смузи фруктовый", kcal: 60, protein: 0.8, fat: 0.3, carbs: 13.5, fiber: 1.4, portionG: 250 },
+  { name: "Протеиновый коктейль на воде", kcal: 45, protein: 9, fat: 0.6, carbs: 1.2, fiber: 0.3, portionG: 300 },
 ];
 
 

@@ -8,7 +8,7 @@
  */
 
 import { barcodeRegion, formatBarcode, isStoreInternal, normalizeBarcode } from "./barcode.ts";
-import { findByBarcode, saveBarcode, type BarcodeProduct } from "./barcode-store.ts";
+import { findByBarcode, saveBarcode, searchBarcodesByName, type BarcodeProduct } from "./barcode-store.ts";
 
 export type LookupResponse =
   | { found: true; product: BarcodeProduct; pretty: string }
@@ -74,4 +74,15 @@ export async function saveBarcodeFromBody(body: SaveBody, userId: number) {
     portionG: Number(body.portionG ?? 0),
     userId,
   });
+}
+
+/**
+ * Поиск по названию — та же точка приёма, другой параметр.
+ *
+ * Отдельного адреса не заводим: и там и там речь об одном справочнике
+ * товаров, и два адреса с одинаковой авторизацией и одинаковыми правилами
+ * разошлись бы при первой же правке.
+ */
+export async function searchBarcodes(query: string): Promise<{ items: BarcodeProduct[] }> {
+  return { items: await searchBarcodesByName(query) };
 }

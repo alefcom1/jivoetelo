@@ -15,6 +15,7 @@ import { useState } from "react";
 import { searchFoodReference, type ReferenceFood } from "@/lib/food-reference";
 import { BarcodeScanner } from "../barcode-scanner";
 import { FoodIcon } from "../food-icon";
+import { productToItem, useProductSearch } from "../use-product-search";
 import { getWebApp, haptic } from "./telegram";
 
 /** Позиция в том виде, в каком её ждут оба экрана. */
@@ -61,6 +62,9 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
   const [error, setError] = useState<string | null>(null);
 
   const found = searchFoodReference(query);
+  // Товары, заведённые людьми по штрихкоду: справочник в бандле маленький и
+  // курируемый, растущая база живёт на сервере (app/use-product-search.ts).
+  const fromBase = useProductSearch(query, "/api/tg/barcode", { "x-telegram-init-data": getWebApp()?.initData ?? "" }, found.map((f) => f.name));
 
   function reset() {
     setOpen(false);
@@ -148,9 +152,29 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
       </li>)}
     </ul>}
 
+    {!manual && fromBase.length > 0 && <>
+      {/* Подпись обязательна: эти карточки завели люди, а не мы, и верить им
+          надо иначе, чем справочнику. */}
+      <p className="tg-hint tg-add-item-source">Из базы товаров — завели пользователи</p>
+      <ul className="tg-add-item-results">
+      {fromBase.map((item) => <li key={item.code}>
+        <button onClick={() => { haptic("success"); onAdd(productToItem(item)); reset(); }}>
+          <FoodIcon name={item.name} size="sm" />
+          <span className="tg-add-item-name">
+            {item.name}
+            {/* «Проверено людьми» — не украшение: карточку заводит кто угодно,
+                и число подтверждений говорит, насколько ей верить. */}
+            {item.confirmations > 0 && <i> · подтверждали {item.confirmations}</i>}
+          </span>
+          <span className="tg-add-item-kcal">{item.kcalPer100}<i> ккал/100 г</i></span>
+        </button>
+      </li>)}
+      </ul>
+    </>}
+
     {/* Пустой результат — не тупик: справочник намеренно небольшой, и путь
         дальше должен быть виден сразу, а не после второй попытки. */}
-    {!manual && query.trim().length >= 2 && found.length === 0 &&
+    {!manual && query.trim().length >= 2 && found.length === 0 && fromBase.length === 0 &&
       <p className="tg-hint">В справочнике этого нет. Введите числа с упаковки или опишите еду на вкладке «Камера» — там разберёт модель.</p>}
 
     {!manual

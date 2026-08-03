@@ -1,4 +1,4 @@
-import { BARCODE_ERRORS, lookupBarcode, saveBarcodeFromBody } from "@/lib/barcode-api";
+import { BARCODE_ERRORS, lookupBarcode, saveBarcodeFromBody, searchBarcodes } from "@/lib/barcode-api";
 import { confirmBarcode } from "@/lib/barcode-store";
 import { authorize } from "../_auth";
 
@@ -10,7 +10,12 @@ export async function GET(request: Request) {
   const auth = await authorize(request);
   if ("response" in auth) return auth.response;
 
-  const code = new URL(request.url).searchParams.get("code") ?? "";
+  const params = new URL(request.url).searchParams;
+  // Поиск по названию: та же точка приёма, другой параметр.
+  const query = params.get("q");
+  if (query !== null) return Response.json(await searchBarcodes(query));
+
+  const code = params.get("code") ?? "";
   const result = await lookupBarcode(code);
   if (!result) return Response.json({ error: BARCODE_ERRORS.invalid_code }, { status: 400 });
   return Response.json(result);

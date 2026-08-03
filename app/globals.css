@@ -413,3 +413,6 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
 /* Кнопка входа в сканер рядом с поиском по справочнику. */
 .add-food-scan{align-self:flex-start;min-height:40px;padding:10px 16px;border:1px solid var(--line);border-radius:999px;background:transparent;font-size:13px;font-weight:700}
 .add-food-scan:hover{border-color:var(--black)}
+/* Подпись над подсказками из базы товаров: эти карточки завели люди, и
+   отличать их от курируемого справочника человек должен глазами. */
+.add-food-source{margin:2px 0 -4px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
