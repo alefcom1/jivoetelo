@@ -14,6 +14,7 @@
 
 import { useState } from "react";
 import { searchFoodReference, type ReferenceFood } from "@/lib/food-reference";
+import { BarcodeScanner } from "../barcode-scanner";
 import { FoodIcon } from "../food-icon";
 
 /** Позиция в том виде, в каком её ждут оба экрана кабинета. */
@@ -56,6 +57,7 @@ export function AddFoodItem({ onAdd }: { onAdd: (item: NewFoodItem) => void }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [manual, setManual] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +66,7 @@ export function AddFoodItem({ onAdd }: { onAdd: (item: NewFoodItem) => void }) {
   function reset() {
     setOpen(false);
     setManual(false);
+    setScanning(false);
     setQuery("");
     setError(null);
     setForm(EMPTY_FORM);
@@ -99,11 +102,25 @@ export function AddFoodItem({ onAdd }: { onAdd: (item: NewFoodItem) => void }) {
     </button>;
   }
 
+  if (scanning) {
+    return <BarcodeScanner
+      endpoint="/api/barcode"
+      onItem={(item) => { onAdd(item); reset(); }}
+      onClose={() => setScanning(false)}
+    />;
+  }
+
   return <section className="add-food">
     <div className="add-food-head">
       <strong>Добавить позицию</strong>
       <button className="draft-remove" type="button" aria-label="Закрыть" onClick={reset}>×</button>
     </div>
+
+    {/* Штрихкод первым: у упакованного продукта это самый точный путь из
+        всех — числа с этикетки, а не оценка по названию. */}
+    <button className="add-food-scan" type="button" onClick={() => setScanning(true)}>
+      Сканировать штрихкод
+    </button>
 
     <input
       className="add-food-search"

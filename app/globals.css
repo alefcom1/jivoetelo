@@ -380,3 +380,36 @@ label.consent input{width:15px;height:15px;margin:1px 0 0;padding:0;border:0;fle
 /* Мигание — единственная анимация на форме, и тем, кому движение мешает, она
    не нужна: точка и без неё остаётся видимой. */
 @media(prefers-reduced-motion:reduce){.voice-dot{animation:none}}
+
+/* Сканер штрихкодов (app/barcode-scanner.tsx) — общий компонент веба и
+   Mini App, поэтому и стили здесь, в globals.css: он подключён в обоих
+   клиентах. Цвета берутся из переменных, а фон и текст наследуются, — внутри
+   .tg-root это даёт тему Telegram без второй копии правил. */
+.scanner{display:flex;flex-direction:column;gap:12px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--white)}
+.scanner-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.scanner-head strong{font-size:15px;font-weight:700}
+.scanner-close{width:36px;height:36px;flex:none;border:0;background:transparent;font-size:22px;line-height:1;color:var(--muted)}
+/* 4:3 — кадр, в котором полоски занимают заметную часть ширины. В квадрате
+   человек подносит пачку целиком, и код оказывается слишком мелким. */
+.scanner-view{position:relative;aspect-ratio:4/3;border-radius:10px;overflow:hidden;background:#111}
+.scanner-view video{display:block;width:100%;height:100%;object-fit:cover}
+.scanner-frame{position:absolute;left:8%;right:8%;top:32%;bottom:32%;border:2px solid rgba(255,255,255,.85);border-radius:8px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35)}
+.scanner-code{margin:0;font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.scanner-name{margin:0;font:500 22px var(--serif);letter-spacing:-.03em}
+.scanner-macros{margin:0;font-size:13px;line-height:1.5}
+.scanner-note{margin:0;font-size:13px;line-height:1.55;color:var(--muted)}
+.scanner-error{margin:0;color:#b95353;font-size:13px;line-height:1.5}
+.scanner-form{display:flex;flex-direction:column;gap:10px}
+.scanner-form label,.scanner-manual label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;color:var(--muted)}
+.scanner-form input,.scanner-manual input{padding:11px;border:1px solid var(--line);border-radius:6px;background:var(--white);color:inherit;font-size:15px}
+.scanner-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.scanner-manual{display:flex;align-items:flex-end;gap:10px}
+.scanner-manual label{flex:1;min-width:0}
+.scanner-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.scanner-primary{min-height:44px;padding:12px 18px;border:0;border-radius:6px;background:var(--black);color:#fff;font-size:13px;font-weight:800}
+.scanner-primary:disabled{opacity:.5}
+.scanner-secondary{min-height:44px;padding:12px 16px;border:1px solid var(--line);border-radius:6px;background:transparent;color:inherit;font-size:13px;font-weight:700}
+.scanner-secondary:disabled{opacity:.5}
+/* Кнопка входа в сканер рядом с поиском по справочнику. */
+.add-food-scan{align-self:flex-start;min-height:40px;padding:10px 16px;border:1px solid var(--line);border-radius:999px;background:transparent;font-size:13px;font-weight:700}
+.add-food-scan:hover{border-color:var(--black)}

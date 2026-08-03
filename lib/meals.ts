@@ -7,7 +7,7 @@ import { mealItems, meals, profiles } from "@/db/schema";
 import type { DiaryItemRow, DiaryMealRow } from "./diary.ts";
 import { dishKey } from "./dish-key.ts";
 import type { PastMeal } from "./frequent-meals.ts";
-import { sumTotals, type NutritionTotals } from "./nutrition.ts";
+import { clampPer100, sumTotals, type NutritionTotals } from "./nutrition.ts";
 import type { PaceKey } from "./pace.ts";
 import { deletePhoto } from "./storage.ts";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
@@ -138,11 +138,11 @@ export function normalizeMealItems(rawItems: unknown): SaveMealItem[] {
       return {
         name: String(item.name ?? "").trim().slice(0, 120),
         grams: clamp(item.grams, 1, 3000),
-        kcalPer100: clamp(item.kcalPer100, 0, 900),
-        proteinPer100: clamp(item.proteinPer100, 0, 100),
-        fatPer100: clamp(item.fatPer100, 0, 100),
-        carbsPer100: clamp(item.carbsPer100, 0, 100),
-        fiberPer100: clamp(item.fiberPer100, 0, 50),
+        kcalPer100: clampPer100("kcal", item.kcalPer100),
+        proteinPer100: clampPer100("protein", item.proteinPer100),
+        fatPer100: clampPer100("fat", item.fatPer100),
+        carbsPer100: clampPer100("carbs", item.carbsPer100),
+        fiberPer100: clampPer100("fiber", item.fiberPer100),
         confidence: ["high", "medium", "low"].includes(String(item.confidence)) ? String(item.confidence) : "medium",
       };
     })

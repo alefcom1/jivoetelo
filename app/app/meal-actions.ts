@@ -9,6 +9,7 @@ import { ANALYSIS_ERRORS, getMealProvider, MealAnalysisError, type MealAnalysis 
 import { getCurrentUser } from "@/lib/auth";
 import { getPendingItem, markProcessed } from "@/lib/inbox";
 import { normalizeMealItems, replaceMealItemsForUser, withDishKeys } from "@/lib/meals";
+import { clampPer100 } from "@/lib/nutrition";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import {
   ALLOWED_PHOTO_TYPES,
@@ -155,11 +156,11 @@ export async function saveMeal(input: SaveMealInput): Promise<{ ok: false; error
     .map((item) => ({
       name: String(item.name ?? "").trim().slice(0, 120),
       grams: clamp(item.grams, 1, 3000),
-      kcalPer100: clamp(item.kcalPer100, 0, 900),
-      proteinPer100: clamp(item.proteinPer100, 0, 100),
-      fatPer100: clamp(item.fatPer100, 0, 100),
-      carbsPer100: clamp(item.carbsPer100, 0, 100),
-      fiberPer100: clamp(item.fiberPer100, 0, 50),
+      kcalPer100: clampPer100("kcal", item.kcalPer100),
+      proteinPer100: clampPer100("protein", item.proteinPer100),
+      fatPer100: clampPer100("fat", item.fatPer100),
+      carbsPer100: clampPer100("carbs", item.carbsPer100),
+      fiberPer100: clampPer100("fiber", item.fiberPer100),
       confidence: ["high", "medium", "low"].includes(item.confidence) ? item.confidence : "medium",
     }))
     .filter((item) => item.name.length > 0)

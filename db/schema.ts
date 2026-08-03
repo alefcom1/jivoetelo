@@ -158,7 +158,7 @@ export const aiUsage = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     onDate: date("on_date").notNull(),
-    kind: text("kind").notNull(), // analyze_photo | analyze_text | suggest
+    kind: text("kind").notNull(), // analyze_photo | analyze_text | suggest | transcribe
     inputTokens: integer("input_tokens").notNull().default(0),
     outputTokens: integer("output_tokens").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -563,4 +563,40 @@ export const reportDeliveries = pgTable(
     uniqueIndex("report_deliveries_once").on(table.userId, table.kind, table.periodEnd, table.channel),
     index("report_deliveries_due").on(table.sentAt, table.createdAt),
   ],
+);
+
+/**
+ * Своя база штрихкодов.
+ *
+ * Единой открытой базы штрихкодов российских продуктов с составом не
+ * существует, поэтому база собирается из того, что вводят люди: отсканировал,
+ * не нашлось, ввёл КБЖУ с упаковки — и следующий, кто отсканирует ту же
+ * пачку, получит её сразу.
+ *
+ * Ключ — сам код, без суррогатного id: товар с этим кодом ровно один, и
+ * второй ключ позволил бы завести его дважды.
+ */
+export const barcodes = pgTable(
+  "barcodes",
+  {
+    code: text("code").primaryKey(),
+    name: text("name").notNull(),
+    kcalPer100: doublePrecision("kcal_per_100").notNull().default(0),
+    proteinPer100: doublePrecision("protein_per_100").notNull().default(0),
+    fatPer100: doublePrecision("fat_per_100").notNull().default(0),
+    carbsPer100: doublePrecision("carbs_per_100").notNull().default(0),
+    fiberPer100: doublePrecision("fiber_per_100").notNull().default(0),
+    /** Вес пачки. Ноль — «не знаем», тогда подставляем сто грамм. */
+    portionG: doublePrecision("portion_g").notNull().default(0),
+    /** Кто завёл. Человек уходит — товар остаётся: он принадлежит не ему. */
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    /**
+     * Сколько раз карточку подтвердили, сохранив по ней еду без правки чисел.
+     * Ноль отличает проверенную запись от заведённой однажды и наугад.
+     */
+    confirmations: integer("confirmations").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("barcodes_name").on(table.name)],
 );

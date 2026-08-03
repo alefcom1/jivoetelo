@@ -886,3 +886,30 @@
 /* Мигание — единственная анимация на экране, и для тех, кому движение мешает,
    она не нужна: точка и без неё остаётся видимой. */
 @media (prefers-reduced-motion: reduce) { .tg-voice-dot { animation: none; } }
+
+/* Сканер штрихкодов: сам компонент общий с вебом (app/barcode-scanner.tsx),
+   его стили — в globals.css. Здесь только то, что должно взять тему
+   Telegram вместо бумажной палитры лендинга. */
+.tg-root .scanner {
+  background: var(--tg-surface); border-color: color-mix(in srgb, var(--tg-hint) 22%, transparent);
+  color: var(--tg-text); border-radius: var(--radius);
+}
+.tg-root .scanner-close,
+.tg-root .scanner-code,
+.tg-root .scanner-note { color: var(--tg-hint); }
+.tg-root .scanner-name { font-family: var(--brand-serif); }
+.tg-root .scanner-form input,
+.tg-root .scanner-manual input {
+  background: var(--tg-bg); color: var(--tg-text);
+  border-color: color-mix(in srgb, var(--tg-hint) 30%, transparent);
+}
+.tg-root .scanner-form label,
+.tg-root .scanner-manual label { color: var(--tg-hint); }
+.tg-root .scanner-primary { background: var(--tg-button); color: var(--tg-button-text); border-radius: var(--radius); }
+.tg-root .scanner-secondary {
+  color: var(--tg-text); border-radius: var(--radius);
+  border-color: color-mix(in srgb, var(--tg-hint) 30%, transparent);
+}
+/* Вход в сканер на экране «Добавить позицию»: рядом с поиском, но тише
+   основного действия — сюда приходят и за продуктом без штрихкода. */
+.tg-scan-open { align-self: flex-start; min-height: 40px; padding: 10px 16px; font-size: 13px; }

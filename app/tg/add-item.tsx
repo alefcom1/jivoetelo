@@ -13,8 +13,9 @@
 
 import { useState } from "react";
 import { searchFoodReference, type ReferenceFood } from "@/lib/food-reference";
+import { BarcodeScanner } from "../barcode-scanner";
 import { FoodIcon } from "../food-icon";
-import { haptic } from "./telegram";
+import { getWebApp, haptic } from "./telegram";
 
 /** Позиция в том виде, в каком её ждут оба экрана. */
 export type NewItem = {
@@ -55,6 +56,7 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [manual, setManual] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [form, setForm] = useState({ name: "", grams: "100", kcal: "", protein: "", fat: "", carbs: "", fiber: "" });
   const [error, setError] = useState<string | null>(null);
 
@@ -63,6 +65,7 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
   function reset() {
     setOpen(false);
     setManual(false);
+    setScanning(false);
     setQuery("");
     setError(null);
     setForm({ name: "", grams: "100", kcal: "", protein: "", fat: "", carbs: "", fiber: "" });
@@ -105,11 +108,26 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
     </button>;
   }
 
+  if (scanning) {
+    return <BarcodeScanner
+      endpoint="/api/tg/barcode"
+      headers={{ "x-telegram-init-data": getWebApp()?.initData ?? "" }}
+      onItem={(item) => { haptic("success"); onAdd(item); reset(); }}
+      onClose={() => setScanning(false)}
+    />;
+  }
+
   return <section className="tg-card tg-add-item">
     <div className="tg-add-item-head">
       <h3>Добавить позицию</h3>
       <button className="tg-remove" aria-label="Закрыть" onClick={reset}>×</button>
     </div>
+
+    {/* Штрихкод первым: у упакованного продукта это самый точный путь из
+        всех — числа с этикетки, а не оценка по названию. */}
+    <button className="tg-button tg-scan-open" onClick={() => { haptic("tap"); setScanning(true); }}>
+      Сканировать штрихкод
+    </button>
 
     <input
       className="tg-input"
