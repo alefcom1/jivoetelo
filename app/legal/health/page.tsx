@@ -6,6 +6,7 @@ import { formatLegalDate, LegalMeta, LegalNav } from "../nav";
 export const metadata: Metadata = {
   title: "Медицинский дисклеймер — Живое Тело",
   description: "Почему «Живое Тело» не медицинское изделие, где границы сервиса и в каких случаях нужно к врачу.",
+  alternates: { canonical: "/legal/health" },
 };
 
 export default function HealthDisclaimerPage() {

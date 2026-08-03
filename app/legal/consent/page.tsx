@@ -7,6 +7,7 @@ import { formatLegalDate, LegalMeta, LegalNav } from "../nav";
 export const metadata: Metadata = {
   title: "Согласие на обработку персональных данных — Живое Тело",
   description: "Текст согласия, которое пользователь даёт при регистрации в сервисе «Живое Тело».",
+  alternates: { canonical: "/legal/consent" },
 };
 
 export const dynamic = "force-dynamic";

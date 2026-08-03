@@ -6,6 +6,7 @@ import { formatLegalDate, LegalMeta, LegalNav } from "../nav";
 export const metadata: Metadata = {
   title: "Файлы cookie — Живое Тело",
   description: "Какие cookie использует «Живое Тело», что собирает счётчик посещаемости и как от него отказаться.",
+  alternates: { canonical: "/legal/cookies" },
 };
 
 export default function CookiesPage() {
