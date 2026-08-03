@@ -1,0 +1,33 @@
+# Наложение поверх основного docker-compose.yml:
+#   docker compose -f docker-compose.yml -f deploy/speech/compose.yml up -d
+#
+# Отдельным файлом, а не сервисом в основном: без него сайт поднимается как
+# раньше, и включение распознавания остаётся осознанным действием.
+#
+# Порт наружу не публикуется намеренно — сервис нужен только приложению.
+services:
+  speech:
+    build: .
+    restart: unless-stopped
+    environment:
+      SPEECH_TOKEN: ${SPEECH_TOKEN:-}
+      GIGAAM_MODEL: ${GIGAAM_MODEL:-v2_rnnt}
+    volumes:
+      - speech-models:/models
+    # Считайте этот лимит до включения: на сервере около 4 ГБ, из них 384 МБ
+    # базе и 512 МБ приложению, и он общий с техперевода
+    # (docs/shared-infra.md). Полутора гигабайт может не оказаться.
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:8081/')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  speech-models:

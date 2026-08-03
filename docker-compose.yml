@@ -42,16 +42,32 @@ services:
       UPLOADS_DIR: /app/data/uploads
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}
+      # Модель под каждую операцию отдельно (docs/ai-proxy.md). Умолчания
+      # разумны, но без проброса переопределить их на сервере было нечем.
+      ANTHROPIC_MODEL_VISION: ${ANTHROPIC_MODEL_VISION:-}
+      ANTHROPIC_MODEL_TEXT: ${ANTHROPIC_MODEL_TEXT:-}
+      ANTHROPIC_MODEL_SUGGEST: ${ANTHROPIC_MODEL_SUGGEST:-}
       AI_PROVIDER: ${AI_PROVIDER:-}
       ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-}
       ANTHROPIC_AUTH_TOKEN: ${ANTHROPIC_AUTH_TOKEN:-}
       AI_DAILY_BUDGET_USD: ${AI_DAILY_BUDGET_USD:-}
+      # Расшифровка голосовых (lib/speech). Пусто — бот честно отвечает
+      # «не расшифровываю», кнопки записи нет, остальное работает как обычно.
+      SPEECH_URL: ${SPEECH_URL:-}
+      SPEECH_TOKEN: ${SPEECH_TOKEN:-}
+      SPEECH_PROVIDER: ${SPEECH_PROVIDER:-}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      # Без него кнопки «Войти через Telegram» нет вовсе — а задавали её в
+      # .env и не понимали, почему не появляется.
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       TELEGRAM_MINIAPP_URL: ${TELEGRAM_MINIAPP_URL:-}
       TELEGRAM_API_BASE: ${TELEGRAM_API_BASE:-}
       TELEGRAM_API_AUTH: ${TELEGRAM_API_AUTH:-}
       SITE_URL: ${SITE_URL:-https://jivoetelo.ru}
+      # Пусто — ключ генерируется случайно при старте; задавать нужно только
+      # при нескольких экземплярах приложения.
+      PHOTO_LINK_SECRET: ${PHOTO_LINK_SECRET:-}
       # Почтовая серия (docs/email-series.md). Без SMTP_* письма печатаются
       # в лог и никуда не уходят — так задумано для первого запуска.
       SMTP_HOST: ${SMTP_HOST:-}
@@ -71,6 +87,12 @@ services:
       LEGAL_OPERATOR_OGRN: ${LEGAL_OPERATOR_OGRN:-}
       LEGAL_OPERATOR_ADDRESS: ${LEGAL_OPERATOR_ADDRESS:-}
       LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:-}
+      # Поставщик почты для таблицы получателей в политике. Заполнить до
+      # того, как включатся отчёты: они несут сведения о питании и вес.
+      LEGAL_MAIL_PROVIDER: ${LEGAL_MAIL_PROVIDER:-}
+      LEGAL_MAIL_PROVIDER_COUNTRY: ${LEGAL_MAIL_PROVIDER_COUNTRY:-}
+      # Без него /admin отвечает 404 всем без исключения.
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       # Потолок кучи: при утечке или всплеске на разборе фото процесс упрётся
       # в свой лимит и перезапустится, а не утащит за собой базу.
       NODE_OPTIONS: --max-old-space-size=384
