@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { parseQueue, slugify } from "../scripts/content-queue.mjs";
+import { parseQueue, pickBatch, slugify } from "../scripts/content-queue.mjs";
 
 const REAL_QUEUE = readFileSync(new URL("../docs/seo-pipeline.md", import.meta.url), "utf8");
 
@@ -71,19 +71,124 @@ test("slug состоит только из латиницы, цифр и деф
   }
 });
 
-test("настоящая очередь читается и не пуста", () => {
+test("затвор «ЖДЁТ РАЗДЕЛА» закрывает раздел целиком", () => {
+  // Тексты писать уже можно, а класть их некуда: страниц глоссария в коде
+  // нет. Без затвора конвейер каждую ночь тратил бы треть работы на отчёт
+  // «раздела нет» — пустой прогон, который выглядит как работа.
+  const queue = parseQueue(`
+### Блюда — вторая волна
+
+- [ ] Омлет
+
+### Глоссарий
+
+> ЖДЁТ РАЗДЕЛА: страниц глоссария в коде нет.
+
+- [ ] Что такое TDEE
+- [ ] Что такое дефицит энергии
+`);
+
+  assert.deepEqual(queue.map((i) => i.title), ["Омлет"]);
+});
+
+test("затвор действует только до следующего заголовка", () => {
+  // Иначе одна строка тихо закрыла бы весь остаток документа, и заметить это
+  // было бы нечем: очередь просто стала бы короче.
+  const queue = parseQueue(`
+### Глоссарий
+
+> ЖДЁТ РАЗДЕЛА: раздела нет.
+
+- [ ] Что такое TDEE
+
+### Блюда — вторая волна
+
+- [ ] Омлет
+`);
+
+  assert.deepEqual(queue.map((i) => i.title), ["Омлет"]);
+});
+
+test("за ночь берутся позиции разных видов, а не три подряд", () => {
+  // Три текста одного вида за один присест — это три одинаковых текста.
+  // Порядок очереди задан частотностью, поэтому первая позиция берётся
+  // строго сверху, а дальше предпочитается другой вид.
+  const queue = parseQueue(`
+### Блюда — вторая волна
+
+- [ ] Омлет
+- [ ] Шашлык
+- [ ] Хачапури
+
+### Каталог продуктов
+
+- [ ] Морковь
+`);
+
+  const batch = pickBatch(queue, 3);
+  assert.equal(batch[0].title, "Омлет", "первая позиция берётся строго сверху");
+  assert.deepEqual(batch.map((i) => i.kind), ["dish", "product", "dish"]);
+});
+
+test("когда вид один, берутся однородные — очередь важнее непохожести", () => {
+  const queue = parseQueue(`
+### Блюда — вторая волна
+
+- [ ] Омлет
+- [ ] Шашлык
+- [ ] Хачапури
+`);
+
+  assert.deepEqual(pickBatch(queue, 3).map((i) => i.title), ["Омлет", "Шашлык", "Хачапури"]);
+});
+
+test("позиция с неслитой веткой не берётся заново", () => {
+  // Иначе простой утренней проверки превращается в повторную работу:
+  // конвейер каждую ночь брал бы одну и ту же непроверенную верхушку.
+  const queue = parseQueue(`
+### Блюда — вторая волна
+
+- [ ] Омлет
+- [ ] Шашлык
+`);
+
+  const batch = pickBatch(queue, 2, new Set(["omlet"]));
+  assert.deepEqual(batch.map((i) => i.title), ["Шашлык"]);
+});
+
+test("выборка не переполняется, когда очередь короче запроса", () => {
+  const queue = parseQueue("\n### Блюда — вторая волна\n\n- [ ] Омлет\n");
+  assert.equal(pickBatch(queue, 3).length, 1);
+  assert.equal(pickBatch(queue, 3, new Set(["omlet"])).length, 0);
+});
+
+test("настоящая очередь читается и рассчитана на тридцать ночей", () => {
   // Защита от того, что кто-то поправит разметку документа так, что скрипт
   // перестанет её понимать, — и ночной конвейер молча начнёт видеть пустую
-  // очередь вместо двадцати с лишним позиций.
-  const queue = parseQueue(REAL_QUEUE);
-  assert.ok(queue.length > 10, `в очереди ${queue.length} позиций — похоже, разметка изменилась`);
+  // очередь вместо девяноста позиций.
+  const all = parseQueue(REAL_QUEUE.replace(/^>\s*ЖДЁТ РАЗДЕЛА:.*$/gm, ""));
+  assert.equal(all.length, 90, `в очереди ${all.length} позиций, а план был на 90`);
 
-  const kinds = new Set(queue.map((i) => i.kind));
-  assert.ok(kinds.has("dish"), "блюда не распознались");
-  assert.ok(kinds.has("glossary"), "глоссарий не распознался");
+  // Разделы очереди обязаны быть известны скрипту: незнакомый он молча
+  // пропускает, и раздел, видный человеку, для конвейера не существует.
+  const kinds = new Set(all.map((i) => i.kind));
+  assert.deepEqual([...kinds].sort(), ["calculator", "dish", "glossary", "methodology", "product"]);
 
-  for (const item of queue) {
+  for (const item of all) {
     assert.ok(item.slug.length > 0, `пустой slug у «${item.title}»`);
     assert.doesNotMatch(item.title, /НЕ брать/i, `взята запрещённая позиция: ${item.title}`);
   }
+
+  // Слаги — это имена веток. Совпадение означало бы, что две ночи пишут в
+  // одну ветку и вторая затирает первую.
+  assert.equal(new Set(all.map((i) => i.slug)).size, all.length, "слаги повторяются");
+});
+
+test("сегодня конвейеру доступно то, чему есть куда лечь", () => {
+  // Открыты блюда и продукты каталога; глоссарий, методология и
+  // калькуляторы ждут своих разделов в коде. Если это соотношение
+  // изменилось — значит, затвор сняли, и раздел должен быть построен.
+  const open = parseQueue(REAL_QUEUE);
+  assert.deepEqual([...new Set(open.map((i) => i.kind))].sort(), ["dish", "product"]);
+  assert.equal(open.length, 64);
 });

@@ -1,27 +1,32 @@
 name: Ночной конвейер контента
 
-# Берёт одну позицию из очереди `docs/seo-pipeline.md`, поручает её агенту и
-# кладёт результат в отдельную ветку. Ничего не публикует.
+# Берёт три позиции из очереди `docs/seo-pipeline.md`, поручает каждую своему
+# агенту и кладёт результаты в три отдельные ветки. Ничего не публикует.
 #
 # Почему ветка, а не пуш в main. Агент пишет числа. Ошибка в калорийности —
 # это не опечатка, а неверные данные на сервисе о питании, которые попадут в
 # выдачу и будут там жить. Автопубликация экономит десять минут проверки и
 # создаёт риск, который стоит несопоставимо дороже (`docs/seo-pipeline.md`).
 #
-# Почему одна позиция за ночь. Пять текстов, написанных за один присест, —
-# это пять одинаковых текстов. И утренняя проверка тоже имеет пропускную
-# способность, причём она у человека.
+# Почему три и почему разных. Три текста одного вида за одну ночь — это три
+# одинаковых текста, и снимается это не темпом, а составом: скрипт очереди
+# предпочитает позиции разных разделов. Разбор целиком — в
+# `docs/seo-pipeline.md`, там же честно сказано, где приём не срабатывает.
+#
+# Почему три ветки, а не одна на три текста. Утром одну из трёх могут
+# завернуть. Из общей ветки её пришлось бы выковыривать, три отдельные —
+# просто три независимых решения.
 on:
-  # 03:20 UTC — раннее утро по Москве: к началу рабочего дня ветка готова.
-  # Не ровно в час: в :00 в очередь GitHub встаёт половина мира, и запуск
-  # сдвигается непредсказуемо.
+  # 21:00 UTC — полночь по Москве. GitHub запускает расписания в :00 с
+  # задержкой в десяток минут: половина мира ставит их на ровный час. Для
+  # ночного конвейера это ничего не меняет, а просьба была про полночь.
   schedule:
-    - cron: "20 3 * * *"
+    - cron: "0 21 * * *"
   # Кнопкой — чтобы можно было прогнать проверку, не дожидаясь ночи.
   workflow_dispatch:
 
-# Два конвейера одновременно взяли бы одну и ту же первую позицию очереди и
-# сделали бы работу дважды.
+# Два конвейера одновременно взяли бы одни и те же позиции очереди и сделали
+# бы работу дважды.
 concurrency:
   group: content-pipeline
   cancel-in-progress: false
@@ -30,9 +35,62 @@ permissions:
   contents: write
 
 jobs:
+  # Выбор отделён от работы: матрица ниже строится из его результата, а
+  # GitHub умеет разворачивать матрицу только из уже посчитанного выхода.
+  pick:
+    runs-on: ubuntu-latest
+    outputs:
+      items: ${{ steps.pick.outputs.items }}
+      empty: ${{ steps.pick.outputs.empty }}
+    steps:
+      - name: Забрать код
+        uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Позиции, у которых уже есть ветка, заняты: их черновик ждёт утренней
+      # проверки. Без этого простой проверки превращается в повторную
+      # работу — конвейер каждую ночь брал бы одну и ту же верхушку очереди.
+      - name: Что уже в работе
+        id: busy
+        run: |
+          SLUGS=$(git ls-remote --heads origin "content/*" \
+            | sed 's#.*refs/heads/content/[0-9-]*-##' \
+            | paste -sd, -)
+          echo "Заняты ветками: ${SLUGS:-(ничего)}"
+          echo "slugs=$SLUGS" >> "$GITHUB_OUTPUT"
+
+      - name: Выбрать позиции
+        id: pick
+        run: |
+          OUT=$(node scripts/content-queue.mjs --take 3 --busy "${{ steps.busy.outputs.slugs }}")
+          echo "$OUT" | node -e "
+            let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{
+              const j=JSON.parse(d);
+              if (j.empty) {
+                console.error('Брать нечего: в очереди', j.remaining, ', занято ветками', j.busy, '. Это не ошибка.');
+              } else {
+                for (const i of j.items) console.error('Берём:', i.title, '('+i.kind+')');
+                console.error('Осталось в очереди:', j.remaining);
+              }
+            })"
+          echo "empty=$(echo "$OUT" | node -pe "JSON.parse(require('fs').readFileSync(0)).empty")" >> "$GITHUB_OUTPUT"
+          echo "items=$(echo "$OUT" | node -pe "JSON.stringify(JSON.parse(require('fs').readFileSync(0)).items)")" >> "$GITHUB_OUTPUT"
+
   write:
+    needs: pick
+    if: needs.pick.outputs.empty == 'false'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      # Один упавший агент не должен уносить двух остальных: их черновики
+      # самостоятельны и утром пригодятся независимо от третьего.
+      fail-fast: false
+      matrix:
+        item: ${{ fromJSON(needs.pick.outputs.items) }}
     steps:
       - name: Забрать код
         uses: actions/checkout@v4
@@ -56,32 +114,16 @@ jobs:
             exit 1
           fi
 
-      - name: Выбрать позицию очереди
-        id: pick
-        run: |
-          ITEM=$(node scripts/content-queue.mjs)
-          echo "item=$ITEM" >> "$GITHUB_OUTPUT"
-          EMPTY=$(echo "$ITEM" | node -e "process.stdin.on('data',d=>console.log(JSON.parse(d).empty))")
-          echo "empty=$EMPTY" >> "$GITHUB_OUTPUT"
-          if [ "$EMPTY" = "true" ]; then
-            echo "Очередь пуста — всё написано. Это не ошибка."
-          else
-            echo "$ITEM" | node -e "process.stdin.on('data',d=>{const i=JSON.parse(d);console.log('Берём:',i.title,'('+i.kind+'), осталось',i.remaining)})"
-          fi
-
       - name: Ветка под работу
-        if: steps.pick.outputs.empty == 'false'
         id: branch
         run: |
-          SLUG=$(echo '${{ steps.pick.outputs.item }}' | node -e "process.stdin.on('data',d=>process.stdout.write(JSON.parse(d).slug))")
-          BRANCH="content/$(date -u +%Y-%m-%d)-$SLUG"
+          BRANCH="content/$(date -u +%Y-%m-%d)-${{ matrix.item.slug }}"
           git config user.name "Ночной конвейер"
           git config user.email "noreply@jivoetelo.ru"
           git checkout -b "$BRANCH"
           echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
 
       - name: Написать
-        if: steps.pick.outputs.empty == 'false'
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -89,9 +131,14 @@ jobs:
             Ты — ночной агент контента «Живого Тела». Тебе досталась ровно
             одна позиция очереди:
 
-            ${{ steps.pick.outputs.item }}
+            ${{ toJSON(matrix.item) }}
 
-            Прочитай `docs/seo-pipeline.md` целиком и соблюдай все восемь
+            Этой же ночью параллельно работают ещё два агента над другими
+            позициями. Их строк в очереди не трогай и их файлов не касайся —
+            иначе три ветки, каждая из которых по отдельности правильная,
+            перестанут сливаться друг с другом.
+
+            Прочитай `docs/seo-pipeline.md` целиком и соблюдай все девять
             правил оттуда — они не про стиль, а про то, из-за чего страницу
             пришлось бы снимать. Особенно: диапазон вместо точки, сходимость
             калорийности с БЖУ по Атуотеру, никаких медицинских утверждений,
@@ -101,26 +148,34 @@ jobs:
             образец тона — он задан существующими страницами, а не описан
             словами.
 
-            Для блюда: добавь запись в `lib/dishes.ts`. Ничего существующего
-            не трогай, только добавление. Посчитай числа сам, не надейся на
-            тест.
+            Для блюда (kind = dish): добавь запись в `lib/dishes.ts`. Ничего
+            существующего не трогай, только добавление. Посчитай числа сам,
+            не надейся на тест.
 
-            Для статьи глоссария или методологии: если раздела ещё нет,
-            остановись и напиши об этом в итоге, а не выдумывай структуру.
+            Для продукта каталога (kind = product): заведи карточку в
+            `PRODUCT_META` в `lib/products.ts`. Числа не выдумывай — позиция
+            уже есть в `lib/food-reference.ts`, оттуда они и берутся. Нужны
+            бытовые меры (`household`), причины разброса (`drivers`) и связь
+            с блюдами (`dishSlugs`), где она есть. Образец — «Творог 5%».
+
+            Для глоссария, методологии и калькуляторов (kind = glossary,
+            methodology, calculator): если раздела ещё нет, остановись и
+            напиши об этом в итоге, а не выдумывай структуру. Эти разделы
+            закрыты затвором в очереди, так что попасть сюда ты не должен, —
+            а если попал, значит затвор сняли раньше, чем построили раздел.
 
             Закончив, прогони `npm test`, `npm run lint` и `npx tsc --noEmit`
-            и убедись, что они зелёные. Затем вычеркни свою строку в очереди
-            `docs/seo-pipeline.md`, поставив `[x]`.
+            и убедись, что они зелёные. Затем вычеркни **свою и только свою**
+            строку в очереди `docs/seo-pipeline.md`, поставив `[x]`.
 
       - name: Отправить ветку
-        if: steps.pick.outputs.empty == 'false'
         run: |
           if git diff --quiet && git diff --cached --quiet; then
             echo "::warning::Агент не внёс изменений — ветку не отправляем."
             exit 0
           fi
           git add -A
-          git commit -m "Черновик: $(echo '${{ steps.pick.outputs.item }}' | node -e "process.stdin.on('data',d=>process.stdout.write(JSON.parse(d).title))")
+          git commit -m "Черновик: ${{ matrix.item.title }}
 
           Подготовлено ночным конвейером (docs/seo-pipeline.md).
           Не публиковать без утренней проверки: числа и тон проверяет человек."
