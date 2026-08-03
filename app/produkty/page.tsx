@@ -6,7 +6,7 @@ import { PRODUCTS, kcalFor, type Product } from "@/lib/products";
 import { breadcrumbsJsonLd, itemListJsonLd, jsonLdScript } from "@/lib/schema-org";
 
 export const metadata: Metadata = {
-  title: "Калорийность продуктов: ответ на вашу порцию, а не на 100 грамм — Живое Тело",
+  title: "Калорийность продуктов: на вашу порцию, не на 100 г — Живое Тело",
   description:
     "Сколько калорий в твороге, гречке, курице и другой обычной еде — на порцию, на столовую ложку, на стакан. " +
     "Пересчёт сухого в отварное и фотографии настоящих порций.",

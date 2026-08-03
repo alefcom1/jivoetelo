@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { AppInvite } from "./app-invite";
 import { Logo } from "./logo";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
+
+// Канонический адрес главной. Именно здесь, а не в layout: каноникл в
+// layout унаследовала бы каждая страница без своего alternates — и все они
+// объявили бы себя копиями главной.
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 /**
  * Главная — серверный компонент, и это не мелочь. Клиентской она была из-за
