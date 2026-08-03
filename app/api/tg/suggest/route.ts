@@ -1,6 +1,7 @@
 import { MealAnalysisError, SUGGEST_ERRORS } from "@/lib/ai";
 import { resolveModel } from "@/lib/ai/client";
 import { getSuggestionProvider } from "@/lib/ai/suggest";
+import { dayGap } from "@/lib/day-gap";
 import { localToday } from "@/lib/dates";
 import { getDaySummary } from "@/lib/meals";
 import { getDiaryContext } from "@/lib/suggest-context";
@@ -40,14 +41,20 @@ export async function GET(request: Request) {
   const meal = nextMeal();
   // Остаток — то, что показывается на экране; дневник — то, что уходит в
   // запрос к модели. Разделены намеренно: обратно клиенту едет только первое.
+  // Остаток считается по всем пяти величинам разом (lib/day-gap.ts). Жир и
+  // углеводы там — потолки, а не цели: недобор по ним дефицитом не считается
+  // и в подсказках не упоминается.
+  const gap = dayGap(summary.targets, summary.totals);
   const remaining = {
-    remainingKcal: Math.max(0, summary.targets.kcalTarget - summary.totals.kcal),
-    remainingProtein: Math.max(0, summary.targets.proteinTarget - summary.totals.protein),
-    remainingFiber: Math.max(0, summary.targets.fiberTarget - summary.totals.fiber),
+    remainingKcal: gap.kcalLeft,
+    remainingProtein: gap.proteinGap,
+    remainingFiber: gap.fiberGap,
     mealTypeLabel: meal.label,
   };
   const context = {
     ...remaining,
+    fatLeft: gap.fatLeft,
+    carbsLeft: gap.carbsLeft,
     showCalories: auth.user.showCalories,
     round: Number.isFinite(round) ? Math.max(0, Math.min(99, Math.floor(round))) : 0,
     ...(await getDiaryContext(auth.user.id, localToday(), meal.type)),
