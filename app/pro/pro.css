@@ -10,7 +10,7 @@
 .pro-hero{padding:0 0 130px}
 .pro-hero .kicker{display:block;margin-bottom:28px}
 .pro-hero h1{font:500 clamp(62px,7vw,105px)/.82 var(--serif);letter-spacing:-.08em;margin:0 0 27px;max-width:680px}
-.pro-hero h1 em{font-style:italic;color:var(--coral);font-weight:400}
+.pro-hero h1 em{font-style:italic;color:var(--coral-text);font-weight:400}
 .pro-lead{max-width:550px;color:#61635c;font-size:14px;line-height:1.7;margin:0}
 .pro-access,.pro-honest,.pro-fit,.pro-status,.pro-faq,.pro-apply{padding:130px max(32px,calc((100% - 1280px)/2));border-top:1px solid var(--line)}
 .pro-access h2,.pro-honest h2,.pro-fit h2,.pro-status h2,.pro-faq h2,.pro-apply h2{font:500 clamp(44px,5vw,72px)/.87 var(--serif);letter-spacing:-.075em;margin:0 0 45px}
@@ -126,7 +126,7 @@
 .pro-consent label{display:flex;gap:10px;align-items:flex-start;font-size:12px;font-weight:500;line-height:1.5;color:#5c5e57}
 .pro-consent input{margin:0;flex:none}
 .pro-consent a{text-decoration:underline;text-underline-offset:2px}
-.pro-consent a:hover{color:var(--coral)}
+.pro-consent a:hover{color:var(--coral-text)}
 .pro-submit{align-self:flex-start;border:0;border-radius:3px;padding:13px 22px;background:var(--black);color:var(--white);font-size:12px;font-weight:800}
 .pro-submit:disabled{opacity:.55}
 .pro-done{max-width:520px;padding:26px;background:var(--lime)}
