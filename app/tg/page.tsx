@@ -39,6 +39,9 @@ export default function MiniApp() {
   // Снимок, выбранный в инбоксе: разбор идёт тем же экраном «Камера», что и
   // обычное добавление, поэтому второго редактора черновика не появляется.
   const [inboxItem, setInboxItem] = useState<InboxItemDto | null>(null);
+  // Приём пищи, открытый нажатием на «Сегодня». Хранится здесь, а не в
+  // «Дневнике»: выбор происходит на одной вкладке, а показывается на другой.
+  const [openMealId, setOpenMealId] = useState<number | null>(null);
   /**
    * Откуда открыли «Камеру» и за какой день делается запись. Раньше «Камера»
    * всегда возвращала на «Сегодня» и всегда сохраняла сегодняшним числом —
@@ -121,6 +124,10 @@ export default function MiniApp() {
     // «Камера» из нижней панели — это всегда запись за сегодня с возвратом
     // на «Сегодня»: сюда нажали не из «Дневника», прошлого дня в виду нет.
     if (next === "camera") setCameraFrom({ tab: "today", day: null });
+    // Обычное переключение вкладок сбрасывает открытый приём пищи: иначе
+    // «Дневник», открытый нижней панелью, каждый раз показывал бы правку
+    // последнего, что открывали с «Сегодня».
+    setOpenMealId(null);
     setTab(next);
   }
 
@@ -230,6 +237,7 @@ export default function MiniApp() {
               day={diaryDay}
               onDayChange={setDiaryDay}
               onOpenCamera={(day) => openCamera("diary", day)}
+              openMealId={openMealId}
             />}
             {tab === "camera" && <CameraTab
               key="manual"

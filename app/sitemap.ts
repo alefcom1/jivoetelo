@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
-import { DISHES } from "@/lib/dishes";
+import { DISHES, dishUpdatedAt } from "@/lib/dishes";
+import { PRODUCTS } from "@/lib/products";
 import { LEGAL_UPDATED_AT } from "@/lib/legal";
 
 /**
@@ -22,6 +23,7 @@ const STATIC_PAGES: Array<{ path: string; priority: number; changeFrequency: "mo
   { path: "/raschet/temp", priority: 0.8, changeFrequency: "monthly" },
   { path: "/raschet/kviz", priority: 0.7, changeFrequency: "monthly" },
   { path: "/skolko-kalorij", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/produkty", priority: 0.8, changeFrequency: "monthly" },
   { path: "/pro", priority: 0.7, changeFrequency: "monthly" },
   { path: "/register", priority: 0.6, changeFrequency: "yearly" },
   { path: "/login", priority: 0.3, changeFrequency: "yearly" },
@@ -46,9 +48,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: page.changeFrequency,
       priority: page.priority,
     })),
+    // Каталог продуктов: на страницы ведут только внутренние ссылки, и без
+    // карты поисковик добрался бы до хвоста нескоро — ровно та причина, по
+    // которой карта заведена для блюд.
+    ...PRODUCTS.map((product) => ({
+      url: `${SITE_URL}/produkty/${product.slug}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
     ...DISHES.map((dish) => ({
       url: `${SITE_URL}/skolko-kalorij/${dish.slug}`,
-      lastModified,
+      // Дата содержимого блюда, а не дата правки оферты: см. DISHES_UPDATED_AT.
+      lastModified: dishUpdatedAt(dish),
       changeFrequency: "yearly" as const,
       priority: 0.7,
     })),

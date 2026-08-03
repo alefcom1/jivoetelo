@@ -10,6 +10,7 @@ import { ArtEmptyPlate } from "./illustrations";
 import { TgPhoto } from "./photo";
 import { StreakCard } from "./streak-card";
 import { SuggestCard } from "./suggest-card";
+import { haptic } from "./telegram";
 import { WeightTrend } from "./weight-trend";
 
 function greeting(): string {
@@ -142,7 +143,7 @@ export function TodayTab({
   onOpenInbox: () => void;
   /** Открыть правку сохранённого приёма пищи — тем же экраном, что и «Дневник». */
   onOpenMeal: (id: number) => void;
-  /** Внесён новый замер веса: данные экрана пора перечитать. */
+  /** Внесён новый замер веса: тренд на этом же экране устарел, день пора перечитать. */
   onWeightAdded: () => void;
 }) {
   const { totals, targets, showCalories } = data;
@@ -204,11 +205,12 @@ export function TodayTab({
         : <>
             {/* Строка списка — кнопка: нажатие открывает правку записи, тот же
                 экран, что и в «Дневнике». До этого нажатие на приём пищи не
-                делало ничего, и единственный способ исправить порцию лежал
-                через соседнюю вкладку и поиск того же дня в ней. */}
+                делало ничего, хотя строка выглядела ровно как в «Дневнике»,
+                где нажатие работает. Молчащий элемент, похожий на рабочий,
+                хуже отсутствующего. */}
             <ul className="tg-meals">
               {data.meals.map((meal) => <li key={meal.id}>
-                <button className="tg-meal-row" onClick={() => onOpenMeal(meal.id)}>
+                <button className="tg-meal-row" onClick={() => { haptic("tap"); onOpenMeal(meal.id); }}>
                   <MealThumb meal={meal} />
                   {/* Внутри кнопки только строчные элементы: <div> здесь был бы
                       невалидной разметкой — тем же приёмом собрана строка
@@ -230,6 +232,10 @@ export function TodayTab({
           </>}
     </section>
 
+    {/* Порядок блоков: сначала день, потом что в нём уже есть, потом
+        подсказка на остаток, и только в конце вес. Вес — итог недели, а не
+        новость дня: наверху он отвечал на вопрос, которого человек в этот
+        момент не задаёт. */}
     <SuggestCard showCalories={showCalories} />
 
     <WeightTrend weight={data.weight} onAdded={onWeightAdded} />

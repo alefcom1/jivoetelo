@@ -126,6 +126,11 @@ export async function suggestNextMeal(context: SuggestionHints): Promise<Suggest
     remainingKcal: Math.min(3000, Math.max(0, Math.round(Number(context.remainingKcal) || 0))),
     remainingProtein: Math.min(200, Math.max(0, Math.round(Number(context.remainingProtein) || 0))),
     remainingFiber: Math.min(60, Math.max(0, Math.round(Number(context.remainingFiber) || 0))),
+    // Потолки по жиру и углеводам клиент не присылает: в вебе подсказки
+    // вызываются с экрана «Сегодня», где этих чисел на руках нет. Ноль здесь
+    // означает «ограничения не заданы» — промпт тогда о них и не говорит.
+    fatLeft: 0,
+    carbsLeft: 0,
     mealTypeLabel: ["Завтрак", "Обед", "Ужин", "Перекус"].includes(context.mealTypeLabel)
       ? context.mealTypeLabel
       : "Перекус",

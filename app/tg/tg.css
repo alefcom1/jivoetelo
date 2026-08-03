@@ -273,8 +273,8 @@
 /* Уточняющие вопросы */
 .tg-clarify { background: var(--brand-lime); border-radius: var(--radius); padding: 16px; }
 .tg-clarify p { margin: 0 0 10px; font: 500 17px/1.3 var(--brand-serif); }
-.tg-clarify div { display: flex; gap: 8px; flex-wrap: wrap; }
-.tg-clarify button {
+.tg-clarify-options { display: flex; gap: 8px; flex-wrap: wrap; }
+.tg-clarify-options > button {
   border: 1px solid var(--tg-text); background: transparent; color: var(--tg-text);
   border-radius: 999px; padding: 9px 16px; font: 600 13px var(--font-body), sans-serif;
   cursor: pointer; min-height: 40px;
@@ -938,4 +938,39 @@
 .tg-root .plate-part--on span { color: color-mix(in srgb, var(--tg-button-text) 75%, transparent); }
 .tg-root .plate-save {
   width: 100%; background: var(--tg-button); color: var(--tg-button-text); border-radius: var(--radius);
+}
+
+/* .tg-input рассчитан на фон страницы: его заливка — тот же --tg-surface, что
+   и у карточки. Внутри .tg-add-item (это .tg-card) он сливался с ней в белое
+   на белом, и поля ввода выглядели просто строчками текста. */
+.tg-add-item .tg-input {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--tg-hint) 32%, transparent);
+}
+.tg-add-item .tg-input:focus-visible { border-color: var(--brand-coral); }
+.tg-add-item-grid .tg-input { padding: 10px 12px; }
+
+/* Открытый на весь экран блок добавления: кнопка-триггер прижата влево
+   (.tg-add-item-open), а здесь он единственное содержимое — во всю ширину. */
+.tg-camera-manual { display: flex; flex-direction: column; gap: 10px; }
+
+/* Свой вариант и отказ рядом с вариантами модели.
+   Пунктир и приглушённость отделяют «мои» кнопки от предложенных моделью:
+   это выходы из списка, а не ещё два пункта в нём. */
+.tg-clarify-options > .tg-clarify-own,
+.tg-clarify-options > .tg-clarify-skip {
+  border-style: dashed;
+  opacity: 0.75;
+}
+.tg-clarify-own:active, .tg-clarify-skip:active { opacity: 1; }
+
+/* Блок добавления внутри уточнения лежит на лаймовой плашке — своя карточка
+   ему там не нужна, иначе получается коробка в коробке. */
+.tg-clarify .tg-add-item {
+  margin-top: 12px; padding: 0; background: transparent;
+}
+.tg-clarify .tg-add-item .tg-input { background: var(--tg-surface); border-color: transparent; }
+.tg-clarify .tg-add-item-results button {
+  border: 0; border-radius: 14px; min-height: 48px;
+  background: color-mix(in srgb, var(--tg-text) 8%, transparent);
 }

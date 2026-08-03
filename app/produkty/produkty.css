@@ -1,0 +1,85 @@
+/* Каталог продуктов. Верстается от 360 px: ответ обязан быть виден без
+   прокрутки, а числа — никогда не уезжать в горизонтальный скролл. */
+
+/* Ответ на порцию — первый экран страницы, поэтому он и самый крупный. */
+.portion-picker {
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 20px; margin: 24px 0;
+  border-radius: 20px; background: var(--surface, #f4f1ea);
+}
+
+.portion-answer { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.portion-answer strong { font: 400 44px/1 var(--font-display), Georgia, serif; font-variant-numeric: tabular-nums; }
+.portion-answer span { font-size: 15px; opacity: 0.7; }
+
+.portion-slider { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.portion-slider input[type="range"] {
+  flex: 1 1 180px; min-width: 140px; accent-color: var(--coral, #e2674a); height: 32px;
+}
+.portion-slider input[type="number"] {
+  width: 84px; padding: 8px 10px; border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 10px; font: 600 16px var(--font-body), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums; background: #fff;
+}
+.portion-unit { font-size: 14px; opacity: 0.6; }
+
+/* Бытовые меры — основной способ ответить, когда весов нет. Переносятся,
+   а не скроллятся: скрытая вторая строка кнопок просто не будет нажата. */
+.portion-measures { display: flex; flex-wrap: wrap; gap: 8px; }
+.portion-measures button {
+  display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  padding: 8px 12px; min-height: 44px;
+  border: 1px solid rgba(0, 0, 0, 0.14); border-radius: 12px;
+  background: #fff; cursor: pointer; font: 600 14px var(--font-body), system-ui, sans-serif;
+}
+.portion-measures button i { font-style: normal; font-size: 11px; opacity: 0.55; font-weight: 500; }
+.portion-measures button:active { opacity: 0.75; }
+
+/* Пары «подпись — число» вместо таблицы: на 360 px таблица либо ужимает
+   числа до нечитаемости, либо уезжает вбок. */
+.portion-macros, .product-nutrition { display: grid; gap: 2px; margin: 0; }
+.portion-macros > div, .product-nutrition > div {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 9px 0; border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+.portion-macros dt, .product-nutrition dt { margin: 0; font-size: 14px; opacity: 0.7; }
+.portion-macros dd, .product-nutrition dd {
+  margin: 0; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+
+/* Снимки читателей. Сетка сама решает, сколько поместится, — от одного
+   столбца на узком экране до трёх на широком. */
+.product-photo-grid {
+  display: grid; gap: 14px; margin-top: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+.product-photo-grid figure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.product-photo-grid img {
+  width: 100%; aspect-ratio: 4 / 3; object-fit: cover;
+  border-radius: 16px; background: rgba(0, 0, 0, 0.05);
+}
+.product-photo-grid figcaption { font-size: 13px; line-height: 1.45; }
+.product-photo-grid figcaption span { opacity: 0.55; }
+
+/* Плитки каталога на хабе и блюд на карточке продукта. */
+.product-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.product-grid a, .dish-related a {
+  display: flex; align-items: center; gap: 10px; min-height: 56px;
+  padding: 12px 14px; border-radius: 14px; text-decoration: none;
+  background: var(--surface, #f4f1ea); color: inherit;
+}
+.product-grid a b, .dish-related a b { flex: 1; font-size: 15px; min-width: 0; }
+.product-grid a span, .dish-related a span {
+  font-size: 13px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.product-grid a i, .dish-related a i { font-style: normal; font-weight: 500; opacity: 0.55; }
+.product-grid a:hover, .dish-related a:hover { background: rgba(0, 0, 0, 0.07); }
+
+.dish-related { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+
+/* Подпись, доступная только скринридеру: у ползунка есть видимое число
+   рядом, но само поле обязано называться. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}

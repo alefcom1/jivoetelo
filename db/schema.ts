@@ -608,3 +608,57 @@ export const barcodes = pgTable(
   },
   (table) => [index("barcodes_name").on(table.name)],
 );
+
+/**
+ * Фотографии продуктов, присланные людьми, — для публичного каталога.
+ *
+ * Почему это отдельная таблица, а не флаг на `meals`. Снимок в дневнике и
+ * снимок в каталоге — разные вещи по назначению и по правовому основанию.
+ * Первый человек сделал для себя, и мы обрабатываем его, чтобы посчитать
+ * еду. Второй уходит на публичную страницу, которую увидит кто угодно, и
+ * это отдельная цель обработки, требующая отдельного согласия. Смешать их в
+ * одной строке значило бы однажды опубликовать первое вместо второго.
+ *
+ * Показывать снимок можно только когда сошлись три условия: он проверен
+ * (`status = 'approved'`), согласие на публикацию не отозвано, и аккаунт не
+ * удалён. Первое — здесь, второе — в `user_consents`, третье обеспечивает
+ * каскад: удаление аккаунта уносит и вклад в каталог.
+ *
+ * Модерация обязательна и не автоматизируется. На снимке еды регулярно
+ * оказывается то, чего человек не имел в виду публиковать: лица за столом,
+ * интерьер кухни, документы и бумаги рядом с тарелкой, отражения в посуде.
+ */
+export const catalogPhotos = pgTable(
+  "catalog_photos",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Slug продукта из `lib/products.ts`. */
+    productSlug: text("product_slug").notNull(),
+    photoKey: text("photo_key").notNull(),
+    /**
+     * Подпись — то, что увидят и человек, и поисковик: она идёт в `alt`, в
+     * `title`, в видимую подпись под снимком и в `ImageObject.caption`.
+     * Хранится готовой строкой, потому что её проверяет модератор: подпись
+     * публикуется вместе со снимком и врать в ней нельзя.
+     */
+    caption: text("caption").notNull(),
+    /** pending | approved | rejected */
+    status: text("status").notNull().default("pending"),
+    rejectionReason: text("rejection_reason"),
+    /**
+     * Редакция документов на момент согласия. Та же логика, что в
+     * `user_consents`: через год надо уметь показать, на что именно человек
+     * соглашался, а не на что соглашаются сегодня.
+     */
+    consentVersion: text("consent_version").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("catalog_photos_slug_status").on(table.productSlug, table.status),
+    index("catalog_photos_user").on(table.userId),
+  ],
+);

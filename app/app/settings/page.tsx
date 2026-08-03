@@ -5,6 +5,7 @@ import { getDb } from "@/db";
 import { reportPreferences, userConsents, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
+import { PhotoConsent } from "./photo-consent";
 import { getBotPreferences } from "@/lib/bot/store";
 import { DEFAULT_DIGEST_HOUR } from "@/lib/reminders";
 import { DEFAULT_REPORT_PREFERENCES, isChannelSetting } from "@/lib/report-prefs";
@@ -49,10 +50,20 @@ export default async function SettingsPage() {
   const preferences = linked ? await getBotPreferences(user.id) : null;
 
   const consents = await db
-    .select({ kind: userConsents.kind, version: userConsents.version, acceptedAt: userConsents.acceptedAt })
+    .select({
+      kind: userConsents.kind,
+      version: userConsents.version,
+      acceptedAt: userConsents.acceptedAt,
+      withdrawnAt: userConsents.withdrawnAt,
+    })
     .from(userConsents)
     .where(eq(userConsents.userId, user.id))
     .orderBy(asc(userConsents.acceptedAt));
+
+  // Согласие на публикацию снимков — единственное, которое отзывается само
+  // по себе: без данных о питании дневник не работает, а без фотографий в
+  // каталоге работает прекрасно.
+  const photoConsent = consents.find((consent) => consent.kind === "photo_publication" && !consent.withdrawnAt);
 
   const toggle = setShowCalories.bind(null, !user.showCalories);
   const toggleSimple = setSimpleMode.bind(null, !user.simpleMode);
@@ -141,11 +152,18 @@ export default async function SettingsPage() {
             {consents.map((consent) => (
               <li key={`${consent.kind}-${consent.version}`}>
                 <b>{isConsentKind(consent.kind) ? CONSENT_LABELS[consent.kind] : consent.kind}</b>
-                <span>редакция {consent.version} · {consentDate.format(consent.acceptedAt)}</span>
+                <span>
+                  редакция {consent.version} · {consentDate.format(consent.acceptedAt)}
+                  {consent.withdrawnAt && ` · отозвано ${consentDate.format(consent.withdrawnAt)}`}
+                </span>
               </li>
             ))}
           </ul>}
-      <p className="field-note">Отзыв согласия — это удаление аккаунта: без данных о питании дневник не работает.</p>
+      <p className="field-note">
+        Отзыв согласия на обработку данных о питании — это удаление аккаунта: без них дневник
+        не работает. Публикация снимков в каталоге — другое дело, она отзывается отдельно.
+      </p>
+      {photoConsent && <PhotoConsent />}
       <div className="legal-links">
         <Link href="/legal/terms">Соглашение</Link>
         <Link href="/legal/privacy">Конфиденциальность</Link>

@@ -164,6 +164,10 @@ footer>.footer-links:first-child{margin-top:0;padding-top:0;border-top:0}.footer
 .clarification{background:var(--lime);padding:16px;margin-bottom:14px}
 .clarification p{margin:0 0 10px;font:500 16px var(--serif)}
 .clarification div{display:flex;gap:8px;flex-wrap:wrap}
+/* Свой вариант и отказ — выходы из списка догадок модели, а не ещё два
+   пункта в нём: пунктир и приглушённость отделяют их от предложенного. */
+.clarification-own,.clarification-skip{border-style:dashed;opacity:.75}
+.clarification-own:hover,.clarification-skip:hover{opacity:1}
 .clarification button{border:1px solid var(--black);background:transparent;border-radius:999px;padding:7px 15px;font-size:12px;font-weight:700}
 .draft-items{display:flex;flex-direction:column;gap:10px;align-items:flex-start;margin-bottom:20px}
 .draft-item{width:100%;background:var(--white);border:1px solid var(--line);padding:12px 14px}

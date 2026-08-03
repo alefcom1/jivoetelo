@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DISHES, DISH_CATEGORIES, portionRange, type DishCategory } from "@/lib/dishes";
+import { breadcrumbsJsonLd, itemListJsonLd, jsonLdScript } from "@/lib/schema-org";
 
 export const metadata: Metadata = {
   title: "Калорийность блюд: диапазоны вместо выдуманной точности — Живое Тело",
@@ -61,5 +62,18 @@ export default function DishesIndexPage() {
         <Link className="black-button" href="/raschet/energiya">Сколько калорий нужно вам в день</Link>
       </div>
     </section>
+
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: jsonLdScript([
+          breadcrumbsJsonLd([{ name: "Калорийность блюд", path: "/skolko-kalorij" }]),
+          itemListJsonLd({
+            name: "Калорийность блюд",
+            items: DISHES.map((dish) => ({ name: dish.name, path: `/skolko-kalorij/${dish.slug}` })),
+          }),
+        ]),
+      }}
+    />
   </article>;
 }

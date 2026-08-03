@@ -13,6 +13,21 @@ export type SuggestionContext = {
   remainingKcal: number;
   remainingProtein: number;
   remainingFiber: number;
+  /**
+   * Потолки, а не цели. Жир и углеводы — остаток от калорий и белка
+   * (lib/macro-split.ts), и «добрать углеводов» мы не предлагаем никогда:
+   * это числовой перфекционизм, от которого продукт отстраивается. Модели
+   * они нужны затем, чтобы не советовать блюдо, выносящее за остаток вдвое.
+   */
+  fatLeft: number;
+  carbsLeft: number;
+  /**
+   * Варианты, уже отобранные нами по остатку дня (lib/suggest-candidates.ts).
+   * Когда список непуст, модель не придумывает блюда — она пишет к готовым
+   * одно предложение «почему сейчас». Названия и числа наши, потому что
+   * проверить чужие мы не можем, а выдумывать их на сервисе о питании нельзя.
+   */
+  candidates?: Array<{ title: string; kcal: number; protein: number; fiber: number }>;
   mealTypeLabel: string;
   showCalories: boolean;
   /**
@@ -73,6 +88,8 @@ export type MealSuggestion = {
   why: string;
   approxKcal: number;
   approxProtein: number;
+  /** Клетчатка — второй «пол» дня, и сверять её надо, а не верить на слово. */
+  approxFiber: number;
   timeMinutes: number;
 };
 
@@ -92,12 +109,13 @@ const SUGGESTIONS_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["title", "why", "approxKcal", "approxProtein", "timeMinutes"],
+        required: ["title", "why", "approxKcal", "approxProtein", "approxFiber", "timeMinutes"],
         properties: {
           title: { type: "string", description: "Короткое название блюда по-русски" },
           why: { type: "string", description: "Одно предложение: почему вариант подходит сейчас" },
           approxKcal: { type: "number" },
           approxProtein: { type: "number", description: "белок, г" },
+          approxFiber: { type: "number", description: "клетчатка, г" },
           timeMinutes: { type: "number", description: "время приготовления в минутах" },
         },
       },
@@ -149,6 +167,7 @@ export function validateSuggestions(raw: unknown): MealSuggestion[] {
         why,
         approxKcal: Math.round(clamp(s.approxKcal, 0, 2000)),
         approxProtein: Math.round(clamp(s.approxProtein, 0, 150)),
+        approxFiber: Math.round(clamp(s.approxFiber, 0, 60)),
         timeMinutes: Math.round(clamp(s.timeMinutes, 0, 120)),
       };
     })
@@ -170,6 +189,17 @@ export function buildPrompt(context: SuggestionContext): string {
     `Следующий приём пищи: ${context.mealTypeLabel}.`,
     `Остаток на сегодня: примерно ${Math.max(0, Math.round(context.remainingKcal))} ккал, белка не хватает ${Math.max(0, Math.round(context.remainingProtein))} г, клетчатки ${Math.max(0, Math.round(context.remainingFiber))} г.`,
   ];
+  // Потолки — отдельной строкой и только когда они заданы. Оговорка «границы,
+  // а не цели» обязательна: без неё модель начинает предлагать «добрать
+  // жиров», а это ровно та подача, которой у нас быть не должно. Ноль
+  // означает «ограничение не задано» (веб-вызов их не присылает), и молчание
+  // здесь честнее, чем строка «уместится 0 г жира».
+  if (context.fatLeft > 0 || context.carbsLeft > 0) {
+    lines.push(
+      `Ещё уместится примерно ${Math.round(context.fatLeft)} г жира и ${Math.round(context.carbsLeft)} г углеводов — ` +
+        "это границы, а не цели: добирать их не нужно, но и сильно выходить за них не стоит.",
+    );
+  }
   // Дневник — главное, чего подсказкам не хватало: раньше модель получала
   // только числа и выдумывала блюда с нуля, не зная человека вовсе.
   // Формулировка осторожная: часть строк — повторы, часть просто недавнее,
@@ -185,6 +215,20 @@ export function buildPrompt(context: SuggestionContext): string {
   }
   // Угол — последней строкой: он уточняет уже поставленную задачу, а не
   // заменяет её, и в таком порядке модель не забывает про остаток дня.
+  if (context.candidates && context.candidates.length > 0) {
+    // Отбор уже сделан, и переигрывать его модели не надо: числа посчитаны
+    // по нашему справочнику и сверены с остатком дня.
+    lines.push(
+      "Варианты уже отобраны под этот остаток:",
+      ...context.candidates.map(
+        (c, i) => `${i + 1}. ${c.title} — примерно ${Math.round(c.kcal)} ккал, белка ${Math.round(c.protein)} г, клетчатки ${Math.round(c.fiber)} г.`,
+      ),
+      "Напиши для каждого одно предложение «почему это сейчас подходит», в том же порядке. " +
+        "Названия и числа не меняй и своих вариантов не добавляй.",
+    );
+    return lines.join("\n");
+  }
+
   const angle = angleFor(context.round);
   if (angle) lines.push(angle);
   return lines.join("\n");
@@ -245,6 +289,7 @@ export class MockSuggestionProvider implements SuggestionProvider {
         why: "Помогает добрать белок и оставляет запас до конца дня.",
         approxKcal: light ? 320 : 550,
         approxProtein: light ? 22 : 42,
+        approxFiber: light ? 4 : 6,
         timeMinutes: 15,
       },
       {
@@ -252,6 +297,7 @@ export class MockSuggestionProvider implements SuggestionProvider {
         why: "Почти без готовки и хорошо насыщает.",
         approxKcal: 250,
         approxProtein: 28,
+        approxFiber: 3,
         timeMinutes: 3,
       },
       {
@@ -259,6 +305,7 @@ export class MockSuggestionProvider implements SuggestionProvider {
         why: "Добавляет клетчатку, которой сегодня не хватает.",
         approxKcal: 330,
         approxProtein: 25,
+        approxFiber: 8,
         timeMinutes: 10,
       },
     ];

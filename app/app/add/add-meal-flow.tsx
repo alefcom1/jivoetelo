@@ -189,6 +189,26 @@ export function AddMealFlow({
     });
   }
 
+  /**
+   * Свой вариант: добавляем пустую позицию и убираем вопрос.
+   *
+   * В вебе строки черновика и так редактируются целиком — название, вес и
+   * КБЖУ, — поэтому отдельного экрана ввода здесь не нужно: человек
+   * дописывает то, чего модель не угадала, там же, где правит остальное.
+   */
+  function answerClarificationOwn(clarIndex: number) {
+    setDraft((d) => d && {
+      ...d,
+      items: [...d.items, emptyItem()],
+      clarifications: d.clarifications.filter((_, i) => i !== clarIndex),
+    });
+  }
+
+  /** Убрать вопрос, ничего не добавив: варианты модели не обязаны покрывать реальность. */
+  function dismissClarification(clarIndex: number) {
+    setDraft((d) => d && { ...d, clarifications: d.clarifications.filter((_, i) => i !== clarIndex) });
+  }
+
   async function handleSave() {
     if (!draft) return;
     setError(null);
@@ -348,6 +368,11 @@ export function AddMealFlow({
       <p>{clar.question}</p>
       <div>{clar.options.map((option, optionIndex) =>
         <button key={option.label} onClick={() => applyClarification(clarIndex, optionIndex)}>{option.label}</button>)}
+        {/* Варианты модели — догадки, а не список всего возможного. Свой
+            вариант дописывается строкой черновика, отказ просто убирает
+            вопрос: иначе остаётся выбрать неправду. */}
+        <button className="clarification-own" onClick={() => answerClarificationOwn(clarIndex)}>Свой вариант</button>
+        <button className="clarification-skip" onClick={() => dismissClarification(clarIndex)}>Ничего из этого</button>
       </div>
     </div>)}
 

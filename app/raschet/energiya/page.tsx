@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { breadcrumbsJsonLd, jsonLdScript, webApplicationJsonLd } from "@/lib/schema-org";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import EnergyForm from "./energy-form";
 
@@ -222,7 +223,20 @@ export default function EnergyCalculatorPage() {
 
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      dangerouslySetInnerHTML={{
+        __html: jsonLdScript([
+          faqJsonLd,
+          webApplicationJsonLd({
+            name: "Калькулятор суточной нормы калорий",
+            description: "Считает суточную норму энергии диапазоном по формуле Миффлина-Сан Жеора, а также ориентиры по белку и клетчатке.",
+            path: "/raschet/energiya",
+          }),
+          breadcrumbsJsonLd([
+            { name: "Расчёты", path: "/raschet" },
+            { name: "Расчёт энергии", path: "/raschet/energiya" },
+          ]),
+        ]),
+      }}
     />
   </article>;
 }

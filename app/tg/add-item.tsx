@@ -12,11 +12,13 @@
 // справочнике нет, — ввод чисел с упаковки.
 
 import { useState } from "react";
-import { searchFoodReference, type ReferenceFood } from "@/lib/food-reference";
+import { parseNutrient, searchFoodReference, type ReferenceFood } from "@/lib/food-reference";
 import { BarcodeScanner } from "../barcode-scanner";
 import { FoodIcon } from "../food-icon";
 import { productToItem, useProductSearch } from "../use-product-search";
 import { getWebApp, haptic } from "./telegram";
+
+const EMPTY_FORM = { name: "", grams: "100", kcal: "", protein: "", fat: "", carbs: "", fiber: "" };
 
 /** Позиция в том виде, в каком её ждут оба экрана. */
 export type NewItem = {
@@ -46,19 +48,31 @@ function toNewItem(food: ReferenceFood): NewItem {
   };
 }
 
-/** Число из поля ввода: запятая как разделитель, пусто и мусор — ноль. */
-function num(value: string, max: number): number {
-  const parsed = Number(value.trim().replace(",", "."));
-  if (!Number.isFinite(parsed) || parsed < 0) return 0;
-  return Math.min(max, parsed);
-}
+/** Поля ручного ввода и их потолки — те же границы, что проверяет сервер. */
+const MANUAL_FIELDS: Array<[keyof typeof EMPTY_FORM, string, number]> = [
+  ["grams", "Вес порции, г", 3000],
+  ["kcal", "Ккал / 100 г", 900],
+  ["protein", "Белки, г", 100],
+  ["fat", "Жиры, г", 100],
+  ["carbs", "Углеводы, г", 100],
+  // Клетчатки сервер принимает до 50 на 100 г, а не до 100 (lib/meals.ts):
+  // разойтись здесь значило бы молча срезать уже принятое формой число.
+  ["fiber", "Клетчатка, г", 50],
+];
 
-export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
-  const [open, setOpen] = useState(false);
+export function AddItem({
+  onAdd,
+  startOpen = false,
+}: {
+  onAdd: (item: NewItem) => void;
+  /** Экран, где добавление руками — единственное действие: сворачивать нечего. */
+  startOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(startOpen);
   const [query, setQuery] = useState("");
   const [manual, setManual] = useState(false);
   const [scanning, setScanning] = useState(false);
-  const [form, setForm] = useState({ name: "", grams: "100", kcal: "", protein: "", fat: "", carbs: "", fiber: "" });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
 
   const found = searchFoodReference(query);
@@ -67,12 +81,14 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
   const fromBase = useProductSearch(query, "/api/tg/barcode", { "x-telegram-init-data": getWebApp()?.initData ?? "" }, found.map((f) => f.name));
 
   function reset() {
-    setOpen(false);
+    // На экране, где блок открыт изначально, сворачивать его нельзя: это
+    // оставило бы пустой экран без единого действия.
+    setOpen(startOpen);
     setManual(false);
     setScanning(false);
     setQuery("");
     setError(null);
-    setForm({ name: "", grams: "100", kcal: "", protein: "", fat: "", carbs: "", fiber: "" });
+    setForm(EMPTY_FORM);
   }
 
   function addFromReference(food: ReferenceFood) {
@@ -87,7 +103,7 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
       setError("Напишите, что это за продукт.");
       return;
     }
-    const grams = num(form.grams, 3000);
+    const grams = parseNutrient(form.grams, 3000);
     if (grams < 1) {
       setError("Укажите вес порции в граммах.");
       return;
@@ -96,11 +112,11 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
     onAdd({
       name: name.slice(0, 120),
       grams: Math.round(grams),
-      kcalPer100: num(form.kcal, 900),
-      proteinPer100: num(form.protein, 100),
-      fatPer100: num(form.fat, 100),
-      carbsPer100: num(form.carbs, 100),
-      fiberPer100: num(form.fiber, 100),
+      kcalPer100: parseNutrient(form.kcal, 900),
+      proteinPer100: parseNutrient(form.protein, 100),
+      fatPer100: parseNutrient(form.fat, 100),
+      carbsPer100: parseNutrient(form.carbs, 100),
+      fiberPer100: parseNutrient(form.fiber, 50),
       confidence: "medium",
     });
     reset();
@@ -124,7 +140,7 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
   return <section className="tg-card tg-add-item">
     <div className="tg-add-item-head">
       <h3>Добавить позицию</h3>
-      <button className="tg-remove" aria-label="Закрыть" onClick={reset}>×</button>
+      {!startOpen && <button className="tg-remove" aria-label="Закрыть" onClick={reset}>×</button>}
     </div>
 
     {/* Штрихкод первым: у упакованного продукта это самый точный путь из
@@ -133,14 +149,21 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
       Сканировать штрихкод
     </button>
 
-    <input
+    {/* В ручном вводе строка поиска не нужна: название там задаётся своим
+        полем, и два поля с одним и тем же словом только сбивают с толку.
+        Кнопка сканирования, наоборот, остаётся: руками числа переписывают
+        как раз с упаковки, которая в этот момент в руках.
+        Фокус ставим, только когда блок раскрыт нажатием, — там это ровно то,
+        чего человек хотел. Где блок открыт изначально, выскочившая при
+        переключении экрана клавиатура закрыла бы пол-экрана. */}
+    {!manual && <input
       className="tg-input"
       type="search"
       placeholder="Начните вводить: творог, гречка, яблоко…"
       value={query}
       onChange={(e) => { setQuery(e.target.value); setError(null); }}
-      autoFocus
-    />
+      autoFocus={!startOpen}
+    />}
 
     {!manual && found.length > 0 && <ul className="tg-add-item-results">
       {found.map((food) => <li key={food.name}>
@@ -178,7 +201,7 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
       <p className="tg-hint">В справочнике этого нет. Введите числа с упаковки или опишите еду на вкладке «Камера» — там разберёт модель.</p>}
 
     {!manual
-      ? <button className="tg-link-button" onClick={() => { haptic("tap"); setManual(true); setForm((f) => ({ ...f, name: query.trim() })); }}>
+      ? <button className="tg-link-button" onClick={() => { haptic("tap"); setManual(true); setForm({ ...EMPTY_FORM, name: query.trim() }); }}>
           Ввести КБЖУ вручную
         </button>
       : <div className="tg-add-item-manual">
@@ -188,17 +211,10 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
           </label>
           <p className="tg-hint">Значения на 100 г — как на упаковке. Пустое поле считается нулём.</p>
           <div className="tg-add-item-grid">
-            {([
-              ["grams", "Вес порции, г"],
-              ["kcal", "Ккал / 100 г"],
-              ["protein", "Белки, г"],
-              ["fat", "Жиры, г"],
-              ["carbs", "Углеводы, г"],
-              ["fiber", "Клетчатка, г"],
-            ] as Array<[keyof typeof form, string]>).map(([key, label]) => <label key={key} className="tg-field">
+            {MANUAL_FIELDS.map(([key, label, max]) => <label key={key} className="tg-field">
               {label}
               <input
-                className="tg-input" type="number" inputMode="decimal" min={0} step="0.1"
+                className="tg-input" type="number" inputMode="decimal" min={0} max={max} step="0.1"
                 value={form[key]}
                 onChange={(e) => { setForm({ ...form, [key]: e.target.value }); setError(null); }}
               />
@@ -207,6 +223,13 @@ export function AddItem({ onAdd }: { onAdd: (item: NewItem) => void }) {
         </div>}
 
     {error && <p className="tg-error">{error}</p>}
-    {manual && <button className="tg-button tg-button-block" onClick={addManual}>Добавить</button>}
+    {manual && <>
+      <button className="tg-button tg-button-block" onClick={addManual}>Добавить</button>
+      {/* Уйти в ручной ввод легко, вернуться — тоже: без этой строки поиск по
+          справочнику пропадал бы до закрытия всего блока. */}
+      <button className="tg-link-button" onClick={() => { haptic("tap"); setManual(false); setError(null); }}>
+        ← Искать в справочнике
+      </button>
+    </>}
   </section>;
 }
