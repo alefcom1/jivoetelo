@@ -24,6 +24,7 @@ POST с байтами записи в теле и её типом в Content-Ty
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -56,6 +57,13 @@ def to_wav(data: bytes) -> str:
             check=True,
             timeout=30,
         )
+    except BaseException:
+        # ffmpeg успевает создать файл до того, как споткнётся о битую
+        # запись, — и недописанный wav остался бы в /tmp навсегда: убирает
+        # его только удачный путь ниже, а сюда мы как раз попали вместо него.
+        if os.path.exists(dst_path):
+            os.unlink(dst_path)
+        raise
     finally:
         os.unlink(src_path)
     return dst_path
@@ -68,8 +76,8 @@ def to_wav(data: bytes) -> str:
 
 class VoskEngine:
     """
-    Самый лёгкий из рабочих вариантов: рантайм 7 МБ, маленькая русская модель —
-    десятки мегабайт. Kaldi под капотом, процессор, задуман для слабых машин.
+    Наш рабочий движок: рантайм 7 МБ, маленькая русская модель — 45 МБ.
+    Kaldi под капотом, процессор, задуман для слабых машин.
 
     ## Словарь — главный рычаг качества
 
@@ -84,14 +92,65 @@ class VoskEngine:
     называл. Молчание тут лучше выдумки, как и везде в этом продукте.
 
     Без VOSK_GRAMMAR работает по всему языку, как обычно.
+
+    ## Как находится модель
+
+    VOSK_MODEL_PATH — это **каталог кэша**, а не путь к модели: так его
+    понимает сам vosk (MODEL_DIRS в его __init__.py). Внутри он ищет папку с
+    именем VOSK_MODEL_NAME и, не найдя, скачивает её с alphacephei.com.
+    Ошибиться тут легко, потому что имя переменной обещает другое.
+
+    Каталог обязан лежать на томе: иначе сорок пять мегабайт выкачиваются
+    заново при каждом пересоздании контейнера.
     """
+
+    #: Маленькая русская модель. Большая (vosk-model-ru-0.42) весит 1,8 ГБ —
+    #: это уже вес GigaAM, и тогда весь размен теряет смысл.
+    DEFAULT_MODEL = "vosk-model-small-ru-0.22"
+
+    @staticmethod
+    def model_name() -> str:
+        return os.environ.get("VOSK_MODEL_NAME", VoskEngine.DEFAULT_MODEL).strip()
+
+    @staticmethod
+    def model_dir() -> str:
+        return os.path.join(os.environ.get("VOSK_MODEL_PATH", "/models"), VoskEngine.model_name())
+
+    @classmethod
+    def prepare(cls) -> None:
+        """
+        Скачать модель, если её нет. Вызывается при старте, а не при первом
+        запросе: сервис, который «поднялся» и ломается на первом голосовом
+        живого человека, хуже сервиса, который не поднялся вовсе.
+
+        Скачивание идёт через vosk.Model(model_name=...) — единственный
+        публичный способ, и он заодно загружает модель в память. Объект тут же
+        выбрасывается, так что лишний пик бывает ровно один раз, при первом
+        запуске контейнера. Дальше каталог на месте, и prepare выходит по
+        первой же строке, ничего не загружая.
+        """
+        if os.path.isdir(cls.model_dir()):
+            return
+        import vosk
+
+        # У vosk на этом пути sys.exit(1) при неизвестном имени модели.
+        # Наружу это должно выйти обычной ошибкой запуска, а не молчаливой
+        # смертью процесса без объяснения.
+        try:
+            vosk.Model(model_name=cls.model_name())
+        except SystemExit as error:
+            raise RuntimeError(
+                f"vosk не нашёл модель {cls.model_name()}; проверьте имя и доступ к alphacephei.com"
+            ) from error
 
     def __init__(self) -> None:
         import vosk
 
         vosk.SetLogLevel(-1)
         self._vosk = vosk
-        self._model = vosk.Model(os.environ.get("VOSK_MODEL_PATH", "/models/vosk"))
+        # Путь к распакованной модели, а не имя: к этому моменту prepare()
+        # уже положил её на место, и второй поход в сеть тут не нужен.
+        self._model = vosk.Model(self.model_dir())
         self._grammar = None
         path = os.environ.get("VOSK_GRAMMAR", "").strip()
         if path and os.path.exists(path):
@@ -129,6 +188,14 @@ class WhisperCppEngine:
     не ограничивает его, и выдумать слово со стороны по-прежнему может.
     """
 
+    @classmethod
+    def prepare(cls) -> None:
+        # Веса кладутся руками: у whisper.cpp они в формате ggml, и качать их
+        # надо с того зеркала, которому вы доверяете.
+        path = os.environ.get("WHISPER_MODEL_PATH", "/models/whisper.bin")
+        if not os.path.isfile(path):
+            raise RuntimeError(f"нет файла модели {path} — положите ggml-веса в том")
+
     def __init__(self) -> None:
         from pywhispercpp.model import Model
 
@@ -152,6 +219,12 @@ class GigaamEngine:
     отдельной машине и точность важнее памяти.
     """
 
+    @classmethod
+    def prepare(cls) -> None:
+        # gigaam качает веса сам при первой загрузке модели; отдельной
+        # подготовки ему не нужно.
+        return
+
     def __init__(self) -> None:
         import gigaam
 
@@ -164,19 +237,24 @@ class GigaamEngine:
 ENGINES = {"vosk": VoskEngine, "whisper": WhisperCppEngine, "gigaam": GigaamEngine}
 
 
+def engine_class():
+    if ENGINE not in ENGINES:
+        raise RuntimeError(f"неизвестный SPEECH_ENGINE={ENGINE}, есть: {', '.join(ENGINES)}")
+    return ENGINES[ENGINE]
+
+
 def load_engine():
     """
-    Движок грузится один раз и лениво — при первом запросе, а не при старте.
+    Модель грузится в память один раз и лениво — при первом запросе.
 
-    Так контейнер поднимается сразу и не держит модель в памяти, пока никто
-    не записал ни одного голосового. На сервере, где память общая, это не
-    мелочь.
+    Не путать с подготовкой: на диск модель кладётся при старте (prepare
+    ниже), и сервис, у которого её нет, не поднимется вовсе. А вот держать
+    три сотни мегабайт в памяти, пока никто не записал ни одного голосового,
+    незачем: расшифровка приходит рывками, а память на сервере общая.
     """
     global _engine
     if _engine is None:
-        if ENGINE not in ENGINES:
-            raise RuntimeError(f"неизвестный SPEECH_ENGINE={ENGINE}, есть: {', '.join(ENGINES)}")
-        _engine = ENGINES[ENGINE]()
+        _engine = engine_class()()
     return _engine
 
 
@@ -198,8 +276,9 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:
-        # Проверка живости для docker healthcheck: модель при этом не грузим.
-        self.reply(200, {"ok": True, "engine": ENGINE})
+        # Проверка живости для docker healthcheck: модель при этом не грузим,
+        # но говорим, лежит ли она на диске и занята ли уже память.
+        self.reply(200, {"ok": True, "engine": ENGINE, "loaded": _engine is not None})
 
     def do_POST(self) -> None:
         if TOKEN and self.headers.get("Authorization") != f"Bearer {TOKEN}":
@@ -227,6 +306,19 @@ class Handler(BaseHTTPRequestHandler):
         # Путь и параметры не пишем: в них ничего нет, а лог растёт.
         pass
 
+    def log_error(self, fmt: str, *args) -> None:
+        # А вот отказы пишем обязательно. По умолчанию log_error зовёт
+        # log_message, и молчаливое «pass» выше проглотило бы заодно и
+        # причину поломки: снаружи виден один и тот же 502, и без строки в
+        # логе искать было бы нечем.
+        sys.stderr.write("[speech] " + (fmt % args) + "\n")
+        sys.stderr.flush()
+
 
 if __name__ == "__main__":
+    # Подготовка до открытия порта: если модели нет и скачать её нельзя,
+    # контейнер должен упасть с внятной ошибкой, а не принять запрос и
+    # ответить отказом первому же человеку.
+    engine_class().prepare()
+    print(f"[speech] движок {ENGINE} готов, слушаю :{PORT}", flush=True)
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

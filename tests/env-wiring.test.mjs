@@ -16,7 +16,14 @@ import { readFileSync } from "node:fs";
  */
 
 const EXAMPLE = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
-const COMPOSE = readFileSync(new URL("../docker-compose.yml", import.meta.url), "utf8");
+/**
+ * Оба файла compose разом: распознавание речи живёт в наложении
+ * (deploy/speech/compose.yml), и его переменные до основного файла не
+ * доходят — а забыть их можно ровно так же.
+ */
+const COMPOSE = ["../docker-compose.yml", "../deploy/speech/compose.yml"]
+  .map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
+  .join("\n");
 
 /** Имена переменных из .env.example — строки вида «NAME=» в начале строки. */
 function declared() {
@@ -60,9 +67,10 @@ test("compose не ждёт того, чего нет в примере", () => 
 });
 
 test("речь описана целиком", () => {
-  // Три переменные работают только вместе: адрес, токен и режим. Забытая
-  // третья означает, что заглушку невозможно ни включить, ни выключить.
-  for (const name of ["SPEECH_URL", "SPEECH_TOKEN", "SPEECH_PROVIDER"]) {
+  // Переменные работают только вместе: адрес, токен и режим — на стороне
+  // приложения, движок и модель — на стороне сервиса. Забытая означает, что
+  // распознавание невозможно ни включить, ни выключить, ни настроить.
+  for (const name of ["SPEECH_URL", "SPEECH_TOKEN", "SPEECH_PROVIDER", "SPEECH_ENGINE", "VOSK_MODEL_NAME"]) {
     assert.ok(EXAMPLE.includes(`${name}=`), `${name} не описан в .env.example`);
     assert.ok(COMPOSE.includes(`\${${name}`), `${name} не пробрасывается в контейнер`);
   }

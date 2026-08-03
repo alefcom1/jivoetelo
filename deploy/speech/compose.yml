@@ -20,9 +20,15 @@ services:
       # даёт больше, чем переход на модель втрое тяжелее. Собирается
       # scripts/speech-grammar.mjs.
       VOSK_GRAMMAR: /app/grammar.json
-      VOSK_MODEL_PATH: ${VOSK_MODEL_PATH:-/models/vosk}
-      WHISPER_MODEL_PATH: ${WHISPER_MODEL_PATH:-/models/whisper.bin}
-      GIGAAM_MODEL: ${GIGAAM_MODEL:-v2_rnnt}
+      # Каталог кэша, а не путь к модели: vosk ищет внутри него папку с
+      # именем VOSK_MODEL_NAME и скачивает её, если не находит. На томе —
+      # чтобы 45 МБ не выкачивались заново при каждом пересоздании.
+      VOSK_MODEL_PATH: /models
+      VOSK_MODEL_NAME: ${VOSK_MODEL_NAME:-vosk-model-small-ru-0.22}
+      # Настройки whisper и gigaam здесь не перечислены намеренно: те же
+      # значения уже стоят умолчаниями в server.py, а список переменных,
+      # который никто не заполняет, только притворяется настройкой. Меняете
+      # движок — допишете сюда его переменные и в .env.example.
     volumes:
       - speech-models:/models
       # Словарь монтируется, а не кладётся в образ: он меняется вслед за

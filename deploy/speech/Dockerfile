@@ -37,6 +37,10 @@ ARG ENGINE
 COPY server.py .
 # Веса скачиваются в том, а не в образ: гигабайт в слое означал бы такую же
 # выкачку при каждом обновлении сервиса.
-ENV SPEECH_ENGINE=${ENGINE} HF_HOME=/models PORT=8081
+# /models — том. Для vosk это каталог кэша, внутри которого он ищет и
+# скачивает модель по имени; для gigaam — куда качает веса Hugging Face.
+ENV SPEECH_ENGINE=${ENGINE} PORT=8081 \
+    VOSK_MODEL_PATH=/models VOSK_MODEL_NAME=vosk-model-small-ru-0.22 \
+    HF_HOME=/models
 EXPOSE 8081
 CMD ["python", "-u", "server.py"]
