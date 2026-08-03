@@ -116,8 +116,18 @@ export const FOOD_REFERENCE: ReferenceFood[] = [
   { name: "Майонез", kcal: 680, protein: 1, fat: 75, carbs: 2.6, fiber: 0, portionG: 15 },
   { name: "Кетчуп", kcal: 112, protein: 1.7, fat: 0.2, carbs: 26, fiber: 0.3, portionG: 20 },
 
-  // Сладкое
+  // Сладкое.
+  //
+  // Десерты здесь не для полноты списка. Справочник — это то, чем человек
+  // наполняет дневник руками, и если в нём есть сахар с шоколадом, но нет
+  // мороженого и печенья, он молча сообщает, что одно записывать положено, а
+  // другое нет. Для сервиса, который обещает «без запретов и давления», это
+  // осуждение через умолчание: съесть мороженое можно, а записать — нечем.
   { name: "Шоколад молочный", kcal: 535, protein: 7.6, fat: 30, carbs: 59, fiber: 3.4, portionG: 25 },
+  { name: "Мороженое пломбир", kcal: 227, protein: 3.5, fat: 15, carbs: 20.5, fiber: 0, portionG: 100 },
+  { name: "Мороженое молочное", kcal: 126, protein: 3.2, fat: 3.5, carbs: 21.3, fiber: 0, portionG: 100 },
+  { name: "Печенье овсяное", kcal: 437, protein: 6.5, fat: 14.5, carbs: 71, fiber: 3, portionG: 40 },
+  { name: "Зефир", kcal: 326, protein: 0.8, fat: 0.1, carbs: 79.8, fiber: 0, portionG: 33 },
   { name: "Мёд", kcal: 304, protein: 0.3, fat: 0, carbs: 82, fiber: 0.2, portionG: 20 },
   { name: "Сахар", kcal: 387, protein: 0, fat: 0, carbs: 100, fiber: 0, portionG: 8 },
 

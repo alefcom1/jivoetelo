@@ -1,7 +1,8 @@
 import { MealAnalysisError, SUGGEST_ERRORS } from "@/lib/ai";
 import { resolveModel } from "@/lib/ai/client";
 import { getSuggestionProvider } from "@/lib/ai/suggest";
-import { dayGap } from "@/lib/day-gap";
+import { dayGap, explain } from "@/lib/day-gap";
+import { pickCandidates } from "@/lib/suggest-candidates";
 import { localToday } from "@/lib/dates";
 import { getDaySummary } from "@/lib/meals";
 import { getDiaryContext } from "@/lib/suggest-context";
@@ -60,16 +61,56 @@ export async function GET(request: Request) {
     ...(await getDiaryContext(auth.user.id, localToday(), meal.type)),
   };
 
+  // Отбор — наш и детерминированный. Раньше блюда придумывала модель, и
+  // проверить, что предложенное укладывается в остаток дня, было нечем:
+  // числа приходили от неё же. Теперь названия и числа наши, а модели
+  // остаётся формулировка — то, что она делает лучше нас.
+  const candidates = pickCandidates(gap, {
+    exclude: context.eatenToday,
+    offset: context.round * 3,
+  });
+
+  // Готовый ответ на случай, когда разбор выключен или модель не отозвалась.
+  // Это не заглушка: числа те же самые, отличается только слог объяснения.
+  const withoutModel = candidates.map((candidate) => ({
+    title: candidate.title,
+    why: explain(candidate, auth.user.showCalories, candidate.portion.kcal),
+    approxKcal: Math.round(candidate.portion.kcal),
+    approxProtein: Math.round(candidate.portion.protein),
+    approxFiber: Math.round(candidate.portion.fiber),
+    timeMinutes: 0,
+  }));
+
   const decision = await checkQuota(auth.user.id, auth.user.plan, "suggest");
   if (!decision.allowed) return Response.json({ error: quotaMessage(decision) }, { status: 429 });
 
   try {
-    const result = await getSuggestionProvider().suggest(context);
+    const result = await getSuggestionProvider().suggest({
+      ...context,
+      candidates: candidates.map((c) => ({
+        title: c.title,
+        kcal: c.portion.kcal,
+        protein: c.portion.protein,
+        fiber: c.portion.fiber,
+      })),
+    });
     await recordUsage(auth.user.id, "suggest", result.usage);
-    return Response.json({ needsPlan: false, context: remaining, suggestions: result.suggestions });
+
+    // От модели берём только формулировку и только по порядку. Числа и
+    // названия остаются нашими: сверить чужие мы не можем, а расходиться им
+    // нельзя — под карточкой стоит наш расчёт остатка дня. Если модель
+    // ответила не тем количеством вариантов, значит задачу она не выполнила,
+    // и объяснение берётся своё.
+    const aligned = result.suggestions.length === withoutModel.length
+      ? withoutModel.map((own, i) => ({ ...own, why: result.suggestions[i].why, timeMinutes: result.suggestions[i].timeMinutes }))
+      : withoutModel;
+
+    return Response.json({ needsPlan: false, context: remaining, suggestions: aligned });
   } catch (error) {
+    // Разбор выключен — не повод оставлять человека без подсказки: отбор
+    // сделан без модели и работает сам по себе.
     if (error instanceof MealAnalysisError && error.reason === "disabled") {
-      return Response.json({ error: SUGGEST_ERRORS.disabled }, { status: 503 });
+      return Response.json({ needsPlan: false, context: remaining, suggestions: withoutModel });
     }
     // Модель в логе обязательна: ровно на неверном её идентификаторе
     // подсказки однажды и упали, а сообщение «tg suggest failed» без имени

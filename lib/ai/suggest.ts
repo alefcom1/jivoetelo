@@ -21,6 +21,13 @@ export type SuggestionContext = {
    */
   fatLeft: number;
   carbsLeft: number;
+  /**
+   * Варианты, уже отобранные нами по остатку дня (lib/suggest-candidates.ts).
+   * Когда список непуст, модель не придумывает блюда — она пишет к готовым
+   * одно предложение «почему сейчас». Названия и числа наши, потому что
+   * проверить чужие мы не можем, а выдумывать их на сервисе о питании нельзя.
+   */
+  candidates?: Array<{ title: string; kcal: number; protein: number; fiber: number }>;
   mealTypeLabel: string;
   showCalories: boolean;
   /**
@@ -208,6 +215,20 @@ export function buildPrompt(context: SuggestionContext): string {
   }
   // Угол — последней строкой: он уточняет уже поставленную задачу, а не
   // заменяет её, и в таком порядке модель не забывает про остаток дня.
+  if (context.candidates && context.candidates.length > 0) {
+    // Отбор уже сделан, и переигрывать его модели не надо: числа посчитаны
+    // по нашему справочнику и сверены с остатком дня.
+    lines.push(
+      "Варианты уже отобраны под этот остаток:",
+      ...context.candidates.map(
+        (c, i) => `${i + 1}. ${c.title} — примерно ${Math.round(c.kcal)} ккал, белка ${Math.round(c.protein)} г, клетчатки ${Math.round(c.fiber)} г.`,
+      ),
+      "Напиши для каждого одно предложение «почему это сейчас подходит», в том же порядке. " +
+        "Названия и числа не меняй и своих вариантов не добавляй.",
+    );
+    return lines.join("\n");
+  }
+
   const angle = angleFor(context.round);
   if (angle) lines.push(angle);
   return lines.join("\n");
