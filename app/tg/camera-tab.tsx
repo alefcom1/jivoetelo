@@ -124,6 +124,11 @@ export function CameraTab({
   // уже что-то есть; собрать новую запись при выключенном разборе или
   // исчерпанной квоте до сих пор было нечем.
   const [mode, setMode] = useState<"camera" | "text" | "manual">("camera");
+  /**
+   * Какой вопрос сейчас отвечают своим вариантом. Индекс, а не флаг: вопросов
+   * бывает два, и открытый ввод должен принадлежать конкретному.
+   */
+  const [customFor, setCustomFor] = useState<number | null>(null);
   const [text, setText] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   // Последний снимок — для повтора после сетевой ошибки: переснимать кадр или
@@ -387,6 +392,20 @@ export function CameraTab({
     haptic("tap");
     const option = clarifications[clarIndex]?.options[optionIndex];
     if (option?.addItem) setItems((current) => (current ? [...current, toDraft(option.addItem!)] : current));
+    dismissClarification(clarIndex);
+  }
+
+  /**
+   * Убрать вопрос, ничего не добавив.
+   *
+   * Нужно и для «ничего из этого», и после своего варианта. Модель предлагает
+   * два-три варианта, и они не обязаны покрывать реальность: если в блюде
+   * действительно не было ни масла, ни соуса, а варианта «без заправки»
+   * модель не дала, то без этой кнопки человеку остаётся выбрать неправду
+   * или оставить вопрос висеть.
+   */
+  function dismissClarification(clarIndex: number) {
+    setCustomFor(null);
     setClarifications((current) => current.filter((_, i) => i !== clarIndex));
   }
 
@@ -633,12 +652,42 @@ export function CameraTab({
         : "Оценка приблизительная — поправьте вес, если нужно."}</p>
     </header>
 
+    {/* Варианты модели — это её догадки, а не список всего возможного. Поэтому
+        рядом с ними два выхода: назвать своё и отказаться отвечать.
+
+        Свой вариант — это тот же поиск по справочнику, что и «Собрать
+        руками»: у выбранного варианта есть готовые КБЖУ (`addItem`), а у
+        свободного текста их нет, и взять их неоткуда, кроме справочника или
+        упаковки. Отправлять ответ обратно модели мы не стали: это ещё один
+        платный вызов и трёхсекундный антифлуд ради одного слова, которое она
+        и так не увидит лучше, чем человек у тарелки. */}
     {clarifications.map((clar, clarIndex) => <div className="tg-clarify" key={clar.question}>
       <p>{clar.question}</p>
-      <div>
+      <div className="tg-clarify-options">
         {clar.options.map((option, optionIndex) => <button key={option.label}
           onClick={() => applyClarification(clarIndex, optionIndex)}>{option.label}</button>)}
+        <button className="tg-clarify-own" onClick={() => {
+          haptic("tap");
+          setCustomFor((current) => (current === clarIndex ? null : clarIndex));
+        }}>
+          {customFor === clarIndex ? "Свернуть" : "Свой вариант"}
+        </button>
+        <button className="tg-clarify-skip" onClick={() => { haptic("tap"); dismissClarification(clarIndex); }}>
+          Ничего из этого
+        </button>
       </div>
+
+      {customFor === clarIndex && <AddItem
+        startOpen
+        onAdd={(item: NewItem) => {
+          setItems((current) => [...(current ?? []), {
+            ...item,
+            suggestedGrams: item.grams,
+            confidence: (item.confidence as Confidence) ?? "medium",
+          }]);
+          dismissClarification(clarIndex);
+        }}
+      />}
     </div>)}
 
     <ul className="tg-draft">
