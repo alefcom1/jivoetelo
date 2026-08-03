@@ -19,12 +19,28 @@ export type OperatorDetails = {
   email: string;
   /** false — реквизиты ещё не заполнены, документы это показывают явно. */
   filled: boolean;
+  /**
+   * Поставщик услуг электронной почты и страна размещения — для раздела «Кому
+   * мы передаём данные».
+   *
+   * Тоже из окружения и по той же причине, что и реквизиты: ящик у нас общий
+   * с соседним проектом (docs/shared-infra.md), провайдера могут сменить, а
+   * назвать в политике не того, кто на самом деле возит письма, — хуже, чем
+   * честно написать «уточняется». Письма с отчётами несут сведения о питании
+   * и вес, поэтому строка в таблице обязана быть заполнена до того, как
+   * рассылка включится на людях.
+   */
+  mailProvider: string;
+  mailProviderCountry: string;
+  mailFilled: boolean;
 };
 
 const NOT_FILLED = "будет указано после регистрации юридического лица";
+const MAIL_NOT_FILLED = "уточняется";
 
 export function operatorDetails(): OperatorDetails {
   const name = process.env.LEGAL_OPERATOR_NAME?.trim() ?? "";
+  const mailProvider = process.env.LEGAL_MAIL_PROVIDER?.trim() ?? "";
   return {
     name: name || NOT_FILLED,
     inn: process.env.LEGAL_OPERATOR_INN?.trim() || NOT_FILLED,
@@ -32,5 +48,8 @@ export function operatorDetails(): OperatorDetails {
     address: process.env.LEGAL_OPERATOR_ADDRESS?.trim() || NOT_FILLED,
     email: process.env.LEGAL_CONTACT_EMAIL?.trim() || "privacy@jivoetelo.ru",
     filled: Boolean(name),
+    mailProvider: mailProvider || MAIL_NOT_FILLED,
+    mailProviderCountry: process.env.LEGAL_MAIL_PROVIDER_COUNTRY?.trim() || MAIL_NOT_FILLED,
+    mailFilled: Boolean(mailProvider),
   };
 }
