@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getPendingItem } from "@/lib/inbox";
+import { isSpeechEnabled } from "@/lib/speech/mode";
 import { AddMealFlow } from "./add-meal-flow";
 
 export default async function AddMealPage({
@@ -22,5 +23,12 @@ export default async function AddMealPage({
     if (!inbox) redirect("/app/inbox");
   }
 
-  return <AddMealFlow showCalories={user.showCalories} simpleMode={user.simpleMode} inbox={inbox} />;
+  // Признак доступности голоса читается здесь, а не в браузере: SPEECH_URL
+  // живёт только на сервере, и клиенту его знать неоткуда.
+  return <AddMealFlow
+    showCalories={user.showCalories}
+    simpleMode={user.simpleMode}
+    speechEnabled={isSpeechEnabled()}
+    inbox={inbox}
+  />;
 }
