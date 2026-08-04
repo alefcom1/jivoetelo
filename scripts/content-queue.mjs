@@ -40,13 +40,39 @@ const QUEUE_FILE = path.join(HERE, "..", "docs", "seo-pipeline.md");
  * Заводя раздел в `docs/seo-pipeline.md`, заводите его и здесь.
  */
 const SECTION_KINDS = {
-  "Блюда — вторая волна": "dish",
-  "Блюда — третья волна": "dish",
+  "Статьи журнала": "article",
+  "Блюда — кластер «Супы»": "dish",
+  "Блюда — кластер «Салаты и закуски»": "dish",
+  "Блюда — кластер «Завтраки»": "dish",
+  "Блюда — кластер «Второе горячее»": "dish",
+  "Блюда — кластер «Быстрая еда»": "dish",
+  "Блюда — кластер «Сладкое»": "dish",
   "Каталог продуктов": "product",
   "Глоссарий": "glossary",
   "Методология": "methodology",
   "Калькуляторы": "calculator",
 };
+
+/**
+ * Роль позиции в составе ночи.
+ *
+ * Ночь собирается не «из разных разделов», а из трёх ролей: якорь, блюдо и
+ * короткая. Правило «разных разделов» работало, пока разделов было пять
+ * вперемешку, и переставало к концу очереди: когда остаются одни блюда,
+ * «разные разделы» превращаются в три блюда подряд. Роли задают состав
+ * жёстко — см. `docs/seo-pipeline.md`, «Состав ночи».
+ */
+const KIND_ROLES = {
+  article: "anchor",
+  methodology: "anchor",
+  calculator: "anchor",
+  dish: "dish",
+  product: "short",
+  glossary: "short",
+};
+
+/** Порядок ролей в ночи. Якорь первым: он самый дорогой и важный. */
+const ROLES = ["anchor", "dish", "short"];
 
 const TRANSLIT = {
   а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "e", ж: "zh", з: "z",
@@ -120,12 +146,13 @@ export function parseQueue(markdown) {
 /**
  * Что взять в работу этой ночью.
  *
- * Порядок очереди задан частотностью, и брать надо сверху. Но три позиции
- * подряд — это, как правило, три позиции одного раздела, а три текста одного
- * вида за одну ночь получаются одинаковыми. Поэтому: первую берём строго
- * сверху, дальше предпочитаем позицию другого вида, а если такой нет —
- * возвращаемся к порядку. Так соблюдены оба правила, и приоритет частотности
- * нарушается ровно настолько, насколько нужно для непохожести.
+ * Одна позиция каждой роли: якорь, блюдо, короткая. Внутри роли берём сверху
+ * — порядок очереди задан полнотой кластера.
+ *
+ * Если пул роли пуст, слот отдаётся ближайшей непустой роли, но два текста
+ * одного вида за ночь — потолок. Три одинаковых не выйдет никогда, и это
+ * главное, ради чего роли заведены: три блюда за ночь — это три одинаковых
+ * блюда, сколько бы разных названий у них ни было.
  *
  * `busy` — слаги, у которых уже есть неслитая ветка. Без этого фильтра
  * простой утренней проверки превращается в повторную работу: конвейер каждую
@@ -134,18 +161,35 @@ export function parseQueue(markdown) {
 export function pickBatch(items, take, busy = new Set()) {
   const free = items.filter((item) => !busy.has(item.slug));
   const batch = [];
-  const kinds = new Set();
+  const perKind = new Map();
 
+  const canTake = (item) => (perKind.get(item.kind) ?? 0) < MAX_PER_KIND;
+  const add = (item) => {
+    batch.push(item);
+    perKind.set(item.kind, (perKind.get(item.kind) ?? 0) + 1);
+  };
+
+  // Сначала по одной позиции на роль, в порядке ролей.
+  for (const role of ROLES) {
+    if (batch.length >= take) break;
+    const pick = free.find(
+      (item) => !batch.includes(item) && KIND_ROLES[item.kind] === role && canTake(item),
+    );
+    if (pick) add(pick);
+  }
+
+  // Роль оказалась пустой — добираем сверху очереди, не нарушая потолка.
   while (batch.length < take) {
-    const rest = free.filter((item) => !batch.includes(item));
-    if (rest.length === 0) break;
-    const pick = rest.find((item) => !kinds.has(item.kind)) ?? rest[0];
-    batch.push(pick);
-    kinds.add(pick.kind);
+    const pick = free.find((item) => !batch.includes(item) && canTake(item));
+    if (!pick) break;
+    add(pick);
   }
 
   return batch;
 }
+
+/** Сколько текстов одного вида допустимо за ночь. */
+const MAX_PER_KIND = 2;
 
 function main() {
   const markdown = readFileSync(QUEUE_FILE, "utf8");
