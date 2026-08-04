@@ -126,6 +126,13 @@ jobs:
       - name: Написать
         uses: anthropics/claude-code-action@v1
         with:
+          # Штатный токен явно. Без него действие меняет OIDC-токен на токен
+          # GitHub-приложения Claude — а это требует и `id-token: write` в
+          # permissions, и установленного приложения. Первый запуск конвейера
+          # упал ровно здесь: «Could not fetch an OIDC token». Агенту хватает
+          # прав github-actions[bot] — файлы он правит локально, а ветку
+          # отправляет следующий шаг.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
             Ты — ночной агент контента «Живого Тела». Тебе досталась ровно
