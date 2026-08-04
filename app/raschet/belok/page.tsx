@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { breadcrumbsJsonLd, jsonLdScript, webApplicationJsonLd } from "@/lib/schema-org";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import ProteinForm from "./protein-form";
@@ -201,6 +202,21 @@ export default function ProteinCalculatorPage() {
           <summary>{item.question}</summary>
           <p>{item.answer}</p>
         </details>)}
+    </section>
+
+    <section className="raschet-section">
+      <h2>Что посчитать дальше</h2>
+      <p>
+        Белок — одна величина из нескольких. Чтобы увидеть картину целиком, посчитайте{" "}
+        <Link href="/raschet/energiya">норму энергии</Link> и разложите её на{" "}
+        <Link href="/raschet/bzhu">белки, жиры и углеводы</Link>. Если добираете белок из обычной
+        еды, пригодится <Link href="/produkty">каталог продуктов</Link>: там указано, сколько его в
+        вашей порции, а не в условных ста граммах.
+      </p>
+      <div className="raschet-actions">
+        <Link className="black-button" href="/raschet/plan">Весь план целиком <b>↗</b></Link>
+        <Link className="link-button" href="/raschet/kletchatka">Норма клетчатки</Link>
+      </div>
     </section>
 
     <p className="raschet-disclaimer field-note">{NOT_MEDICAL_DISCLAIMER}</p>

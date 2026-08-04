@@ -584,3 +584,205 @@
   font-size: 18px; cursor: pointer;
 }
 .measure-stepper button:active { background: var(--line); }
+
+/* ===== Общие элементы новых калькуляторов ===== */
+
+/* Пометка «не обязательно» у поля. */
+.field-optional { font-style: normal; font-weight: 500; text-transform: none; letter-spacing: 0; opacity: 0.6; }
+
+/* Выбор из вариантов кнопками: пол, активность, цель, способ готовки. */
+.raschet-choice { display: flex; flex-wrap: wrap; gap: 8px; }
+.raschet-choice button {
+  display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  min-height: 44px; padding: 10px 14px;
+  border: 1px solid var(--line); background: var(--white);
+  font: 600 14px var(--font-body), system-ui, sans-serif; cursor: pointer;
+}
+.raschet-choice button i { font-style: normal; font-size: 12px; font-weight: 500; opacity: 0.6; }
+.raschet-choice button.active { background: var(--black); color: var(--white); border-color: var(--black); }
+.raschet-choice button.active i { opacity: 0.75; }
+.raschet-choice--stack { flex-direction: column; }
+.raschet-choice--stack button { width: 100%; }
+
+/* Флажок с длинной подписью. */
+.raschet-check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.5; }
+.raschet-check input { margin-top: 2px; width: 20px; height: 20px; flex: none; }
+
+/* Оговорки под результатом: их видно, но они не кричат. */
+.raschet-caveats { margin-top: 14px; display: grid; gap: 10px; }
+.raschet-caveats p {
+  margin: 0; padding: 12px 14px; background: var(--paper);
+  border-left: 3px solid var(--coral); font-size: 13px; line-height: 1.6;
+}
+
+/* Врезка-вывод внутри текста страницы. */
+.raschet-callout {
+  max-width: 640px; margin: 22px 0; padding: 18px 20px;
+  background: var(--lime); font-size: 14px; line-height: 1.7;
+}
+.raschet-callout p:last-child { margin-bottom: 0; }
+
+/* Таблицы данных на страницах расчётов. */
+.raschet-table-scroll { overflow-x: auto; max-width: 100%; }
+.raschet-table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 14px; }
+.raschet-table th, .raschet-table td {
+  padding: 11px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top; line-height: 1.5;
+}
+.raschet-table thead th {
+  background: var(--paper); font-size: 11px; font-weight: 800;
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+
+/* ===== ИМТ: шкала ===== */
+.bmi-scale { position: relative; margin: 22px 0 8px; }
+.bmi-scale-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; }
+.bmi-zone { flex: 1; }
+.bmi-zone--under { background: #cfd6e6; }
+.bmi-zone--normal { background: var(--lime); flex: 1.3; }
+.bmi-zone--over { background: #f2d9a0; }
+.bmi-zone--obese { background: #e8b0a3; flex: 1.6; }
+.bmi-scale-marker {
+  position: absolute; top: -6px; width: 3px; height: 22px; background: var(--black);
+  transform: translateX(-1px); border-radius: 2px;
+}
+.bmi-scale-labels {
+  display: flex; margin-top: 8px; font-size: 11px; font-weight: 700;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
+}
+.bmi-scale-labels span { flex: 1; }
+.bmi-scale-labels span:nth-child(2) { flex: 1.3; }
+.bmi-scale-labels span:nth-child(4) { flex: 1.6; }
+
+/* ===== БЖУ: полоса долей ===== */
+.bzhu-bar { display: flex; height: 14px; margin: 20px 0 6px; border-radius: 7px; overflow: hidden; background: var(--line); }
+.bzhu-bar span { display: block; }
+.bzhu-bar--protein { background: #4a7fd0; }
+.bzhu-bar--fat { background: #e0a53f; }
+.bzhu-bar--carbs { background: #a86fc4; }
+
+/* ===== Вода: стаканы ===== */
+.water-glasses { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 8px; }
+.water-glass {
+  width: 18px; height: 26px; border: 2px solid var(--coral); border-top: 0;
+  border-radius: 0 0 5px 5px; background: rgba(229, 109, 85, 0.18);
+}
+
+/* ===== Рецепт: список ингредиентов ===== */
+.recipe-items { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 6px; }
+.recipe-items li {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; background: var(--white); border: 1px solid var(--line);
+}
+.recipe-item-name { flex: 1; font-size: 14px; min-width: 0; }
+.recipe-item-grams { display: flex; align-items: center; gap: 4px; }
+.recipe-item-grams input {
+  width: 74px; padding: 8px; border: 1px solid var(--line); background: var(--white);
+  font-size: 14px; text-align: right; font-variant-numeric: tabular-nums;
+}
+.recipe-item-grams i { font-style: normal; font-size: 12px; opacity: 0.6; }
+.recipe-remove {
+  width: 44px; height: 44px; flex: none; border: 0; background: transparent;
+  font-size: 20px; color: var(--muted); cursor: pointer;
+}
+.recipe-remove:hover { color: var(--coral); }
+.recipe-empty { justify-content: center; color: var(--muted); font-size: 13px; }
+.recipe-search { margin-top: 4px; }
+.recipe-results { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.recipe-results button {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  width: 100%; min-height: 44px; padding: 10px 12px;
+  border: 0; background: var(--white); text-align: left; cursor: pointer; font-size: 14px;
+}
+.recipe-results button:hover { background: var(--paper); }
+.recipe-results i { font-style: normal; font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+/* ===== Меры: таблица с выбором строки ===== */
+.measures-table td:first-child { padding: 0; }
+.measures-pick {
+  width: 100%; min-height: 44px; padding: 10px 12px;
+  border: 0; background: transparent; text-align: left; cursor: pointer; font: inherit;
+}
+.measures-pick:hover { background: var(--paper); color: var(--coral); }
+.measures-group th {
+  background: var(--black); color: var(--white);
+  font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.measures-counter { margin-top: 24px; }
+
+/* ===== Ладонь: карточки мер ===== */
+.hand-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.hand-card { padding: 16px 18px; background: var(--white); border: 1px solid var(--line); }
+.hand-card-top { display: flex; align-items: center; gap: 14px; }
+.hand-card-top div { flex: 1; min-width: 0; }
+.hand-card-top b { display: block; font: 500 20px var(--serif); letter-spacing: -0.02em; }
+.hand-card-top span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.hand-card-top strong { font: 600 20px var(--serif); font-variant-numeric: tabular-nums; }
+.hand-icon { width: 40px; height: 40px; flex: none; color: var(--coral); }
+.hand-icon svg { width: 100%; height: 100%; display: block; }
+.hand-card-meal { margin: 12px 0 6px; font-size: 14px; line-height: 1.6; }
+.hand-card-caveat { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+
+/* ===== Прогноз: график ===== */
+.forecast-chart { margin: 20px 0 6px; }
+.forecast-chart svg { display: block; width: 100%; height: auto; border: 1px solid var(--line); }
+.forecast-chart figcaption { margin-top: 10px; font-size: 12px; line-height: 1.6; color: var(--muted); }
+
+@media (max-width: 720px) {
+  .raschet-table { min-width: 420px; }
+  .hand-card-top strong { font-size: 18px; }
+}
+
+/* Поля поиска в калькуляторах: 24px по высоте — не тач-цель. Правило общее
+   для всех типов ввода раздела, чтобы новая форма не унаследовала проблему. */
+.raschet-form input[type="search"],
+.raschet-form input[type="number"],
+.raschet-form input[type="text"],
+.raschet-form select {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  font-size: 16px; /* 16px, иначе Safari зумит страницу при фокусе */
+}
+
+/* Таблица внутри fieldset прорывала форму: у fieldset и grid-элементов
+   min-width по умолчанию auto, и они растягиваются под самое широкое
+   содержимое, игнорируя overflow контейнера. */
+.raschet-form fieldset,
+.raschet-form { min-width: 0; }
+.raschet-table-scroll { min-width: 0; max-width: 100%; }
+
+/* На узких экранах таблица мер прокручивается, а не распирает страницу. */
+@media (max-width: 520px) {
+  .raschet-table { min-width: 340px; font-size: 13px; }
+  .raschet-table th, .raschet-table td { padding: 9px 8px; }
+}
+
+/* Galaxy Fold: 340px таблицы не помещаются в 280px экрана даже с
+   прокруткой контейнера — сама прокрутка должна начинаться раньше. */
+@media (max-width: 340px) {
+  .raschet-table { min-width: 300px; }
+}
+
+/* Скролл-контейнер обязан иметь свою ширину, иначе он растягивается под
+   таблицу и прокрутка не включается: overflow работает только у элемента с
+   ограниченной шириной. */
+.raschet-table-scroll { width: 100%; }
+
+@media (max-width: 340px) {
+  /* Четыре подписи шкалы ИМТ не помещаются в строку — сокращаем и уменьшаем. */
+  .bmi-scale-labels { font-size: 9px; letter-spacing: 0; }
+  .bmi-scale-labels span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* Поля с подписью внутри форм расчёта — подпись сверху, а не сбоку:
+   в строку она сжимает само поле до нечитаемой ширины. */
+.raschet-form .field {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.raschet-form .field input { text-transform: none; letter-spacing: normal; }
+
+/* Пояснение под результатом не должно прилипать к числам над ним. */
+.raschet-range-card .raschet-hint { margin-top: 12px; }

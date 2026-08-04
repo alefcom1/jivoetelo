@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { breadcrumbsJsonLd, jsonLdScript, webApplicationJsonLd } from "@/lib/schema-org";
 import { AppInvite } from "../../app-invite";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import "./plan.css";
@@ -9,6 +11,39 @@ export const metadata: Metadata = {
   description:
     "Пошаговый расчёт нормы энергии, белка и веса с честным коридором значений. Если формула переоценит ваш расход, мы прямо скажем, где план остановится, — вместо обещанной даты и цифры. Всё считается в браузере, ничего не сохраняется.",
   alternates: { canonical: "/raschet/plan" },
+};
+
+const FAQ_ITEMS = [
+  {
+    question: "Чем стартовый коридор отличается от обычного калькулятора калорий?",
+    answer:
+      "Обычный калькулятор выдаёт одно число. Здесь считается коридор — интервал, внутри которого почти наверняка находится ваша настоящая потребность, — плюс ориентиры по белку и клетчатке и разумный срок. Формула у всех одна и та же, разница в честности подачи результата.",
+  },
+  {
+    question: "Почему семь вопросов, а не три?",
+    answer:
+      "Три вопроса — рост, вес, возраст — дают формулу для среднего человека. Остальные уточняют то, что формула не знает: как вы двигаетесь, какая цель, с какой скоростью готовы идти. Каждый вопрос влияет на итог, лишних здесь нет.",
+  },
+  {
+    question: "Что делать после расчёта?",
+    answer:
+      "Неделю просто записывать еду, ничего не меняя. Почти всегда обнаруживается пара источников калорий, о которых человек не подозревал, — и этого знания часто достаточно, чтобы дальше всё пошло само.",
+  },
+  {
+    question: "Как часто пересчитывать план?",
+    answer:
+      "Раз в месяц или после изменения веса на 3–5 килограммов. В приложении это происходит само: норма подстраивается по сглаженному тренду веса и предлагает корректировку небольшими шагами.",
+  },
+];
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: { "@type": "Answer", text: item.answer },
+  })),
 };
 
 export default function PlanPage() {
@@ -41,5 +76,48 @@ export default function PlanPage() {
         "В Telegram ни почты, ни пароля не нужно — нажали «Начать», и всё."
       }
     />
+
+    <section className="raschet-section">
+      <h2>Что дальше</h2>
+      <p>
+        План — это стартовая точка, а не приговор. Дальше его уточняют ваши собственные данные:
+        сервис смотрит на сглаженный тренд веса и предлагает подвинуть коридор на 150 килокалорий,
+        если тренд расходится с планом. Подробно — на странице{" "}
+        <Link href="/kak-schitaem">«Как мы считаем»</Link>.
+      </p>
+      <p>
+        Отдельные части плана можно пересчитать по-своему:{" "}
+        <Link href="/raschet/bzhu">БЖУ</Link>, <Link href="/raschet/belok">белок</Link>,{" "}
+        <Link href="/raschet/prognoz-vesa">прогноз веса</Link> или{" "}
+        <Link href="/raschet/imt">ИМТ с обхватом талии</Link>.
+      </p>
+      <div className="raschet-actions">
+        <Link className="black-button" href="/register">Начать вести дневник <b>↗</b></Link>
+        <Link className="link-button" href="/raschet">Все калькуляторы</Link>
+      </div>
+    </section>
+
+    <section className="raschet-faq">
+      <h2>Частые вопросы</h2>
+      {FAQ_ITEMS.map((item) => <details key={item.question}>
+        <summary>{item.question}</summary>
+        <p>{item.answer}</p>
+      </details>)}
+    </section>
+
+    <script type="application/ld+json" dangerouslySetInnerHTML={{
+      __html: jsonLdScript([
+        faqJsonLd,
+        webApplicationJsonLd({
+          name: "Расчёт стартового плана питания",
+          description: "Семь вопросов — коридор калорий, ориентиры по белку и клетчатке и разумный срок.",
+          path: "/raschet/plan",
+        }),
+        breadcrumbsJsonLd([
+          { name: "Расчёты", path: "/raschet" },
+          { name: "Стартовый план", path: "/raschet/plan" },
+        ]),
+      ]),
+    }} />
   </article>;
 }

@@ -59,13 +59,14 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Расчёты",
     links: [
       { href: "/raschet/energiya", label: "Сколько калорий в день" },
-      { href: "/raschet/belok", label: "Сколько белка в день" },
-      { href: "/raschet/temp", label: "С какой скоростью снижать вес" },
-      { href: "/raschet/suhoe-varenoe", label: "Сухая и варёная крупа" },
-      { href: "/raschet/porcii", label: "Порция без весов" },
+      { href: "/raschet/bzhu", label: "Калькулятор БЖУ" },
+      { href: "/raschet/imt", label: "Калькулятор ИМТ" },
+      { href: "/raschet/kaloriynost-blyuda", label: "Калорийность блюда" },
+      { href: "/raschet/prognoz-vesa", label: "Сколько уйдёт за месяц" },
+      { href: "/raschet/voda", label: "Норма воды" },
+      { href: "/raschet/gramm-v-stakane", label: "Граммы в стакане и ложке" },
       { href: "/slovar", label: "Словарь" },
-      { href: "/raschet/kviz", label: "Стоит ли снижать вес" },
-      { href: "/raschet", label: "Все расчёты" },
+      { href: "/raschet", label: "Все калькуляторы" },
     ],
     art: {
       src: "/site/menu-calculators.webp",
@@ -94,4 +95,10 @@ export const NAV_EXEMPT = [
   "/login", "/register", "/reset",   // справа в шапке
   "/legal", "/pochta/otpiska",       // подвал и письма
   "/pro/clients",                    // кабинет специалиста, за авторизацией
+  // Раздел расчётов вырос до пятнадцати страниц — в выпадающую панель они не
+  // влезают и не должны. В панели семь самых спрашиваемых плюс ссылка «Все
+  // калькуляторы»; остальные доступны из хаба /raschet, где разложены по
+  // группам. Тест на «каждая страница доступна из меню» это и проверяет —
+  // через хаб, а не через панель.
+  "/raschet",
 ];

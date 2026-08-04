@@ -219,6 +219,27 @@ export default function EnergyCalculatorPage() {
         </details>)}
     </section>
 
+    <section className="raschet-section">
+      <h2>Что посчитать дальше</h2>
+      <p>
+        Норма энергии — точка отсчёта, а не весь план. Дальше полезны три вещи:
+        разложить эту норму на <Link href="/raschet/bzhu">белки, жиры и углеводы</Link>,
+        выбрать <Link href="/raschet/temp">темп снижения</Link>, который выдержите месяцами, и
+        посмотреть <Link href="/raschet/prognoz-vesa">прогноз веса</Link> — он честно показывает,
+        что снижение однажды замедлится само.
+      </p>
+      <p>
+        Если хочется проверить исходные данные о себе, начните с{" "}
+        <Link href="/raschet/imt">ИМТ и обхвата талии</Link>: второе говорит о здоровье больше
+        первого. А как эта норма уточняется по вашим настоящим данным — на странице{" "}
+        <Link href="/kak-schitaem">«Как мы считаем»</Link>.
+      </p>
+      <div className="raschet-actions">
+        <Link className="black-button" href="/raschet/plan">Весь план целиком <b>↗</b></Link>
+        <Link className="link-button" href="/produkty">Каталог продуктов</Link>
+      </div>
+    </section>
+
     <p className="raschet-disclaimer field-note">{NOT_MEDICAL_DISCLAIMER}</p>
 
     <script

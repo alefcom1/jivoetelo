@@ -1,67 +1,73 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { CALCULATORS, CALCULATOR_GROUPS, GROUP_NOTES, calculatorsIn } from "@/lib/calculators";
+import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
+import { breadcrumbsJsonLd, itemListJsonLd, jsonLdScript } from "@/lib/schema-org";
 
 export const metadata: Metadata = {
-  title: "Расчёты питания — Живое Тело",
-  description: "Бесплатные расчёты нормы энергии и белка. Показываем диапазон, а не одну цифру.",
+  title: "Калькуляторы питания: калории, БЖУ, ИМТ, порции — Живое Тело",
+  description:
+    "Пятнадцать бесплатных калькуляторов питания: норма калорий и БЖУ, ИМТ с талией, прогноз веса, калорийность блюда по ингредиентам, меры и порции. Без регистрации.",
   alternates: { canonical: "/raschet" },
 };
-
-// Один источник карточек для хаба: сюда же добавляются новые калькуляторы
-// раздела, без правки разметки.
-const CALCULATORS = [
-  {
-    href: "/raschet/plan",
-    title: "Ваш стартовый коридор",
-    summary: "Семь вопросов — и коридор калорий, белка и срока. С честной границей, где план перестаёт работать",
-  },
-  {
-    href: "/raschet/energiya",
-    title: "Сколько энергии нужно вашему телу",
-    summary: "Суточная норма энергии и белка по формуле Миффлина-Сан Жеора",
-  },
-  {
-    href: "/raschet/belok",
-    title: "Сколько белка нужно в день",
-    summary: "Коридор нормы по весу и когда стоит держаться его верхней половины",
-  },
-  {
-    href: "/raschet/temp",
-    title: "С какой скоростью снижать вес",
-    summary: "Темп, дефицит и срок — и какую долю расхода этот темп съедает",
-  },
-  {
-    href: "/raschet/kviz",
-    title: "Стоит ли вам сейчас снижать вес",
-    summary: "Пять вопросов о сне, нагрузке и отношении к еде — и честный ответ",
-  },
-  {
-    href: "/raschet/suhoe-varenoe",
-    title: "Сухая и варёная крупа",
-    summary: "100 г сухой гречки — сколько это готовой? Пересчёт веса и калорий в обе стороны",
-  },
-  {
-    href: "/raschet/porcii",
-    title: "Порция без весов",
-    summary: "Сколько в ложке, стакане и штуке — соберите порцию из бытовых мер",
-  },
-];
 
 export default function RaschetHubPage() {
   return <article className="raschet-page">
     <p className="kicker">Расчёты <i /></p>
-    <h1>Расчёты без ложной точности</h1>
+    <h1>Калькуляторы питания</h1>
     <p className="raschet-lead">
-      Любой расчёт нормы — это оценка, а не измерение. Мы показываем границы, внутри которых почти наверняка
-      находится ваша настоящая потребность, и честно говорим, чего формула не знает.
+      {CALCULATORS.length} расчётов, которые работают без регистрации. Любой расчёт нормы — это
+      оценка, а не измерение: мы показываем границы, внутри которых почти наверняка находится ваша
+      настоящая потребность, и честно говорим, чего формула не знает.
     </p>
 
-    <div className="raschet-index">
-      {CALCULATORS.map((item) =>
-        <Link key={item.href} href={item.href}>
+    {CALCULATOR_GROUPS.map((group) => <section className="raschet-section" key={group}>
+      <h2>{group}</h2>
+      <p>{GROUP_NOTES[group]}</p>
+      <div className="raschet-index">
+        {calculatorsIn(group).map((item) => <Link key={item.href} href={item.href}>
           <span><b>{item.title}</b><span>{item.summary}</span></span>
           <b>→</b>
         </Link>)}
-    </div>
+      </div>
+    </section>)}
+
+    <section className="raschet-section">
+      <h2>С чего начать</h2>
+      <p>
+        Если считаете впервые, полезен такой порядок. Сначала{" "}
+        <Link href="/raschet/energiya">норма энергии</Link> — она задаёт точку отсчёта для всего
+        остального. Потом <Link href="/raschet/bzhu">БЖУ</Link>, чтобы понять, из чего эта норма
+        складывается. Если цель — снижение веса, посмотрите{" "}
+        <Link href="/raschet/temp">разумный темп</Link> и{" "}
+        <Link href="/raschet/prognoz-vesa">прогноз</Link>: они честно показывают, что снижение
+        замедляется само и это нормально.
+      </p>
+      <p>
+        Расчёты из группы «Кухня и порции» не спрашивают о вас ничего — они про еду, а не про тело.
+        Их удобно держать под рукой во время готовки.
+      </p>
+      <div className="raschet-callout">
+        <p>
+          Одно общее правило для всех страниц раздела: мы не показываем одну цифру там, где честен
+          диапазон. Формулы описывают среднего человека с вашими параметрами, а не вас — подробно об
+          этом на странице <Link href="/kak-schitaem">«Как мы считаем»</Link>.
+        </p>
+      </div>
+    </section>
+
+    <p className="raschet-disclaimer field-note">
+      {NOT_MEDICAL_DISCLAIMER} <Link href="/legal/health">Подробнее о границах сервиса →</Link>
+    </p>
+
+    <script type="application/ld+json" dangerouslySetInnerHTML={{
+      __html: jsonLdScript([
+        itemListJsonLd({
+          name: "Калькуляторы питания «Живого Тела»",
+          items: CALCULATORS.map((item) => ({ name: item.title, path: item.href })),
+        }),
+        breadcrumbsJsonLd([{ name: "Расчёты", path: "/raschet" }]),
+      ]),
+    }} />
   </article>;
 }
