@@ -132,10 +132,36 @@ export const HEROES: Record<string, () => React.ReactElement> = {
   "norma-kalorij-kotoraya-uchitsya": HeroAdaptive,
 };
 
-export function ArticleHero({ slug, image, alt }: { slug: string; image: string | null; alt: string }) {
+/**
+ * Обложка статьи. `card` — для мест, где картинка показывается мелко:
+ * карточки журнала на главной и в сетке хаба. Там подставляется версия
+ * 800 px (scripts/blog-heroes.mjs готовит обе), иначе ради картинки в
+ * 300 CSS-пикселей грузился бы файл на 1600.
+ *
+ * Пустой `alt` — сознательно: во всех местах, где обложка декоративна,
+ * контейнер помечен `aria-hidden`, а смысл несёт заголовок рядом. На
+ * странице самой статьи alt приходит настоящий.
+ */
+export function ArticleHero({
+  slug,
+  image,
+  alt,
+  card = false,
+}: {
+  slug: string;
+  image: string | null;
+  alt: string;
+  card?: boolean;
+}) {
   if (image) {
-    // Пропорция обложек фиксирована договорённостью в docs/blog-illustrations.md.
-    return <Image src={image} alt={alt} width={1600} height={900} sizes="(max-width: 850px) 100vw, 1080px" />;
+    const src = card ? image.replace(/\.webp$/, "-card.webp") : image;
+    return <Image
+      src={src}
+      alt={alt}
+      width={card ? 800 : 1600}
+      height={card ? 450 : 900}
+      sizes={card ? "(max-width: 850px) 100vw, 560px" : "(max-width: 850px) 100vw, 1120px"}
+    />;
   }
   const Hero = HEROES[slug];
   return Hero ? <Hero /> : null;

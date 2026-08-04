@@ -111,12 +111,27 @@ test("методологические статьи опираются на на
   }
 });
 
-test("заявленная растровая обложка существует", () => {
+test("обложка существует в обоих размерах", () => {
+  // Карточки берут облегчённую версию `-card`; если её нет, Next вернёт
+  // 404 на картинку, а страница при этом соберётся — молчаливая поломка.
+  for (const article of ARTICLES) {
+    if (!article.heroImage) continue;
+    const card = article.heroImage.replace(/\.webp$/, "-card.webp");
+    for (const path of [article.heroImage, card]) {
+      assert.ok(
+        existsSync(new URL(`../public${path}`, import.meta.url)),
+        `«${article.slug}»: нет ${path} — соберите: node scripts/blog-heroes.mjs <каталог>`,
+      );
+    }
+  }
+});
+
+test("у обложки есть осмысленное описание", () => {
   for (const article of ARTICLES) {
     if (!article.heroImage) continue;
     assert.ok(
-      existsSync(new URL(`../public${article.heroImage}`, import.meta.url)),
-      `«${article.slug}»: heroImage ${article.heroImage} не найден в public/`,
+      article.heroAlt.length >= 40,
+      `«${article.slug}»: heroAlt слишком короткий — он идёт в alt и в OpenGraph`,
     );
   }
 });

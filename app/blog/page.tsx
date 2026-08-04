@@ -47,7 +47,7 @@ export default function BlogHubPage() {
     <div className="blog-grid">
       {rest.map((article) => <Link className="blog-card" key={article.slug} href={`/blog/${article.slug}`}>
         <span className="blog-card-hero" aria-hidden>
-          <ArticleHero slug={article.slug} image={article.heroImage} alt="" />
+          <ArticleHero slug={article.slug} image={article.heroImage} alt="" card />
         </span>
         <span className="blog-meta">
           <span>{article.kicker}</span><i /><span>{article.minutes} мин</span>
