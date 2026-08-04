@@ -10,6 +10,9 @@
  * графики и таблицы, и в строку данных их не уложить.
  */
 
+/** Источник, на который опирается статья: закон, методичка, оригинал формулы. */
+export type Source = { title: string; url: string };
+
 export type Article = {
   slug: string;
   /** Рубрика над заголовком: «Продукт», «Сравнение», «Методология»… */
@@ -23,6 +26,12 @@ export type Article = {
   lead: string;
   /** Дата публикации, ГГГГ-ММ-ДД. Реальная, не маркетинговая. */
   published: string;
+  /**
+   * Дата последней содержательной правки. Отдельно от `published`, потому
+   * что «обновлено» — сигнал и для читателя, и для поиска, и врать им
+   * одинаково плохо: правка запятой датой обновления не считается.
+   */
+  updated: string;
   minutes: number;
   /**
    * Заглавная иллюстрация. Пока файла нет — обложку рисует SVG-компонент
@@ -31,6 +40,17 @@ export type Article = {
    */
   heroImage: string | null;
   heroAlt: string;
+  /**
+   * На чём стоит статья. Пустой список — честный ответ для текстов про наш
+   * же интерфейс: там источник — сам продукт, и выдумывать ссылки на
+   * исследования, чтобы выглядеть научнее, мы не будем.
+   */
+  sources: Source[];
+  /**
+   * Раскрытие интереса. Нужно там, где мы судим сами себя: сравнение с
+   * конкурентами без такой пометки — реклама, притворяющаяся обзором.
+   */
+  disclosure?: string;
 };
 
 export const ARTICLES: Article[] = [
@@ -47,6 +67,8 @@ export const ARTICLES: Article[] = [
       "и почему на каждом шаге можно всё поправить руками.",
     published: "2026-08-04",
     minutes: 7,
+    updated: "2026-08-04",
+    sources: [],
     heroImage: null,
     heroAlt: "Телефон над тарелкой: снимок еды превращается в список продуктов",
   },
@@ -63,6 +85,12 @@ export const ARTICLES: Article[] = [
       "где пока проигрываем, — их три, и мы объясняем почему.",
     published: "2026-08-04",
     minutes: 9,
+    updated: "2026-08-04",
+    sources: [],
+    disclosure:
+      "«Живое Тело» — наш продукт, и признаки для сравнения выбирали мы. " +
+      "Данные о чужих приложениях собраны по их открытым описаниям и нашей проверке " +
+      "на начало августа 2026 года; функции меняются, и мы просим сообщать об устаревшем.",
     heroImage: null,
     heroAlt: "Четыре колонки сравнения приложений, одна выделена коралловым",
   },
@@ -79,6 +107,10 @@ export const ARTICLES: Article[] = [
       "и работает на любом телефоне, где есть сам Telegram.",
     published: "2026-08-04",
     minutes: 6,
+    updated: "2026-08-04",
+    sources: [
+      { title: "Telegram Mini Apps — документация платформы", url: "https://core.telegram.org/bots/webapps" },
+    ],
     heroImage: null,
     heroAlt: "Экран Telegram с открытым мини-приложением дневника питания",
   },
@@ -95,6 +127,11 @@ export const ARTICLES: Article[] = [
       "и почему показывать этот разброс полезнее, чем прятать.",
     published: "2026-08-04",
     minutes: 6,
+    updated: "2026-08-04",
+    sources: [
+      { title: "МР 2.3.1.0253-21. Нормы физиологических потребностей в энергии и пищевых веществах", url: "https://www.rospotrebnadzor.ru/documents/details.php?ELEMENT_ID=18979" },
+      { title: "FAO. Food energy — methods of analysis and conversion factors (коэффициенты Этуотера)", url: "https://www.fao.org/4/y5022e/y5022e00.htm" },
+    ],
     heroImage: null,
     heroAlt: "Одна тарелка борща и линейка диапазона калорийности под ней",
   },
@@ -111,6 +148,11 @@ export const ARTICLES: Article[] = [
       "записей сервис перестаёт верить формуле и начинает верить вашим данным.",
     published: "2026-08-04",
     minutes: 7,
+    updated: "2026-08-04",
+    sources: [
+      { title: "Mifflin M. D. et al. A new predictive equation for resting energy expenditure in healthy individuals (1990)", url: "https://pubmed.ncbi.nlm.nih.gov/2305711/" },
+      { title: "МР 2.3.1.0253-21. Нормы физиологических потребностей в энергии и пищевых веществах", url: "https://www.rospotrebnadzor.ru/documents/details.php?ELEMENT_ID=18979" },
+    ],
     heroImage: null,
     heroAlt: "Линия веса и линия плана, которые сходятся на графике",
   },

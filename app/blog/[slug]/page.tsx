@@ -72,6 +72,41 @@ export default async function ArticlePage({ params }: Params) {
 
     <Content />
 
+    {/* Кто это написал и на чём стоит.
+        Автор — редакция, а не выдуманное имя эксперта: тексты пишет и
+        вычитывает команда сервиса, и приписывать их несуществующему
+        диетологу было бы ровно тем враньём, против которого статьи и
+        написаны. Зато проверяемо всё остальное: методика открыта
+        отдельной страницей, числа взяты из кода, источники названы. */}
+    <section className="blog-byline">
+      <h2>Кто это написал</h2>
+      <p>
+        Текст подготовила редакция «Живого Тела» — команда, которая делает сам сервис.
+        Все числа в статье взяты из работающего кода, а не из общих соображений: методика
+        расчётов открыта целиком на странице <Link href="/kak-schitaem">«Как мы считаем»</Link>,
+        и любую цифру отсюда можно сверить с ней.
+      </p>
+      <p className="blog-byline-dates">
+        Опубликовано {formatArticleDate(article.published)}
+        {article.updated !== article.published && <> · обновлено {formatArticleDate(article.updated)}</>}
+      </p>
+      {article.disclosure && <p className="blog-disclosure">
+        <strong>Раскрытие.</strong> {article.disclosure}
+      </p>}
+      {article.sources.length > 0 && <>
+        <h3>Источники</h3>
+        <ul className="blog-sources">
+          {article.sources.map((source) => <li key={source.url}>
+            <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a>
+          </li>)}
+        </ul>
+      </>}
+      <p className="blog-byline-note">
+        Нашли неточность или устаревшее? Напишите — <a href="mailto:privacy@jivoetelo.ru">privacy@jivoetelo.ru</a>.
+        Поправим и отметим дату обновления.
+      </p>
+    </section>
+
     <aside className="blog-cta">
       <h2>Попробуйте на своей тарелке</h2>
       <p>
@@ -107,7 +142,10 @@ export default async function ArticlePage({ params }: Params) {
             description: article.description,
             path: `/blog/${article.slug}`,
             published: article.published,
+            updated: article.updated,
+            section: article.kicker,
             image: article.heroImage,
+            sources: article.sources,
           }),
           breadcrumbsJsonLd([
             { name: "Журнал", path: "/blog" },

@@ -70,6 +70,44 @@ test("скриншоты, на которые ссылаются статьи, �
   }
 });
 
+test("дата обновления не раньше публикации", () => {
+  for (const article of ARTICLES) {
+    assert.match(article.updated, /^\d{4}-\d{2}-\d{2}$/, `«${article.slug}»: updated не ГГГГ-ММ-ДД`);
+    assert.ok(article.updated >= article.published, `«${article.slug}»: обновлено раньше публикации`);
+  }
+});
+
+test("источники — живые внешние ссылки, а не заглушки", () => {
+  for (const article of ARTICLES) {
+    for (const source of article.sources) {
+      assert.match(source.url, /^https:\/\//, `«${article.slug}»: источник «${source.title}» не по https`);
+      assert.ok(source.title.length > 15, `«${article.slug}»: у источника слишком короткое название`);
+    }
+  }
+});
+
+test("статья, где мы судим сами себя, раскрывает интерес", () => {
+  // Ровно та проверка, ради которой поле и заведено: сравнение с
+  // конкурентами без раскрытия — реклама, притворяющаяся обзором.
+  for (const article of ARTICLES) {
+    if (article.kicker !== "Сравнение") continue;
+    assert.ok(
+      article.disclosure && article.disclosure.length > 60,
+      `«${article.slug}» — сравнение без раскрытия интереса`,
+    );
+  }
+});
+
+test("методологические статьи опираются на названные источники", () => {
+  for (const article of ARTICLES) {
+    if (article.kicker !== "Методология") continue;
+    assert.ok(
+      article.sources.length > 0,
+      `«${article.slug}»: методология без единого источника — нечем подтвердить цифры`,
+    );
+  }
+});
+
 test("заявленная растровая обложка существует", () => {
   for (const article of ARTICLES) {
     if (!article.heroImage) continue;

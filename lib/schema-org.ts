@@ -175,7 +175,13 @@ export function blogPostingJsonLd(input: {
   description: string;
   path: string;
   published: string;
+  /** Дата содержательной правки; по умолчанию совпадает с публикацией. */
+  updated?: string;
+  /** Рубрика — она же articleSection. */
+  section?: string;
   image?: string | null;
+  /** Источники статьи: попадают в `citation`, как их и ищут агрегаторы. */
+  sources?: Array<{ title: string; url: string }>;
 }): JsonLd {
   return {
     "@context": "https://schema.org",
@@ -183,10 +189,22 @@ export function blogPostingJsonLd(input: {
     headline: input.title,
     description: input.description,
     url: absoluteUrl(input.path),
+    mainEntityOfPage: { "@type": "WebPage", "@id": absoluteUrl(input.path) },
     datePublished: input.published,
-    dateModified: input.published,
+    dateModified: input.updated ?? input.published,
     inLanguage: "ru",
+    isAccessibleForFree: true,
+    ...(input.section ? { articleSection: input.section } : {}),
     ...(input.image ? { image: absoluteUrl(input.image) } : {}),
+    ...(input.sources?.length
+      ? {
+          citation: input.sources.map((source) => ({
+            "@type": "CreativeWork",
+            name: source.title,
+            url: source.url,
+          })),
+        }
+      : {}),
     author: { "@id": absoluteUrl("/#organization") },
     publisher: { "@id": absoluteUrl("/#organization") },
     isPartOf: { "@type": "Blog", name: "Журнал «Живого Тела»", url: absoluteUrl("/blog") },

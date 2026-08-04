@@ -485,7 +485,13 @@ input[type=checkbox],input[type=radio]{width:24px;height:24px;flex:none;margin:0
    подводка, и воздух отдан ей. Карточка — колонка, ссылка прижата вниз,
    чтобы «Читать статью» стояли на одной линии при разной длине подводок. */
 .articles article{display:flex;flex-direction:column}
-.articles h3{margin:26px 0 12px}
+/* Обложка статьи во всю ширину карточки: поля карточки компенсируются
+   отрицательными полями картинки, а у первой карточки левого поля нет —
+   она прижата к краю сетки (`.articles article:first-child`). */
+.articles-hero{display:block;margin:-22px -22px 22px;overflow:hidden;max-width:none}
+.articles article:first-child .articles-hero{margin-left:0}
+.articles-hero svg,.articles-hero img{display:block;width:100%;height:170px;object-fit:cover}
+.articles h3{margin:0 0 12px}
 .articles article>p{margin:0 0 22px;color:#5c5e57;font-size:13px;line-height:1.6}
 .articles article>a{margin-top:auto}
 
@@ -507,3 +513,8 @@ input[type=checkbox],input[type=radio]{width:24px;height:24px;flex:none;margin:0
    статью», «Все статьи журнала», «Подробнее о границах сервиса». Все они
    были 17–18px высотой — строка текста, а не цель для пальца. */
 .articles a,.journal-all a,.limits-more,.tools-all a{display:inline-flex;align-items:center;min-height:44px}
+@media(max-width:850px){
+  /* На узком экране у карточек нет боковых полей (padding:25px 0), и
+     отрицательные поля обложки выносили её за край страницы. */
+  .articles-hero{margin-left:0;margin-right:0}
+}
