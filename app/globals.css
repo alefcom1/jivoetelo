@@ -520,30 +520,25 @@ input[type=checkbox],input[type=radio]{width:24px;height:24px;flex:none;margin:0
 }
 
 /* ===== Витрина «Меню на день» на главной =====
-   Фотография во всю ширину, текст поверх правой половины — там, где в кадре
-   спокойный фон. На узком экране накладывать текст на снимок нельзя: он
-   ложится прямо на тарелку и перестаёт читаться, поэтому ниже 860px карточка
-   разбирается на снимок сверху и текст под ним. */
+   Две колонки: снимок слева, текст справа на своём фоне. Сначала текст лежал
+   поверх правой половины кадра с растяжкой-подложкой — читался, но наползал
+   на снимок, и граница подложки шла прямо по второй миске. Разнесли: теперь
+   фотография и текст не пересекаются вовсе, а снимок кадрируется по левому
+   краю, где тарелка. Ниже 860px колонки становятся друг под другом. */
 .menu-promo { padding: 0 max(24px, calc((100% - 1280px) / 2)) 40px; }
 .menu-promo-card {
-  position: relative; display: block; overflow: hidden;
-  color: inherit; text-decoration: none; background: var(--paper);
+  display: grid; grid-template-columns: 1.28fr 1fr;
+  overflow: hidden; color: inherit; text-decoration: none; background: var(--paper);
 }
-.menu-promo-card img { display: block; width: 100%; height: auto; }
+.menu-promo-card img {
+  display: block; width: 100%; height: 100%;
+  /* Кадр шире колонки — прижимаем к левому краю: там тарелка, ради которой
+     снимок и взят. По центру в колонку попадала бы скатерть. */
+  object-fit: cover; object-position: left center;
+}
 .menu-promo-copy {
-  position: absolute; inset: 0 0 0 auto; width: 48%;
   display: flex; flex-direction: column; justify-content: center; gap: 6px;
-  padding: 0 clamp(24px, 4vw, 56px) 0 clamp(28px, 5vw, 72px);
-  /* Подложка обязательна: без неё надпись ложится на складки скатерти и
-     фактуру дерева. Слева она сходит на нет, чтобы граница не читалась
-     прямоугольником, наклеенным поверх снимка. */
-  background: linear-gradient(
-    to right,
-    rgba(244, 241, 234, 0) 0%,
-    rgba(244, 241, 234, 0.86) 18%,
-    rgba(244, 241, 234, 0.97) 34%,
-    rgba(244, 241, 234, 0.99) 100%
-  );
+  padding: clamp(28px, 3vw, 48px) clamp(24px, 3.4vw, 52px);
 }
 .menu-promo-copy h2 {
   margin: 6px 0 12px;
@@ -563,10 +558,10 @@ input[type=checkbox],input[type=radio]{width:24px;height:24px;flex:none;margin:0
 .menu-promo-card:hover .menu-promo-cta b { transform: translateX(4px); }
 
 @media (max-width: 860px) {
-  .menu-promo-copy {
-    position: static; width: auto;
-    padding: 22px 20px 26px;
-    background: var(--paper);
-  }
+  /* Одна колонка: снимок сверху, текст под ним. В строку фотография тут
+     сжимается до полоски, а заголовок — до трёх слов в строке. */
+  .menu-promo-card { grid-template-columns: 1fr; }
+  .menu-promo-card img { max-height: 300px; object-position: left center; }
+  .menu-promo-copy { padding: 22px 20px 26px; }
   .menu-promo-copy > p:not(.kicker) { font-size: 14px; }
 }
