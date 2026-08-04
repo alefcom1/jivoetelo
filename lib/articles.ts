@@ -66,7 +66,7 @@ export const ARTICLES: Article[] = [
       "Показываем весь путь: от снимка до строчки в дневнике — где сервис уверен, где переспросит " +
       "и почему на каждом шаге можно всё поправить руками.",
     published: "2026-08-04",
-    minutes: 7,
+    minutes: 3,
     updated: "2026-08-04",
     sources: [],
     heroImage: null,
@@ -84,7 +84,7 @@ export const ARTICLES: Article[] = [
       "Мы сравнили себя с тремя сильными конкурентами по десяти признакам и честно отметили клетки, " +
       "где пока проигрываем, — их три, и мы объясняем почему.",
     published: "2026-08-04",
-    minutes: 9,
+    minutes: 3,
     updated: "2026-08-04",
     sources: [],
     disclosure:
@@ -106,7 +106,7 @@ export const ARTICLES: Article[] = [
       "не в App Store, а в Telegram: открывается из чата с ботом за секунду, ничего не устанавливает " +
       "и работает на любом телефоне, где есть сам Telegram.",
     published: "2026-08-04",
-    minutes: 6,
+    minutes: 2,
     updated: "2026-08-04",
     sources: [
       { title: "Telegram Mini Apps — документация платформы", url: "https://core.telegram.org/bots/webapps" },
@@ -126,7 +126,7 @@ export const ARTICLES: Article[] = [
       "и неправда: у одного и того же блюда разброс в разы. Рассказываем, где именно теряется точность — " +
       "и почему показывать этот разброс полезнее, чем прятать.",
     published: "2026-08-04",
-    minutes: 6,
+    minutes: 3,
     updated: "2026-08-04",
     sources: [
       { title: "МР 2.3.1.0253-21. Нормы физиологических потребностей в энергии и пищевых веществах", url: "https://www.rospotrebnadzor.ru/documents/details.php?ELEMENT_ID=18979" },
@@ -147,7 +147,7 @@ export const ARTICLES: Article[] = [
       "человека вашего пола, роста и возраста. Вы — не средний человек. Поэтому через пару недель " +
       "записей сервис перестаёт верить формуле и начинает верить вашим данным.",
     published: "2026-08-04",
-    minutes: 7,
+    minutes: 2,
     updated: "2026-08-04",
     sources: [
       { title: "Mifflin M. D. et al. A new predictive equation for resting energy expenditure in healthy individuals (1990)", url: "https://pubmed.ncbi.nlm.nih.gov/2305711/" },

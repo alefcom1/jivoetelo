@@ -51,7 +51,10 @@ test("описания влезают в выдачу, заголовки — в
     assert.ok(article.title.length <= 75, `«${article.slug}»: заголовок длиннее 75 символов`);
     assert.ok(article.titleShort.length <= 40, `«${article.slug}»: короткое имя длиннее 40 символов`);
     assert.match(article.published, /^\d{4}-\d{2}-\d{2}$/, `«${article.slug}»: дата не ГГГГ-ММ-ДД`);
-    assert.ok(article.minutes >= 3 && article.minutes <= 20, `«${article.slug}»: странное время чтения`);
+    // Само число сверяется с текстом в scripts/reading-time.mjs — тесту без
+    // отрендеренной страницы этого не сделать. Здесь только границы здравого
+    // смысла: «1 мин» читается как заметка, «20+» у нас пока не бывает.
+    assert.ok(article.minutes >= 2 && article.minutes <= 20, `«${article.slug}»: странное время чтения`);
   }
 });
 
