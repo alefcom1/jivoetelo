@@ -34,6 +34,12 @@ export type TodayResponse = {
   showCalories: boolean;
   /** Упрощённый режим учёта: тарелка вместо чисел (lib/simple-log.ts). */
   simpleMode: boolean;
+  /**
+   * Работает ли расшифровка голоса. Без этого признака кнопка записи стоит
+   * всегда, и отказ человек видит уже после того, как наговорил, — то есть
+   * мы предлагаем то, чего у нас нет.
+   */
+  speechEnabled: boolean;
   day: string;
   totals: TgTotals;
   targets: TgTargets | null;

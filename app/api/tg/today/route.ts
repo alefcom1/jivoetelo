@@ -2,6 +2,7 @@ import { localToday, MEAL_TYPE_LABELS } from "@/lib/dates";
 import { countPending } from "@/lib/inbox";
 import { splitMacroTargets } from "@/lib/macro-split";
 import { getDaySummary, listLoggedDays } from "@/lib/meals";
+import { isSpeechEnabled } from "@/lib/speech/mode";
 import { computeStreak } from "@/lib/streak";
 import { weeklyTrendChange, weightTrend } from "@/lib/trend";
 import { listRecentWeights } from "@/lib/weight";
@@ -29,6 +30,10 @@ export async function GET(request: Request) {
   return Response.json({
     showCalories: auth.user.showCalories,
     simpleMode: auth.user.simpleMode,
+    // Умеем ли расшифровывать голос. Знает об этом только сервер (там лежит
+    // SPEECH_URL), а прятать кнопку записи должен клиент — без этого поля он
+    // предлагает то, чего нет, и человек узнаёт об отказе уже после записи.
+    speechEnabled: isSpeechEnabled(),
     day: summary.day,
     totals: summary.totals,
     targets: summary.targets && macros ? { ...summary.targets, ...macros } : summary.targets,

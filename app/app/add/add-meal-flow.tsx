@@ -86,11 +86,18 @@ export type InboxDraft = {
 export function AddMealFlow({
   showCalories,
   simpleMode = false,
+  speechEnabled = false,
   inbox,
 }: {
   showCalories: boolean;
   /** Упрощённый режим: тарелка вместо чисел (lib/simple-log.ts). */
   simpleMode?: boolean;
+  /**
+   * Работает ли расшифровка голоса. Приходит со страницы: SPEECH_URL живёт
+   * на сервере. Умолчание `false` — предлагать запись, которую некому
+   * разобрать, хуже, чем не предлагать вовсе.
+   */
+  speechEnabled?: boolean;
   inbox?: InboxDraft | null;
 }) {
   const now = new Date();
@@ -316,11 +323,14 @@ export function AddMealFlow({
             <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3}
               placeholder="Например: два сырника, ложка сметаны и капучино без сахара" autoFocus />
             {/* Расшифровка дописывается к набранному, а не затирает его:
-                человек мог начать печатать и досказать остальное голосом. */}
-            <VoiceInput
+                человек мог начать печатать и досказать остальное голосом.
+
+                Без сервиса распознавания кнопки нет совсем — иначе отказ
+                приходит уже после записи, когда человек всё наговорил. */}
+            {speechEnabled && <VoiceInput
               disabled={busy}
               onText={(spoken) => setText((current) => (current.trim() ? `${current.trim()}, ${spoken}` : spoken))}
-            />
+            />}
           </>
         : <div className="addflow-photo">
             {/* Камера первой: человек с ноутбуком чаще хочет снять тарелку

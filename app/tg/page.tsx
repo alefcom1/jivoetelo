@@ -209,6 +209,7 @@ export default function MiniApp() {
         ? <CameraTab
             key={inboxItem.id}
             showCalories={today.showCalories}
+            speechEnabled={today.speechEnabled}
             inbox={inboxItem}
             onCancelInbox={() => { setInboxItem(null); setInboxOpen(true); }}
             onSaved={handleCameraSaved}
@@ -243,6 +244,7 @@ export default function MiniApp() {
               key="manual"
               showCalories={today.showCalories}
               simpleMode={today.simpleMode}
+              speechEnabled={today.speechEnabled}
               forDay={cameraFrom.day}
               onSaved={handleCameraSaved}
               onDraft={handleDraft}

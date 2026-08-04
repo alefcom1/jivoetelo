@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { checkAudio, isAllowedAudioMime, MAX_AUDIO_BYTES, MAX_DURATION_SEC, normalizeAudioMime } from "../lib/speech/limits.ts";
@@ -250,4 +251,56 @@ test("gigaam: длинная запись не доходит до сети", as
     assert.equal(reason, "too_long");
     assert.equal(called, false, "проверять пределы после похода в сеть — значит платить за отказ");
   });
+});
+
+/**
+ * Кнопка записи не должна пережить выключенную расшифровку.
+ *
+ * Дефект был настоящий и дожил до пользователей: `<VoiceInput>` в обоих
+ * клиентах рендерился безусловно, о доступности голоса ему никто не
+ * сообщал. Человек видел «Сказать голосом», нажимал, наговаривал — и только
+ * потом получал «голосовые я пока не расшифровываю». Предложили то, чего у
+ * нас нет, и отобрали после того, как человек сделал свою часть работы.
+ *
+ * Проверяем связь, а не вёрстку: признак обязан доехать от сервера до
+ * каждого места, где стоит кнопка. Разорвётся любое звено — тест падает.
+ */
+
+const SOURCES = {
+  tgApi: readFileSync("app/tg/api.ts", "utf8"),
+  tgRoute: readFileSync("app/api/tg/today/route.ts", "utf8"),
+  tgPage: readFileSync("app/tg/page.tsx", "utf8"),
+  tgCamera: readFileSync("app/tg/camera-tab.tsx", "utf8"),
+  webPage: readFileSync("app/app/add/page.tsx", "utf8"),
+  webFlow: readFileSync("app/app/add/add-meal-flow.tsx", "utf8"),
+};
+
+test("признак доступности голоса доезжает от сервера до обоих клиентов", () => {
+  // Mini App: сервер считает → тип объявляет → страница передаёт.
+  assert.match(SOURCES.tgRoute, /speechEnabled: isSpeechEnabled\(\)/, "route не отдаёт speechEnabled");
+  assert.match(SOURCES.tgApi, /speechEnabled: boolean/, "в TodayResponse нет speechEnabled");
+  assert.match(SOURCES.tgPage, /speechEnabled=\{today\.speechEnabled\}/, "page не передаёт признак в CameraTab");
+
+  // Веб: страница серверная, признак читается прямо там.
+  assert.match(SOURCES.webPage, /speechEnabled=\{isSpeechEnabled\(\)\}/, "страница добавления не передаёт признак");
+});
+
+test("кнопка записи стоит под условием в обоих клиентах", () => {
+  for (const [name, source] of [["Mini App", SOURCES.tgCamera], ["веб", SOURCES.webFlow]]) {
+    const uses = [...source.matchAll(/(.{0,40})<VoiceInput/gs)];
+    assert.equal(uses.length, 1, `в ${name} ожидали одну кнопку записи, нашли ${uses.length}`);
+    assert.match(
+      uses[0][1],
+      /speechEnabled && $/,
+      `в ${name} <VoiceInput> рендерится безусловно — кнопка появится и без сервиса распознавания`,
+    );
+  }
+});
+
+test("по умолчанию кнопки нет: не дождавшись ответа, не предлагаем", () => {
+  // Умолчание `true` означало бы вспышку кнопки на первой отрисовке и её
+  // исчезновение после ответа сервера — хуже, чем её отсутствие.
+  for (const [name, source] of [["Mini App", SOURCES.tgCamera], ["веб", SOURCES.webFlow]]) {
+    assert.match(source, /speechEnabled = false/, `в ${name} умолчание speechEnabled не false`);
+  }
 });

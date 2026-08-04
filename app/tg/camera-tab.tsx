@@ -94,6 +94,7 @@ function guessMealType(): string {
 export function CameraTab({
   showCalories,
   simpleMode = false,
+  speechEnabled = false,
   onSaved,
   inbox,
   onCancelInbox,
@@ -103,6 +104,12 @@ export function CameraTab({
   showCalories: boolean;
   /** Упрощённый режим: тарелка вместо чисел (lib/simple-log.ts). */
   simpleMode?: boolean;
+  /**
+   * Работает ли расшифровка голоса (сервер знает, клиент — нет). Умолчание
+   * `false` намеренно: не дождавшись ответа сервера, кнопку записи лучше не
+   * показывать вовсе, чем показать и отобрать.
+   */
+  speechEnabled?: boolean;
   onSaved: () => void;
   /** Снимок из фото-инбокса, если разбор начат оттуда. */
   inbox?: InboxItemDto | null;
@@ -602,11 +609,15 @@ export function CameraTab({
         <textarea className="tg-input" rows={3} value={text} onChange={(e) => setText(e.target.value)}
           placeholder="Например: два сырника, ложка сметаны и капучино" />
         {/* Расшифровка дописывается к набранному, а не затирает его: человек
-            мог начать печатать и досказать остальное голосом. */}
-        <VoiceInput
+            мог начать печатать и досказать остальное голосом.
+
+            Без сервиса распознавания кнопки нет совсем. Показать её и
+            ответить отказом после записи — хуже, чем не предлагать: человек
+            уже наговорил, а взамен получил «я этого не умею». */}
+        {speechEnabled && <VoiceInput
           disabled={busy}
           onText={(spoken) => setText((current) => (current.trim() ? `${current.trim()}, ${spoken}` : spoken))}
-        />
+        />}
         {/* Своя кнопка нужна ТОЛЬКО вне Telegram: там нативной главной
             кнопки не существует. Внутри Telegram она была лишней и стояла
             второй такой же «Разобрать» — одна над панелью вкладок, другая
