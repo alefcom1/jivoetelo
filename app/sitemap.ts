@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { ARTICLES } from "@/lib/articles";
 import { DISHES, dishUpdatedAt } from "@/lib/dishes";
 import { GLOSSARY } from "@/lib/glossary";
 import { PRODUCTS } from "@/lib/products";
@@ -72,6 +73,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${SITE_URL}/skolko-kalorij/${dish.slug}`,
       // Дата содержимого блюда, а не дата правки оферты: см. DISHES_UPDATED_AT.
       lastModified: dishUpdatedAt(dish),
+      changeFrequency: "yearly" as const,
+      priority: 0.7,
+    })),
+    // Журнал: у статей — их собственная дата публикации.
+    {
+      url: `${SITE_URL}/blog`,
+      lastModified: new Date(
+        ARTICLES.reduce((latest, a) => (a.published > latest ? a.published : latest), ARTICLES[0].published),
+      ),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    },
+    ...ARTICLES.map((article) => ({
+      url: `${SITE_URL}/blog/${article.slug}`,
+      lastModified: new Date(article.published),
       changeFrequency: "yearly" as const,
       priority: 0.7,
     })),

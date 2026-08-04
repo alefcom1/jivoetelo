@@ -43,9 +43,11 @@
 .pro-status p{max-width:640px;margin:0 0 18px;font-size:14px;line-height:1.65;color:#5c5e57}
 .pro-status p:last-of-type{margin:0}
 .pro-faq-list{display:flex;flex-direction:column;gap:0}
-.pro-faq-list details{border-top:1px solid var(--line);padding:20px 0;cursor:pointer}
+.pro-faq-list details{border-top:1px solid var(--line);padding:9px 0;cursor:pointer}
 .pro-faq-list details:last-child{border-bottom:1px solid var(--line)}
-.pro-faq-list summary{font-size:14px;font-weight:600;color:var(--black);list-style:none;display:flex;justify-content:space-between;align-items:center}
+/* Поля у строки вопроса, а не у details: сама строка — тач-цель, и в 21px
+   в неё промахивались. Отступ details уменьшен на ту же величину. */
+.pro-faq-list summary{padding:11px 0;font-size:14px;font-weight:600;color:var(--black);list-style:none;display:flex;justify-content:space-between;align-items:center}
 .pro-faq-list summary::-webkit-details-marker{display:none}
 .pro-faq-list summary:after{content:"▼";font-size:11px;color:var(--muted);transition:transform .2s;width:14px;text-align:right}
 .pro-faq-list details[open]>summary:after{transform:scaleY(-1)}

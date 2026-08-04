@@ -218,11 +218,15 @@
 }
 
 .raschet-faq details {
-  padding: 18px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--line);
 }
 
 .raschet-faq summary {
+  /* Поля, а не голый текст: строка вопроса — тач-цель, и в 23px по высоте
+     в неё промахивались. Внешний отступ details уменьшен на ту же величину,
+     поэтому ритм списка вопросов не изменился. */
+  padding: 8px 0;
   cursor: pointer;
   list-style: none;
   font-size: 15px;

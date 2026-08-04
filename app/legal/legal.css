@@ -146,7 +146,9 @@
 }
 
 .legal-nav a {
-  padding: 9px 13px;
+  /* 11px по вертикали: с 9px кнопка выходила 37px — на волосок ниже
+     разумной тач-цели, и на телефоне в неё промахивались. */
+  padding: 11px 13px;
   border: 1px solid var(--line);
   border-radius: 3px;
   color: inherit;

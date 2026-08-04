@@ -14,7 +14,10 @@
 
 .portion-slider { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .portion-slider input[type="range"] {
-  flex: 1 1 180px; min-width: 140px; accent-color: var(--coral, #e2674a); height: 32px;
+  /* 44px, а не 32: ползунок — главный элемент управления страницы, и по
+     нему промахиваются пальцем чаще всего. Сам трек рисуется тонким, высоту
+     набирает поле вокруг него. */
+  flex: 1 1 180px; min-width: 140px; accent-color: var(--coral, #e2674a); height: 44px;
 }
 .portion-slider input[type="number"] {
   width: 84px; padding: 8px 10px; border: 1px solid rgba(0, 0, 0, 0.18);
