@@ -14,7 +14,8 @@ import { deletePhoto } from "./storage.ts";
 
 export type InboxItem = {
   id: number;
-  photoKey: string;
+  /** null у расшифрованного голосового: разбирать нужно текст из `note`. */
+  photoKey: string | null;
   note: string | null;
   takenOn: string;
   takenTime: string;
@@ -61,7 +62,8 @@ export async function countPendingOnDay(userId: number, day: string): Promise<nu
 
 export async function addToInbox(input: {
   userId: number;
-  photoKey: string;
+  /** null — запись голосом: файла нет, вся суть в `note`. */
+  photoKey: string | null;
   note: string | null;
   takenOn: string;
   takenTime: string;
@@ -141,6 +143,7 @@ export async function dismissItem(userId: number, id: number): Promise<boolean> 
 
   const row = rows[0];
   if (!row) return false;
-  await deletePhoto(row.photoKey).catch(() => {});
+  // У записи голосом файла нет — удалять нечего.
+  if (row.photoKey) await deletePhoto(row.photoKey).catch(() => {});
   return true;
 }

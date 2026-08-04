@@ -7,10 +7,16 @@
   --tg-bg: #f4f1ea;
   --tg-surface: #fffefa;
   --tg-text: #171917;
-  --tg-hint: #75766f;
   --tg-link: #2946c6;
   --tg-button: #171917;
   --tg-button-text: #ffffff;
+
+  /* Подсказочный цвет выводится из текста и фона, а не приходит из темы
+     Telegram: там он в части схем даёт контраст ниже нормы, и мелкий текст
+     читался бы плохо независимо от нас. 64% основного цвета поверх фона —
+     это заметно тише текста и при этом гарантированно читаемо на любой
+     теме, светлой и тёмной. */
+  --tg-hint: color-mix(in srgb, var(--tg-text) 64%, var(--tg-bg));
 
   --brand-coral: #e56d55;
   --brand-lime: #d9e49c;
@@ -141,12 +147,50 @@
   transition: width 600ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.tg-impact-text { margin: 0; font-size: 14px; line-height: 1.6; }
+
+/* Счётчики приёмов пищи на «Плане». Числа те же по форме, что «Осталось на
+   сегодня», — одна и та же сетка из трёх колонок читается одинаково на обоих
+   экранах. Список типов под ними: сколько раз и в котором часу обычно. */
+.tg-meal-stats { display: flex; flex-direction: column; gap: 14px; }
+.tg-meal-stats .tg-draft-total-row strong i {
+  font-style: normal; font-size: 14px; font-weight: 500; color: var(--tg-hint);
+}
+.tg-meal-types { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tg-meal-types li {
+  display: flex; align-items: baseline; gap: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--tg-hint) 16%, transparent); padding-top: 8px;
+}
+.tg-meal-types b { font-size: 14px; font-weight: 600; }
+.tg-meal-types li > span { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tg-meal-types time { margin-left: auto; font-size: 12px; color: var(--tg-hint); font-variant-numeric: tabular-nums; }
+
+/* «Осталось на сегодня» — остаток дня числами. Заголовок оформлен как у
+   .tg-section, но живёт внутри карточки, поэтому правило своё. */
+.tg-remaining { display: flex; flex-direction: column; gap: 12px; }
+.tg-remaining h2 {
+  margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--tg-hint);
+}
+
 /* Тренд веса — мини-график SVG на «Сегодня» */
 .tg-weight { display: flex; flex-direction: column; gap: 10px; }
 .tg-weight-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .tg-weight-head strong { display: block; font: 500 26px var(--brand-serif); letter-spacing: -0.02em; }
 .tg-weight-head strong small { font-size: 13px; font-weight: 600; color: var(--tg-hint); }
 .tg-weight-change { font-size: 12px; font-weight: 700; color: var(--tg-hint); white-space: nowrap; }
+/* Замер вносится из самой карточки тренда. Кнопка компактная и вторичная:
+   она стоит рядом с главным числом экрана и не должна с ним спорить. */
+.tg-weight-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.tg-weight-add {
+  border: 0; border-radius: 999px; padding: 8px 14px; min-height: 36px;
+  background: color-mix(in srgb, var(--brand-coral) 14%, transparent); color: var(--brand-coral);
+  font: 700 13px var(--font-body), sans-serif; cursor: pointer; white-space: nowrap;
+}
+.tg-weight-add:active { opacity: 0.75; }
+.tg-weight-head strong.tg-weight-empty { color: var(--tg-hint); font-size: 17px; }
+.tg-weight-form { display: flex; gap: 8px; }
+.tg-weight-form .tg-input { flex: 1; min-width: 0; background: var(--tg-bg); }
 .tg-weight-svg { display: block; width: 100%; height: 64px; }
 .tg-weight-svg polyline { fill: none; stroke: var(--brand-coral); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -164,24 +208,23 @@
 .tg-section { display: flex; flex-direction: column; gap: 10px; }
 .tg-section h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tg-hint); }
 .tg-meals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.tg-meals li { background: var(--tg-surface); border-radius: var(--radius); }
-/* Строка целиком — кнопка: нажатие открывает правку. Сбрасываем оформление
-   кнопки до нуля, иначе браузер добавит рамку, фон и центрирование текста. */
-.tg-meal-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px;
-  border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-.tg-meal-row:active { background: color-mix(in srgb, var(--tg-hint) 12%, transparent); border-radius: var(--radius); }
+/* Карточкой строки стала сама кнопка, а не <li>: нажатие открывает правку
+   записи, и область нажатия должна совпадать с тем, что человек видит
+   строкой, — до последнего пикселя фона. */
+.tg-meals li { display: flex; }
+.tg-meal-row {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  border: 0; border-radius: var(--radius); padding: 14px;
+  background: var(--tg-surface); color: var(--tg-text);
+  font: inherit; text-align: left; cursor: pointer; transition: opacity 180ms ease;
+}
+.tg-meal-row:active { opacity: 0.75; }
 .tg-meals time { font-size: 12px; font-weight: 700; color: var(--tg-hint); width: 42px; font-variant-numeric: tabular-nums; }
-.tg-meal-row > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tg-meal-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .tg-meals b { font-size: 14px; }
-.tg-meal-row > div span { font-size: 12px; color: var(--tg-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-meal-row-body > span { font-size: 12px; color: var(--tg-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tg-meals strong { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font: 500 17px var(--brand-serif); white-space: nowrap; }
 .tg-meals strong em { font: 500 11px var(--font-body), sans-serif; font-style: normal; color: var(--tg-hint); }
-
-/* Запись веса прямо в карточке тренда: раньше поле жило только в «Профиле»,
-   за двумя касаниями от графика, который про вес и напоминает. */
-.tg-weight-add { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
-.tg-weight-add .tg-input { flex: 1; min-width: 0; }
-.tg-weight-add-open { margin-top: 12px; font-size: 13px; font-weight: 600; }
 
 .tg-empty { background: var(--tg-surface); border-radius: var(--radius); padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .tg-empty svg { color: color-mix(in srgb, var(--tg-hint) 55%, transparent); }
@@ -503,6 +546,18 @@
 .tg-illustration { display: block; width: 132px; height: 132px; }
 .tg-empty .tg-illustration { margin-bottom: 2px; }
 
+/* Живело: карточка серии дней.
+   Полосой, а не блоком — она стоит над кольцом энергии, главным объектом
+   экрана, и всё, что выше кольца, отодвигает его вниз. Отсюда и 76 пикселей
+   картинки вместо 132 у иллюстраций пустых экранов.
+   Файл в 288 пикселей на сторону — с запасом на экраны с тройной плотностью. */
+.tg-mascot { display: block; width: 76px; height: 76px; flex-shrink: 0; }
+.tg-streak { display: flex; gap: 12px; align-items: center; }
+.tg-streak-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tg-streak-body b { font-size: 17px; letter-spacing: -0.01em; }
+.tg-streak-body p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--tg-hint); }
+.tg-streak-body em { font-style: normal; font-size: 13px; font-weight: 700; color: var(--brand-coral); }
+
 /* Миниатюра приёма пищи: настоящий снимок, если он есть, иначе значок
    категории на подложке её же тона. Размер один и тот же — список не
    «прыгает» от того, сфотографировал человек еду или ввёл текстом. */
@@ -521,7 +576,7 @@
 /* Строка приёма пищи на «Сегодня». Время переехало внутрь заголовка, к
    названию приёма: миниатюра слева теперь несёт больше смысла, чем колонка
    из четырёх цифр, и отдавать ей отдельную колонку незачем. */
-.tg-meals li { padding: 10px 14px; }
+.tg-meal-row { padding: 10px 14px; }
 .tg-meals b { display: flex; align-items: baseline; gap: 8px; }
 .tg-meals b time { width: auto; font-size: 11px; }
 
@@ -773,6 +828,117 @@
 .tg-consent{display:flex;gap:10px;align-items:flex-start;text-align:left;margin:4px 0 18px;font-size:13px;line-height:1.5;color:var(--tg-hint)}
 .tg-consent input{width:18px;height:18px;margin:1px 0 0;flex:none;accent-color:var(--brand-coral)}
 .tg-consent a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+
+/* Недельный обзор (app/tg/review-screen.tsx). Вход с «Плана» — строка того же
+   устройства, что .tg-inbox-banner на «Сегодня»: одно действие, стрелка
+   справа, вся строка нажимается. */
+.tg-review-entry {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  border: 0; border-radius: var(--radius); padding: 14px 16px; cursor: pointer; text-align: left;
+  background: var(--tg-surface); color: var(--tg-text); font: inherit;
+}
+.tg-review-entry:active { opacity: 0.85; }
+.tg-review-entry > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.tg-review-entry b { font-size: 14px; font-weight: 700; }
+.tg-review-entry i { font-style: normal; font-size: 12px; line-height: 1.4; color: var(--tg-hint); }
+.tg-review-entry > b { flex: none; font-size: 16px; color: var(--tg-hint); }
+
+/* Секции обзора: заголовок-кикер как у .tg-section, но с текстом абзацем, а
+   не карточками — обзор читают подряд, сверху вниз. */
+.tg-review-section p { margin: 0; font-size: 14px; line-height: 1.6; }
+.tg-review-proposal { display: flex; flex-direction: column; gap: 10px; }
+.tg-review-proposal p { margin: 0; font-size: 14px; line-height: 1.6; }
+.tg-review-proposal .tg-hint { font-size: 12.5px; }
+
+/* Расшифровка голосового: в списке инбокса — значком вместо превью, на
+   экране разбора — цитатой вместо снимка. */
+.tg-inbox-voice {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%; font-size: 32px;
+  background: color-mix(in srgb, var(--tg-hint) 14%, var(--tg-bg));
+}
+.tg-transcript {
+  margin: 0; padding: 12px 14px; border-left: 3px solid var(--brand-coral);
+  border-radius: 0 var(--radius) var(--radius) 0; background: var(--tg-surface);
+  font-size: 15px; font-style: italic; line-height: 1.55;
+}
+
+/* Запись голосом (app/tg/voice-input.tsx). Кнопка второстепенная по весу:
+   главное действие на этом экране — съёмка, голос и текст выручают, когда
+   снять нельзя. Во время записи она становится заметной — иначе человек не
+   поймёт, что микрофон включён. */
+.tg-voice { display: flex; flex-direction: column; gap: 8px; }
+.tg-voice-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  align-self: flex-start; min-height: 44px; padding: 11px 18px;
+  border: 1px solid color-mix(in srgb, var(--tg-hint) 40%, transparent); border-radius: 999px;
+  background: transparent; color: var(--tg-text); font: 600 14px var(--font-body), sans-serif;
+  cursor: pointer;
+}
+.tg-voice-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.tg-voice-button:active:not(:disabled) { opacity: 0.8; }
+.tg-voice-button--live { border-color: var(--brand-coral); color: var(--brand-coral); }
+.tg-voice-dot {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--brand-coral);
+  animation: tg-voice-pulse 1.1s ease-in-out infinite;
+}
+@keyframes tg-voice-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+/* Мигание — единственная анимация на экране, и для тех, кому движение мешает,
+   она не нужна: точка и без неё остаётся видимой. */
+@media (prefers-reduced-motion: reduce) { .tg-voice-dot { animation: none; } }
+
+/* Сканер штрихкодов: сам компонент общий с вебом (app/barcode-scanner.tsx),
+   его стили — в globals.css. Здесь только то, что должно взять тему
+   Telegram вместо бумажной палитры лендинга. */
+.tg-root .scanner {
+  background: var(--tg-surface); border-color: color-mix(in srgb, var(--tg-hint) 22%, transparent);
+  color: var(--tg-text); border-radius: var(--radius);
+}
+.tg-root .scanner-close,
+.tg-root .scanner-code,
+.tg-root .scanner-note { color: var(--tg-hint); }
+.tg-root .scanner-name { font-family: var(--brand-serif); }
+.tg-root .scanner-form input,
+.tg-root .scanner-manual input {
+  background: var(--tg-bg); color: var(--tg-text);
+  border-color: color-mix(in srgb, var(--tg-hint) 30%, transparent);
+}
+.tg-root .scanner-form label,
+.tg-root .scanner-manual label { color: var(--tg-hint); }
+.tg-root .scanner-primary { background: var(--tg-button); color: var(--tg-button-text); border-radius: var(--radius); }
+.tg-root .scanner-secondary {
+  color: var(--tg-text); border-radius: var(--radius);
+  border-color: color-mix(in srgb, var(--tg-hint) 30%, transparent);
+}
+/* Вход в сканер на экране «Добавить позицию»: рядом с поиском, но тише
+   основного действия — сюда приходят и за продуктом без штрихкода. */
+.tg-scan-open { align-self: flex-start; min-height: 40px; padding: 10px 16px; font-size: 13px; }
+/* Подпись над подсказками из базы товаров — см. .add-food-source в globals.css. */
+.tg-add-item-source { margin: 2px 0 -2px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* Согласие в Mini App: тот же порог 24×24, что и в вебе (globals.css).
+   Правило здесь, потому что .tg-consent input специфичнее общего. */
+.tg-consent input { width: 24px; height: 24px; }
+
+/* Тарелка вместо чисел: компонент общий с вебом (app/plate-input.tsx), его
+   стили — в globals.css. Здесь только то, что должно взять тему Telegram. */
+.tg-root .plate-part,
+.tg-root .plate-portion {
+  background: var(--tg-surface); color: var(--tg-text); border-radius: var(--radius);
+  border-color: color-mix(in srgb, var(--tg-hint) 24%, transparent);
+}
+.tg-root .plate-part span,
+.tg-root .plate-question,
+.tg-root .plate-range,
+.tg-root .plate-note { color: var(--tg-hint); }
+.tg-root .plate-part--on,
+.tg-root .plate-portion--on {
+  background: var(--tg-button); color: var(--tg-button-text); border-color: var(--tg-button);
+}
+.tg-root .plate-part--on span { color: color-mix(in srgb, var(--tg-button-text) 75%, transparent); }
+.tg-root .plate-save {
+  width: 100%; background: var(--tg-button); color: var(--tg-button-text); border-radius: var(--radius);
+}
 
 /* .tg-input рассчитан на фон страницы: его заливка — тот же --tg-surface, что
    и у карточки. Внутри .tg-add-item (это .tg-card) он сливался с ней в белое

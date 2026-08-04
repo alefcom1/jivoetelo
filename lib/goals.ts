@@ -27,7 +27,17 @@
 /** Расчёт на /raschet/plan доведён до экрана результата. */
 export const GOAL_PLAN_DONE = "plan_done";
 
-/** Первая запись еды в дневнике. Главная цель воронки. */
+/** Аккаунт заведён. Не успех сам по себе — начало воронки. */
+export const GOAL_SIGNUP = "signup";
+
+/**
+ * Запись еды в дневнике. Главная цель воронки.
+ *
+ * В исследовании это событие названо `first_meal`, здесь имя другое, и
+ * менять его нельзя: цель под этим именем уже заведена в панели Метрики, и
+ * переименование обнулило бы всю собранную статистику. Имя — вопрос
+ * совместимости, а не смысла.
+ */
 export const GOAL_MEAL_SAVED = "meal_saved";
 
 /**
@@ -41,8 +51,50 @@ export const GOAL_MEAL_SAVED = "meal_saved";
  * отчёт выглядит как «никто не привязывает», а не как «мы не считаем».
  */
 export const GOAL_PLAN_SET = "plan_set";
+// То же событие, что `onboarding_done` в исследовании: имя оставлено прежним
+// по той же причине, что и у meal_saved.
 
-export const ALL_GOALS = [GOAL_PLAN_DONE, GOAL_MEAL_SAVED, GOAL_PLAN_SET] as const;
+/**
+ * Второй день с записями и седьмой.
+ *
+ * Считаем дни с записями, а не календарные дни с регистрации: «вернулся на
+ * второй день» без записи — это визит, а не пользование. И считаем именно
+ * общее число дней, а не длину непрерывной серии: лучший предиктор
+ * удержания — сколько дней человек вообще вёл дневник, а не сколько подряд
+ * (docs/research-2026-08.md, раздел 7.5).
+ */
+export const GOAL_DAY2_RETURN = "day2_return";
+export const GOAL_WEEK1_ACTIVE = "week1_active";
+
+/**
+ * Telegram привязан.
+ *
+ * Тонкость, из-за которой цель однажды уже снимали: сама привязка
+ * завершается внутри бота или Mini App, и браузер о ней не узнаёт. Поэтому
+ * цель отмечает не момент привязки, а **первое появление привязки в этом
+ * браузере** — то есть визит в кабинет уже связанного аккаунта.
+ *
+ * Что это значит для отчёта: цифра честная снизу и заниженная сверху. Тот,
+ * кто привязался и больше не заходил в веб, в неё не попадёт. Для вопроса
+ * «доходят ли веб-пользователи до Telegram» этого достаточно, и это заметно
+ * лучше, чем отсутствие цели вовсе, — но читать её как «сколько всего
+ * привязок» нельзя.
+ */
+export const GOAL_TELEGRAM_LINKED = "telegram_linked";
+
+/** Недельный обзор открыт — в кабинете или по ссылке из письма. */
+export const GOAL_REPORT_OPENED = "report_opened";
+
+export const ALL_GOALS = [
+  GOAL_PLAN_DONE,
+  GOAL_SIGNUP,
+  GOAL_MEAL_SAVED,
+  GOAL_PLAN_SET,
+  GOAL_DAY2_RETURN,
+  GOAL_WEEK1_ACTIVE,
+  GOAL_TELEGRAM_LINKED,
+  GOAL_REPORT_OPENED,
+] as const;
 export type Goal = (typeof ALL_GOALS)[number];
 
 type Ym = (id: number, action: string, target?: string) => void;
@@ -54,6 +106,28 @@ type Ym = (id: number, action: string, target?: string) => void;
  * внутри Telegram Mini App (там своё окружение, и тянуть туда счётчик мы не
  * стали). Аналитика не тот повод, ради которого стоит уронить экран.
  */
+/**
+ * Цель, которая должна сработать один раз за всё время, а не при каждом
+ * заходе. «Второй день с записями» наступает однажды; отправлять его каждый
+ * день — значит превратить событие воронки в счётчик визитов.
+ *
+ * Отметка в localStorage, а не в базе: цена ошибки — повторная отправка из
+ * другого браузера, то есть небольшое завышение. Колонка в базе ради этого
+ * не стоит миграции, и это осознанный размен, а не недосмотр.
+ */
+export function reachGoalOnce(goal: Goal): void {
+  if (typeof window === "undefined") return;
+  const key = `jt.goal.${goal}`;
+  try {
+    if (window.localStorage.getItem(key)) return;
+    window.localStorage.setItem(key, "1");
+  } catch {
+    // Приватный режим запрещает хранилище. Тогда цель уйдёт повторно — это
+    // лучше, чем не уйти вовсе.
+  }
+  reachGoal(goal);
+}
+
 export function reachGoal(goal: Goal): void {
   if (typeof window === "undefined") return;
   const ym = (window as unknown as { ym?: Ym }).ym;

@@ -1,6 +1,6 @@
 import { getUsageToday, OPERATION_LABELS, PLAN_LIMITS, type AiOperation, type Plan } from "@/lib/quota";
 
-const ORDER: AiOperation[] = ["analyze_photo", "analyze_text", "suggest"];
+const ORDER: AiOperation[] = ["analyze_photo", "analyze_text", "transcribe", "suggest"];
 
 /**
  * Показывает расход AI-операций за сегодня. Тон нейтральный: лимит — это

@@ -31,11 +31,21 @@ import path from "node:path";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const QUEUE_FILE = path.join(HERE, "..", "docs", "seo-pipeline.md");
 
-/** Раздел очереди → что агент должен произвести. */
+/**
+ * Раздел очереди → что агент должен произвести.
+ *
+ * Раздел, которого здесь нет, парсер молча пропускает (`if (!kind) continue`).
+ * Это удобно для заголовков-пояснений внутри очереди и опасно для новых
+ * разделов работы: строки видны человеку, но конвейеру их как бы нет.
+ * Заводя раздел в `docs/seo-pipeline.md`, заводите его и здесь.
+ */
 const SECTION_KINDS = {
   "Блюда — вторая волна": "dish",
+  "Блюда — третья волна": "dish",
+  "Каталог продуктов": "product",
   "Глоссарий": "glossary",
   "Методология": "methodology",
+  "Калькуляторы": "calculator",
 };
 
 const TRANSLIT = {
@@ -57,21 +67,38 @@ export function slugify(title) {
 
 /**
  * Разбирает очередь. Возвращает все невыполненные позиции по порядку —
- * порядок задан частотностью запросов, и агент берёт первую.
+ * порядок задан частотностью запросов, и агент берёт первые.
+ *
+ * ## Затвор на раздел
+ *
+ * Строка `> ЖДЁТ РАЗДЕЛА: …` сразу под заголовком закрывает раздел целиком.
+ * Нужна там, где тексты писать уже можно, а положить их ещё некуда: агенту
+ * предписано в таком случае остановиться, и без затвора конвейер каждую ночь
+ * тратил бы треть работы на отчёт «раздела нет».
+ *
+ * Это не «выключено навсегда», а «не раньше, чем появится место». Снять
+ * затвор — удалить строку; ничего больше делать не надо.
  */
 export function parseQueue(markdown) {
   const items = [];
   let section = null;
+  let gated = false;
 
   for (const line of markdown.split("\n")) {
     const heading = line.match(/^###\s+(.+?)\s*$/);
     if (heading) {
       section = heading[1];
+      gated = false;
+      continue;
+    }
+
+    if (/^>\s*ЖДЁТ РАЗДЕЛА:/i.test(line)) {
+      gated = true;
       continue;
     }
 
     const task = line.match(/^-\s+\[( |x)\]\s+(.+?)\s*$/);
-    if (!task || !section) continue;
+    if (!task || !section || gated) continue;
 
     const done = task[1] === "x";
     const title = task[2];
@@ -90,6 +117,36 @@ export function parseQueue(markdown) {
   return items;
 }
 
+/**
+ * Что взять в работу этой ночью.
+ *
+ * Порядок очереди задан частотностью, и брать надо сверху. Но три позиции
+ * подряд — это, как правило, три позиции одного раздела, а три текста одного
+ * вида за одну ночь получаются одинаковыми. Поэтому: первую берём строго
+ * сверху, дальше предпочитаем позицию другого вида, а если такой нет —
+ * возвращаемся к порядку. Так соблюдены оба правила, и приоритет частотности
+ * нарушается ровно настолько, насколько нужно для непохожести.
+ *
+ * `busy` — слаги, у которых уже есть неслитая ветка. Без этого фильтра
+ * простой утренней проверки превращается в повторную работу: конвейер каждую
+ * ночь берёт одну и ту же непроверенную верхушку очереди.
+ */
+export function pickBatch(items, take, busy = new Set()) {
+  const free = items.filter((item) => !busy.has(item.slug));
+  const batch = [];
+  const kinds = new Set();
+
+  while (batch.length < take) {
+    const rest = free.filter((item) => !batch.includes(item));
+    if (rest.length === 0) break;
+    const pick = rest.find((item) => !kinds.has(item.kind)) ?? rest[0];
+    batch.push(pick);
+    kinds.add(pick.kind);
+  }
+
+  return batch;
+}
+
 function main() {
   const markdown = readFileSync(QUEUE_FILE, "utf8");
   const items = parseQueue(markdown);
@@ -99,15 +156,28 @@ function main() {
     return;
   }
 
-  const next = items[0];
-  if (!next) {
-    // Пустая очередь — не ошибка: это значит, что всё написано. Workflow
-    // читает `empty` и завершается без запуска агента.
-    console.log(JSON.stringify({ empty: true }));
-    return;
-  }
+  const takeAt = process.argv.indexOf("--take");
+  const take = takeAt === -1 ? 1 : Math.max(1, Number(process.argv[takeAt + 1]) || 1);
 
-  console.log(JSON.stringify({ empty: false, remaining: items.length, ...next }));
+  // Слаги занятых позиций приходят списком через запятую: workflow снимает их
+  // с имён веток `content/<дата>-<slug>`, потому что только он и знает, что
+  // сейчас лежит в origin.
+  const busyAt = process.argv.indexOf("--busy");
+  const busy = new Set(
+    busyAt === -1 ? [] : (process.argv[busyAt + 1] ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+  );
+
+  const batch = pickBatch(items, take, busy);
+
+  // Пустая выборка — не ошибка: либо всё написано, либо верхушка очереди
+  // целиком ждёт утренней проверки. Workflow читает `empty` и завершается,
+  // не запуская агентов.
+  console.log(JSON.stringify({
+    empty: batch.length === 0,
+    remaining: items.length,
+    busy: busy.size,
+    items: batch,
+  }));
 }
 
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) main();

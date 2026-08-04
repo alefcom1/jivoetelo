@@ -1,22 +1,29 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { formatKcalChange } from "@/lib/adaptive";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDayRu } from "@/lib/dates";
+import { getReviewData } from "@/lib/review-data";
 import { applyProposedAdjustment } from "../profile-actions";
-import { getReviewData } from "./data";
+import { ReportOpened } from "./report-opened";
 
 export default async function ReviewPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { review, targets, proposal, weekStart, weekEnd } = await getReviewData(user.id, user.showCalories);
+  const { review, targets, proposal, weekStart, weekEnd, mealStats, impact } = await getReviewData(user.id, user.showCalories);
 
   return <main className="review">
+    <ReportOpened />
     <h1>Недельный обзор</h1>
     <p className="addflow-hint">{formatDayRu(weekStart)} — {formatDayRu(weekEnd)}</p>
 
     <section className="day-totals">
       <div><strong>{review.daysLogged}</strong><span>дней с записями</span></div>
+      <div><strong>{mealStats.mealCount}</strong><span>приёмов пищи</span></div>
+      {/* Дни с двумя и более записями — лучший предиктор результата, лучше
+          длины серии. Стоят рядом с общим числом дней, а не в тексте ниже. */}
+      <div><strong>{mealStats.daysWithTwoMeals}</strong><span>дней с двумя+</span></div>
       {user.showCalories && review.avgKcal !== null && <div><strong>{review.avgKcal}</strong><span>ккал в среднем</span></div>}
       {review.avgProtein !== null && <div><strong>{review.avgProtein}</strong><span>белок, г в среднем</span></div>}
       {review.avgFiber !== null && <div><strong>{review.avgFiber}</strong><span>клетчатка, г в среднем</span></div>}
@@ -27,6 +34,11 @@ export default async function ReviewPage() {
       <p>{section.text}</p>
     </section>)}
 
+    {impact && <section className="review-section">
+      <h2>{impact.title}</h2>
+      <p>{impact.text}</p>
+    </section>}
+
     {proposal && targets && <section className="review-proposal">
       <h2>Предложение по плану</h2>
       <p>{proposal.reason}</p>
@@ -36,7 +48,7 @@ export default async function ReviewPage() {
       </p>
       <form action={applyProposedAdjustment}>
         <button className="black-button" type="submit">
-          Применить {proposal.deltaKcal > 0 ? "+" : ""}{proposal.deltaKcal} ккал
+          Применить {formatKcalChange(proposal.deltaKcal)} ккал
         </button>
       </form>
     </section>}

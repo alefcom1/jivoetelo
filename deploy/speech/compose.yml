@@ -1,0 +1,53 @@
+# Наложение поверх основного docker-compose.yml:
+#   docker compose -f docker-compose.yml -f deploy/speech/compose.yml up -d
+#
+# Отдельным файлом, а не сервисом в основном: без него сайт поднимается как
+# раньше, и включение распознавания остаётся осознанным действием.
+#
+# Порт наружу не публикуется намеренно — сервис нужен только приложению.
+services:
+  speech:
+    build:
+      context: .
+      args:
+        # vosk | whisper | gigaam — сравнение в docs/speech.md. По умолчанию
+        # лёгкий: на общем VPS это единственный, который точно поместится.
+        ENGINE: ${SPEECH_ENGINE:-vosk}
+    restart: unless-stopped
+    environment:
+      SPEECH_TOKEN: ${SPEECH_TOKEN:-}
+      # Словарь из нашего же справочника продуктов: для маленькой модели он
+      # даёт больше, чем переход на модель втрое тяжелее. Собирается
+      # scripts/speech-grammar.mjs.
+      VOSK_GRAMMAR: /app/grammar.json
+      # Каталог кэша, а не путь к модели: vosk ищет внутри него папку с
+      # именем VOSK_MODEL_NAME и скачивает её, если не находит. На томе —
+      # чтобы 45 МБ не выкачивались заново при каждом пересоздании.
+      VOSK_MODEL_PATH: /models
+      VOSK_MODEL_NAME: ${VOSK_MODEL_NAME:-vosk-model-small-ru-0.22}
+      # Настройки whisper и gigaam здесь не перечислены намеренно: те же
+      # значения уже стоят умолчаниями в server.py, а список переменных,
+      # который никто не заполняет, только притворяется настройкой. Меняете
+      # движок — допишете сюда его переменные и в .env.example.
+    volumes:
+      - speech-models:/models
+      # Словарь монтируется, а не кладётся в образ: он меняется вслед за
+      # справочником продуктов, а образ — вслед за движком.
+      - ./grammar.json:/app/grammar.json:ro
+    # Лимит под лёгкий движок. Для whisper поднимите до 768m, для gigaam —
+    # до 1536m, и считайте заново: на сервере около 4 ГБ, из них 384 МБ базе
+    # и 512 МБ приложению, и он общий с техперевода (docs/shared-infra.md).
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://127.0.0.1:8081/')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  speech-models:

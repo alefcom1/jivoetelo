@@ -87,7 +87,7 @@
 }
 
 .legal-doc a {
-  color: var(--coral);
+  color: var(--coral-text);
   text-decoration: underline;
   text-underline-offset: 3px;
 }

@@ -20,6 +20,8 @@ import { FoodIcon } from "../food-icon";
 import { ArtCamera } from "./illustrations";
 import { haptic, useInsideTelegram, useMainButton } from "./telegram";
 import { TgPhoto } from "./photo";
+import { VoiceInput } from "./voice-input";
+import { PlateInput } from "../plate-input";
 import { cameraGrantedThisSession, useCamera } from "../use-camera";
 import { useCameraPref } from "../camera-prefs";
 import { useFrameWatch } from "../use-frame-watch";
@@ -91,6 +93,7 @@ function guessMealType(): string {
  */
 export function CameraTab({
   showCalories,
+  simpleMode = false,
   onSaved,
   inbox,
   onCancelInbox,
@@ -98,6 +101,8 @@ export function CameraTab({
   forDay,
 }: {
   showCalories: boolean;
+  /** Упрощённый режим: тарелка вместо чисел (lib/simple-log.ts). */
+  simpleMode?: boolean;
   onSaved: () => void;
   /** Снимок из фото-инбокса, если разбор начат оттуда. */
   inbox?: InboxItemDto | null;
@@ -124,6 +129,8 @@ export function CameraTab({
   // уже что-то есть; собрать новую запись при выключенном разборе или
   // исчерпанной квоте до сих пор было нечем.
   const [mode, setMode] = useState<"camera" | "text" | "manual">("camera");
+  /** Разовый выход из упрощённого режима: он умолчание, а не запрет. */
+  const [detailed, setDetailed] = useState(false);
   /**
    * Какой вопрос сейчас отвечают своим вариантом. Индекс, а не флаг: вопросов
    * бывает два, и открытый ввод должен принадлежать конкретному.
@@ -384,6 +391,36 @@ export function CameraTab({
     setMode(next);
   }
 
+  /**
+   * Запись из тарелки уходит в дневник сразу, без черновика: в этом смысл
+   * упрощённого режима. Приём пищи и время подставляются по часам и правятся
+   * потом — открыв запись, если нужно.
+   */
+  async function saveSimple(plate: Array<{ name: string; grams: number; kcalPer100: number; proteinPer100: number; fatPer100: number; carbsPer100: number; fiberPer100: number; confidence: string }>) {
+    setError(null);
+    setBusy(true);
+    try {
+      const now = new Date();
+      await saveMeal({
+        inboxId: null,
+        eatenOn: forDay ?? now.toLocaleDateString("en-CA"),
+        eatenTime: now.toTimeString().slice(0, 5),
+        mealType: guessMealType(),
+        sourceText: null,
+        photoKey: null,
+        analysis: null,
+        items: plate,
+      });
+      haptic("success");
+      onSaved();
+    } catch (err) {
+      haptic("error");
+      setError(err instanceof Error && err.message !== "error" ? err.message : "Не получилось сохранить.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function updateItem(index: number, patch: Partial<DraftItem>) {
     setItems((current) => current && current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
@@ -422,15 +459,21 @@ export function CameraTab({
     return <div className="tg-page">
       <header className="tg-hero">
         <p className="tg-kicker">Из инбокса</p>
-        <h1>Снимок за {inbox.takenTime}</h1>
+        <h1>{inbox.photoKey ? "Снимок" : "Запись"} за {inbox.takenTime}</h1>
       </header>
 
-      <div className="tg-photo">
-        <div className="tg-photo-drop">
-          <TgPhoto photoKey={inbox.photoKey} alt="Снимок еды из инбокса" variant="wide" />
-        </div>
-      </div>
-      {inbox.note && <p className="tg-hint">Ваша подпись: «{inbox.note}»</p>}
+      {/* У записи голосом показывать нечего, кроме расшифровки, — она же и
+          есть то, что сейчас разбирает модель. */}
+      {inbox.photoKey
+        ? <>
+            <div className="tg-photo">
+              <div className="tg-photo-drop">
+                <TgPhoto photoKey={inbox.photoKey} alt="Снимок еды из инбокса" variant="wide" />
+              </div>
+            </div>
+            {inbox.note && <p className="tg-hint">Ваша подпись: «{inbox.note}»</p>}
+          </>
+        : <blockquote className="tg-transcript">«{inbox.note}»</blockquote>}
 
       {error ? <p className="tg-error">{error}</p> : <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
 
@@ -440,6 +483,27 @@ export function CameraTab({
       </button>}
       {onCancelInbox &&
         <button className="tg-link-button" onClick={onCancelInbox} disabled={busy}>← В инбокс</button>}
+    </div>;
+  }
+
+  /**
+   * Упрощённый режим: тарелка вместо чисел, запись уходит сразу.
+   *
+   * Стоит перед видоискателем, а не рядом с ним: в этом режиме экран
+   * «Камера» — это экран записи еды, и предлагать сначала снять кадр значило
+   * бы вернуть ровно ту работу, ради избавления от которой режим и включают.
+   * Разовый выход в съёмку остаётся ссылкой внизу.
+   */
+  if (simpleMode && !inbox && !detailed) {
+    return <div className="tg-page tg-camera">
+      {forDay && <p className="tg-kicker">Запись за {formatDayRu(forDay)}</p>}
+      <h1 className="tg-camera-title">Что вы ели?</h1>
+      <PlateInput showCalories={showCalories} busy={busy} onSave={(plate) => void saveSimple(plate)} />
+      {error && <p className="tg-error">{error}</p>}
+      <div className="tg-ways">
+        <button className="tg-way" onClick={() => { haptic("tap"); setDetailed(true); switchMode("camera"); }}>Снять камерой</button>
+        <button className="tg-way" onClick={() => { haptic("tap"); setDetailed(true); switchMode("text"); }}>Записать точнее</button>
+      </div>
     </div>;
   }
 
@@ -537,6 +601,12 @@ export function CameraTab({
         <h1 className="tg-camera-title">Что вы ели?</h1>
         <textarea className="tg-input" rows={3} value={text} onChange={(e) => setText(e.target.value)}
           placeholder="Например: два сырника, ложка сметаны и капучино" />
+        {/* Расшифровка дописывается к набранному, а не затирает его: человек
+            мог начать печатать и досказать остальное голосом. */}
+        <VoiceInput
+          disabled={busy}
+          onText={(spoken) => setText((current) => (current.trim() ? `${current.trim()}, ${spoken}` : spoken))}
+        />
         {/* Своя кнопка нужна ТОЛЬКО вне Telegram: там нативной главной
             кнопки не существует. Внутри Telegram она была лишней и стояла
             второй такой же «Разобрать» — одна над панелью вкладок, другая
@@ -584,8 +654,11 @@ export function CameraTab({
           <input type="file" accept="image/*" onChange={handlePhotoChange} />
           Из галереи
         </label>
+        {/* «Или голосом» — не украшение подписи: запись живёт на этом экране,
+            и без упоминания её здесь человек, знающий про голосовые из бота,
+            искал бы кнопку среди вкладок. */}
         {mode !== "text" && <button className="tg-way" onClick={() => switchMode("text")}>
-          Описать словами
+          Словами или голосом
         </button>}
         {mode !== "manual" && <button className="tg-way" onClick={() => switchMode("manual")}>
           Собрать руками

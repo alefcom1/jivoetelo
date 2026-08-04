@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { computeStreak } from "../lib/streak.ts";
 import {
   DEFAULT_DIGEST_HOUR,
   GENTLE_NUDGE_TEXT,
@@ -113,4 +114,55 @@ test("час дайджеста нормализуется в допустимо
 test("пауза действительно переносит следующий заход за завтра", () => {
   const until = snoozeUntil(NOW);
   assert.ok(until.getTime() - NOW.getTime() > 48 * 60 * 60 * 1000);
+});
+
+/**
+ * Живело в напоминании. Проверяется не текст, а граница: персонаж добавляет
+ * контекст к сообщению, которое и так отправляется, но никогда не создаёт
+ * повода отправить.
+ */
+test("серия не заставляет бота писать там, где он молчал", () => {
+  const base = {
+    now: new Date("2026-03-18T18:00:00Z"),
+    localDay: "2026-03-18",
+    localHour: 21,
+    remindersEnabled: true,
+    digestHour: 20,
+    snoozedUntil: null,
+    lastReminderOn: null,
+    pendingPhotosToday: 0,
+    // День записан и фото разобраны — повода нет.
+    mealsToday: 3,
+  };
+  const streak = computeStreak(["2026-03-15", "2026-03-16"], "2026-03-18");
+  assert.equal(planReminder({ ...base, streak }), null, "с серией бот обязан молчать так же, как без неё");
+});
+
+test("к найденному поводу дописывается реплика Живело", () => {
+  const base = {
+    now: new Date("2026-03-18T18:00:00Z"),
+    localDay: "2026-03-18",
+    localHour: 21,
+    remindersEnabled: true,
+    digestHour: 20,
+    snoozedUntil: null,
+    lastReminderOn: null,
+    pendingPhotosToday: 0,
+    mealsToday: 0,
+  };
+  // Серия оборвалась пару дней назад: енот берёт пропуск на себя и называет
+  // накопленное. Ушедшему на две недели (mood «asleep») он ничего не говорит —
+  // «серия сбилась» тому, кого не было полмесяца, это новость ни о чём.
+  const broken = computeStreak(["2026-03-11", "2026-03-12", "2026-03-13"], "2026-03-18");
+  const plan = planReminder({ ...base, streak: broken });
+  assert.match(plan.text, /🦝/, `реплики нет: ${plan.text}`);
+  assert.match(plan.text, /3 дня с записями/);
+  assert.ok(!/\bвы\s+пропустил/i.test(plan.text), `упрёк в напоминании: ${plan.text}`);
+
+  // Без серии сообщение остаётся ровно прежним.
+  assert.equal(planReminder(base).text, GENTLE_NUDGE_TEXT);
+
+  // А вернувшемуся через две недели — только обычный текст, без реплики.
+  const longGone = computeStreak(["2026-03-01", "2026-03-02"], "2026-03-18");
+  assert.equal(planReminder({ ...base, streak: longGone }).text, GENTLE_NUDGE_TEXT);
 });

@@ -1,6 +1,6 @@
 // Данные экрана «План» (Mini App v2): динамика веса, приверженность дневнику
 // и разбор адаптивной цели. Отдельный модуль, а не код прямо в route-файле —
-// тот же приём, что и app/app/review/data.ts на вебе: сборка данных из базы
+// тот же приём, что и lib/review-data.ts у недельного обзора: сборка данных из базы
 // живёт рядом с остальным бэкендом, а не размазана по обработчику запроса.
 
 import { and, eq, gte } from "drizzle-orm";
@@ -8,6 +8,8 @@ import { getDb } from "@/db";
 import { meals, profiles, weightEntries } from "@/db/schema";
 import { computeAdherence, hasEnoughAdherenceData, type AdherenceResult } from "./adherence.ts";
 import { localToday, shiftDay } from "./dates.ts";
+import { getDishImpact } from "./dish-impact.ts";
+import { computeMealStats, hasEnoughMealStats, type MealStats } from "./meal-stats.ts";
 import { computeTdee, computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
 import { weeklyTrendChange, weightTrend, type TrendPoint } from "./trend.ts";
 
@@ -30,19 +32,29 @@ export type PlanData = {
   hasEnoughTrendData: boolean;
   adherence: AdherenceResult;
   hasEnoughAdherenceData: boolean;
+  /** Сколько и когда человек ест — счётчики за неделю и за месяц. */
+  mealStats: MealStats;
+  hasEnoughMealStats: { week: boolean; month: boolean };
+  /**
+   * Раздел «Вес и еда» — готовый текст или null, когда показывать нечего.
+   * Текстом, а не числами: формулировка здесь и есть содержание, и собирается
+   * она в одном месте (lib/impact-text.ts), чтобы экран и письмо не разошлись.
+   */
+  impact: { title: string; text: string } | null;
 };
 
 export async function getPlanData(userId: number): Promise<PlanData> {
   const db = getDb();
   const today = localToday();
 
-  const [profileRows, weightRows, adherenceEarliest] = await Promise.all([
+  const [profileRows, weightRows, adherenceEarliest, impact] = await Promise.all([
     db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1),
     db
       .select({ onDate: weightEntries.onDate, weightKg: weightEntries.weightKg })
       .from(weightEntries)
       .where(eq(weightEntries.userId, userId)),
     findEarliestActivityDay(userId, today),
+    getDishImpact(userId, today),
   ]);
 
   const profile = profileRows[0];
@@ -68,19 +80,29 @@ export async function getPlanData(userId: number): Promise<PlanData> {
     };
   }
 
-  const loggedDays = await db
-    .selectDistinct({ eatenOn: meals.eatenOn })
+  // Один запрос на оба разбора: приверженности нужны дни с записями, статистике
+  // — сами приёмы со временем и типом. Окно берём по большему из двух (56 дней);
+  // computeMealStats урежет своё до 7 и 30 дней сам.
+  const windowMeals = await db
+    .select({ eatenOn: meals.eatenOn, eatenTime: meals.eatenTime, mealType: meals.mealType })
     .from(meals)
     .where(and(eq(meals.userId, userId), gte(meals.eatenOn, shiftDay(today, -(ADHERENCE_WINDOW_DAYS - 1)))));
 
   const adherence = computeAdherence(
-    loggedDays.map((r) => r.eatenOn),
+    windowMeals.map((r) => r.eatenOn),
     today,
     adherenceEarliest,
     ADHERENCE_WINDOW_DAYS,
   );
+  const mealStats = computeMealStats(windowMeals, today, adherenceEarliest);
 
   return {
+    impact: impact.section,
+    mealStats,
+    hasEnoughMealStats: {
+      week: hasEnoughMealStats(mealStats.week),
+      month: hasEnoughMealStats(mealStats.month),
+    },
     targets,
     trend: trend.slice(-CHART_POINTS_LIMIT),
     weeklyTrendChangeKg,

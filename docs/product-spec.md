@@ -246,7 +246,10 @@ Implement minimum safeguards:
 - no celebratory messages for extreme deficits;
 - no “burn off your meal” messaging;
 - no red punishment state after exceeding a target;
-- no streak loss designed to provoke guilt;
+- no streak loss designed to provoke guilt — the day counter and “weeks with
+  care” never reset, milestones unlock on total logged days rather than on the
+  streak, two silent freezes per month cover slips, and a missed day is voiced
+  by the mascot about itself (`lib/streak.ts`, `lib/mascot.ts`);
 - allow the user to hide calories and focus on habits;
 - show crisis and specialist guidance if the user enters alarming food-related behaviour patterns.
 

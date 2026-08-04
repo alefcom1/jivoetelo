@@ -34,6 +34,22 @@ test("другие таймзоны работают так же", () => {
   assert.equal(localMoment(at, "UTC").day, "2026-07-28");
 });
 
+test("несуществующая дата не считается днём", () => {
+  // Форму проходят обе, и обе приходят из недоверенных мест: `?day=` в
+  // адресе дневника и `onDate` в теле запроса на вес.
+  assert.equal(isValidDay("2026-13-40"), false, "тринадцатого месяца не бывает");
+  // А эта ещё и опаснее: движок разберёт её молча, сдвинув на 2 марта, — и
+  // человек увидит чужой день, не поняв, почему.
+  assert.equal(isValidDay("2026-02-30"), false, "30 февраля не бывает");
+  assert.equal(isValidDay("2026-00-10"), false);
+  assert.equal(isValidDay("2025-02-29"), false, "2025 год не високосный");
+
+  assert.equal(isValidDay("2024-02-29"), true, "а 2024 — високосный");
+  assert.equal(isValidDay("2026-03-18"), true);
+  assert.equal(isValidDay(undefined), false);
+  assert.equal(isValidDay(""), false);
+});
+
 test("день из localMoment принимается остальным кодом дат", () => {
   const { day } = localMoment(new Date("2026-01-01T00:00:00Z"), "Europe/Moscow");
   assert.ok(isValidDay(day));

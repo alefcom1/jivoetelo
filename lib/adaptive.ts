@@ -70,3 +70,18 @@ export function proposeAdjustment(input: AdjustmentInput): AdjustmentProposal | 
   if (delta === 0 || !withinCap(input.currentAdjustment, delta)) return null;
   return { deltaKcal: delta, reason };
 }
+
+/**
+ * Поправка со знаком: «+150», «−150».
+ *
+ * Настоящий минус «−», а не дефис — по той же причине, что и в килограммах
+ * (formatKg в lib/trend.ts): дефис в шрифте короче и выше, и рядом с плюсом из
+ * соседнего состояния кнопки читается как другой знак. Одна функция на оба
+ * клиента: кнопку «Применить» показывают и кабинет, и Mini App.
+ */
+export function formatKcalChange(value: number): string {
+  // Ноль без знака: «−0» читается как опечатка. Предложение нулевым не бывает
+  // (proposeAdjustment вернёт null), но применённая величина приходит из базы.
+  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
+  return `${sign}${Math.abs(value)}`;
+}

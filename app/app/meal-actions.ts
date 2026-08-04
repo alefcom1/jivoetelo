@@ -8,6 +8,8 @@ import { mealItems, meals, users } from "@/db/schema";
 import { ANALYSIS_ERRORS, getMealProvider, MealAnalysisError, type MealAnalysis } from "@/lib/ai";
 import { getCurrentUser } from "@/lib/auth";
 import { getPendingItem, markProcessed } from "@/lib/inbox";
+import { normalizeMealItems, replaceMealItemsForUser, withDishKeys } from "@/lib/meals";
+import { clampPer100 } from "@/lib/nutrition";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import {
   ALLOWED_PHOTO_TYPES,
@@ -42,21 +44,32 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
       // Фото уже лежит на диске: его прислали боту раньше. Здесь мы его
       // только читаем — заново загружать и заново класть на диск не нужно.
       const item = await getPendingItem(user.id, Number(formData.get("inboxId")));
-      if (!item) return { ok: false, error: "Этот снимок уже разобран или удалён." };
-      const data = await readPhoto(item.photoKey);
-      if (!data) return { ok: false, error: "Файл снимка не найден. Попробуйте отклонить его в инбоксе." };
+      if (!item) return { ok: false, error: "Эта запись уже разобрана или удалена." };
 
-      photoKey = item.photoKey;
-      sourceText = item.note;
-      const result = await getMealProvider().analyseMeal({
-        kind: "photo",
-        data,
-        mediaType: photoMimeType(item.photoKey) as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
-        note: item.note ?? undefined,
-        photoKey: item.photoKey,
-      });
-      analysis = result.analysis;
-      await recordUsage(user.id, operation, result.usage);
+      // Запись голосом: файла нет, в note лежит расшифровка. Разбираем её как
+      // обычный текст — тем же разбором, что и описание еды словами.
+      if (!item.photoKey) {
+        if (!item.note) return { ok: false, error: "В этой записи нечего разбирать." };
+        sourceText = item.note;
+        const result = await getMealProvider().analyseMeal({ kind: "text", text: item.note });
+        analysis = result.analysis;
+        await recordUsage(user.id, "analyze_text", result.usage);
+      } else {
+        const data = await readPhoto(item.photoKey);
+        if (!data) return { ok: false, error: "Файл снимка не найден. Попробуйте отклонить его в инбоксе." };
+
+        photoKey = item.photoKey;
+        sourceText = item.note;
+        const result = await getMealProvider().analyseMeal({
+          kind: "photo",
+          data,
+          mediaType: photoMimeType(item.photoKey) as "image/jpeg" | "image/png" | "image/webp" | "image/gif",
+          note: item.note ?? undefined,
+          photoKey: item.photoKey,
+        });
+        analysis = result.analysis;
+        await recordUsage(user.id, operation, result.usage);
+      }
     } else if (mode === "photo") {
       const file = formData.get("photo");
       if (!(file instanceof File) || file.size === 0) {
@@ -143,11 +156,11 @@ export async function saveMeal(input: SaveMealInput): Promise<{ ok: false; error
     .map((item) => ({
       name: String(item.name ?? "").trim().slice(0, 120),
       grams: clamp(item.grams, 1, 3000),
-      kcalPer100: clamp(item.kcalPer100, 0, 900),
-      proteinPer100: clamp(item.proteinPer100, 0, 100),
-      fatPer100: clamp(item.fatPer100, 0, 100),
-      carbsPer100: clamp(item.carbsPer100, 0, 100),
-      fiberPer100: clamp(item.fiberPer100, 0, 50),
+      kcalPer100: clampPer100("kcal", item.kcalPer100),
+      proteinPer100: clampPer100("protein", item.proteinPer100),
+      fatPer100: clampPer100("fat", item.fatPer100),
+      carbsPer100: clampPer100("carbs", item.carbsPer100),
+      fiberPer100: clampPer100("fiber", item.fiberPer100),
       confidence: ["high", "medium", "low"].includes(item.confidence) ? item.confidence : "medium",
     }))
     .filter((item) => item.name.length > 0)
@@ -170,7 +183,7 @@ export async function saveMeal(input: SaveMealInput): Promise<{ ok: false; error
         analysis: input.analysis ?? null,
       })
       .returning({ id: meals.id });
-    await db.insert(mealItems).values(items.map((item) => ({ ...item, mealId: inserted[0].id })));
+    await db.insert(mealItems).values(withDishKeys(items).map((item) => ({ ...item, mealId: inserted[0].id })));
     // Снимок уходит из инбокса только теперь, когда приём пищи действительно
     // сохранён: до этого момента разбор можно было бросить на полпути.
     if (input.inboxId) await markProcessed(user.id, input.inboxId, inserted[0].id);
@@ -179,6 +192,45 @@ export async function saveMeal(input: SaveMealInput): Promise<{ ok: false; error
     return { ok: false, error: "Не получилось сохранить. Попробуйте ещё раз." };
   }
   redirect(`/app?date=${eatenOn}&saved=meal`);
+}
+
+/**
+ * Правка уже сохранённой записи из кабинета: состав, вес, КБЖУ на 100 г, тип
+ * приёма и время.
+ *
+ * Раньше в кабинете этого не было вовсе — только «Удалить запись». Разбор по
+ * фото иногда ошибается (в том числе выдаёт позицию с нулевой калорийностью),
+ * и единственным способом исправить одну цифру было удалить приём пищи
+ * целиком и завести заново, потратив ещё один разбор. В Mini App правка была,
+ * в вебе — нет; расхождение чинится здесь.
+ *
+ * Числа проходят через ту же `normalizeMealItems`, что и запись из Telegram:
+ * значения с клиента недоверенные, и правила обрезки должны быть одни на оба
+ * клиента, иначе через веб в базу попадёт то, что через бот не попадает.
+ */
+export async function updateMealItems(input: {
+  mealId: number;
+  mealType: string;
+  eatenTime: string;
+  items: unknown;
+}): Promise<{ ok: boolean; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const items = normalizeMealItems(input.items);
+  if (items.length === 0) return { ok: false, error: "Добавьте хотя бы одну позицию." };
+
+  try {
+    const updated = await replaceMealItemsForUser(user.id, input.mealId, input.mealType, items, input.eatenTime);
+    if (!updated) return { ok: false, error: "Запись не найдена." };
+  } catch (error) {
+    console.error("updateMealItems failed", error);
+    return { ok: false, error: "Не получилось сохранить. Попробуйте ещё раз." };
+  }
+
+  revalidatePath(`/app/meals/${input.mealId}`);
+  revalidatePath("/app");
+  return { ok: true };
 }
 
 export async function deleteMeal(mealId: number): Promise<void> {
@@ -221,5 +273,15 @@ export async function setShowCalories(show: boolean): Promise<void> {
   if (!user) redirect("/login");
   await getDb().update(users).set({ showCalories: show }).where(eq(users.id, user.id));
   revalidatePath("/app");
+  revalidatePath("/app/settings");
+}
+
+/** Упрощённый режим учёта (lib/simple-log.ts): тарелка вместо чисел. */
+export async function setSimpleMode(simple: boolean): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  await getDb().update(users).set({ simpleMode: simple }).where(eq(users.id, user.id));
+  revalidatePath("/app");
+  revalidatePath("/app/add");
   revalidatePath("/app/settings");
 }

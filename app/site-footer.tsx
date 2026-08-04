@@ -27,8 +27,16 @@ import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
  *
  * Компонент нарочно без `"use client"` и без обращений к дате и окружению:
  * его подключают и серверные layout'ы разделов, и клиентская главная.
+ *
+ * ## `authed`
+ *
+ * Тот же подвал стоит и в кабинете. Звать вошедшего человека «начать
+ * бесплатно» и «войти» — значит предлагать ему то, что он уже сделал, поэтому
+ * под учётной записью эти две ссылки заменяются на дорогу внутрь кабинета.
+ * Остальные колонки одинаковы: документы и расчёты нужны одинаково и до
+ * регистрации, и после.
  */
-export function SiteFooter({ children }: { children?: React.ReactNode }) {
+export function SiteFooter({ children, authed = false }: { children?: React.ReactNode; authed?: boolean }) {
   return <footer id="about">
     {children}
     <div className="footer-links">
@@ -36,8 +44,15 @@ export function SiteFooter({ children }: { children?: React.ReactNode }) {
         <p>Сервис</p>
         <Link href="/">Главная</Link>
         <Link href="/pro">Для специалистов</Link>
-        <Link href="/register">Начать бесплатно</Link>
-        <Link href="/login">Войти</Link>
+        {authed
+          ? <>
+              <Link href="/app">Мой дневник</Link>
+              <Link href="/app/settings">Настройки</Link>
+            </>
+          : <>
+              <Link href="/register">Начать бесплатно</Link>
+              <Link href="/login">Войти</Link>
+            </>}
       </div>
       <div>
         <p>Расчёты</p>

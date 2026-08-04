@@ -91,7 +91,11 @@ export function InboxTab({ onPick, onBack }: { onPick: (item: InboxItemDto) => v
       {items.map((item) =>
         <li key={item.id} className="tg-inbox-item">
           <button className="tg-inbox-photo" onClick={() => { haptic("tap"); onPick(item); }}>
-            <TgPhoto photoKey={item.photoKey} alt="Снимок еды" />
+            {/* У записи голосом файла нет: вместо превью — значок, чтобы
+                строка не разъезжалась и вид списка оставался прежним. */}
+            {item.photoKey
+              ? <TgPhoto photoKey={item.photoKey} alt="Снимок еды" />
+              : <span className="tg-inbox-voice" aria-label="Запись голосом">🎤</span>}
           </button>
           <div className="tg-inbox-body">
             <p className="tg-inbox-when">{formatTakenAt(item)}</p>

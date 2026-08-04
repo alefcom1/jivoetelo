@@ -37,3 +37,24 @@ export function weeklyTrendChange(trend: TrendPoint[]): number | null {
   if (!reference) return null;
   return Math.round((last.trendKg - reference.trendKg) * 100) / 100;
 }
+
+/**
+ * Килограммы по-русски: запятая вместо точки и настоящий минус «−» вместо
+ * дефиса.
+ *
+ * Заведено потому, что одно и то же число печаталось по-разному в соседних
+ * строках одного письма: в блоке чисел «−0,4», в тексте абзаца «-0.4». Для
+ * читателя это два разных числа, и он останавливается их сравнивать.
+ *
+ * Дефис вместо минуса — не придирка к типографике: в шрифте он короче и выше,
+ * и в колонке чисел строка с минусом заметно не совпадает с остальными.
+ */
+export function formatKg(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return `${rounded < 0 ? "−" : ""}${Math.abs(rounded).toFixed(1).replace(".", ",")}`;
+}
+
+/** То же, но со знаком «+» у прибавки: в тренде важно направление. */
+export function formatKgChange(value: number): string {
+  return `${value > 0 ? "+" : ""}${formatKg(value)}`;
+}

@@ -1,6 +1,5 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
@@ -91,18 +90,10 @@ export async function applyProposedAdjustment(): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { getReviewData } = await import("./review/data");
-  const { proposal } = await getReviewData(user.id, user.showCalories);
-  if (proposal) {
-    const rows = await getDb()
-      .select({ kcalAdjustment: profiles.kcalAdjustment })
-      .from(profiles)
-      .where(eq(profiles.userId, user.id))
-      .limit(1);
-    const current = rows[0]?.kcalAdjustment ?? 0;
-    const next = Math.min(450, Math.max(-450, current + proposal.deltaKcal));
-    await getDb().update(profiles).set({ kcalAdjustment: next, updatedAt: new Date() }).where(eq(profiles.userId, user.id));
-  }
+  // Сама правка — в lib/review-data.ts: ту же кнопку показывает Mini App, и
+  // два разных пересчёта одной поправки развели бы клиенты по разным планам.
+  const { applyProposal } = await import("@/lib/review-data");
+  await applyProposal(user.id, user.showCalories);
   revalidatePath("/app/review");
   revalidatePath("/app");
 }

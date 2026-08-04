@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import { Logo } from "../logo";
+import { SiteFooter } from "../site-footer";
 import { logout } from "../auth-actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -24,25 +24,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <form action={logout}><button className="link-button" type="submit">Выйти</button></form>
     </header>
     <div className="shell-content">{children}</div>
-    <footer className="shell-footer">
-      <p>{NOT_MEDICAL_DISCLAIMER}</p>
-      {/* Дорога обратно на сайт. Полного меню здесь нет сознательно: в
-          кабинете человек работает со своим дневником, а не выбирает, что
-          почитать, и семь разделов сайта поверх семи разделов кабинета
-          сделали бы навигацию вдвое шумнее. Логотип ведёт на «Сегодня» —
-          домой внутри приложения; сайт живёт здесь, внизу, как и везде. */}
-      <div className="legal-links">
-        <Link href="/">Главная сайта</Link>
-        <Link href="/pro">Живое Тело Pro</Link>
-        <Link href="/skolko-kalorij">Калькуляторы</Link>
-      </div>
-      <div className="legal-links">
-        <Link href="/legal/health">Границы сервиса</Link>
-        <Link href="/legal/terms">Соглашение</Link>
-        <Link href="/legal/privacy">Конфиденциальность</Link>
-        <Link href="/legal/consent">Согласие</Link>
-        <Link href="/legal/cookies">Cookie</Link>
-      </div>
-    </footer>
+    {/* Подвал — тот же, что на сайте.
+        Раньше здесь стоял свой, укороченный: считалось, что в кабинете человек
+        работает с дневником, а не выбирает, что почитать. На деле кабинет
+        оказался тупиком — из него не было дороги ни к расчётам, ни к каталогу
+        блюд, ни к полному списку документов, а именно за ними отсюда и уходят.
+        Ширину подвал берёт от кабинета (правило `.shell>footer`), поэтому
+        колонки встают под контентом, а не шире него. */}
+    <SiteFooter authed />
   </div>;
 }

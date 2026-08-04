@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { handleUpdate } from "@/lib/bot/handle-update";
 import { botLinks } from "@/lib/bot/links";
-import { botStore } from "@/lib/bot/store";
+import { botStore, botTranscriber } from "@/lib/bot/store";
 import { botToken, createTelegramClient, type TelegramUpdate } from "@/lib/telegram-api";
 
 /**
@@ -53,6 +53,7 @@ export async function POST(request: Request) {
   await handleUpdate(update, {
     client: createTelegramClient(token),
     store: botStore,
+    transcribe: botTranscriber(),
     now: new Date(),
     links: botLinks(),
   });

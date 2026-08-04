@@ -14,8 +14,12 @@ const stroke = {
   strokeLinejoin: "round" as const,
 };
 
-function Frame({ children, label }: { children: React.ReactNode; label: string }) {
-  return <svg className="tg-illustration" viewBox="0 0 128 128" role="img" aria-label={label}>
+function Frame({ children, label, className = "tg-illustration" }: {
+  children: React.ReactNode;
+  label: string;
+  className?: string;
+}) {
+  return <svg className={className} viewBox="0 0 128 128" role="img" aria-label={label}>
     {children}
   </svg>;
 }

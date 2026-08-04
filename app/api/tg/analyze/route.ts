@@ -30,7 +30,17 @@ export async function POST(request: Request) {
       // Снимок уже на диске: его прислали боту раньше. Заново загружать и
       // заново класть на диск нечего.
       const item = await getPendingItem(auth.user.id, Number(formData.get("inboxId")));
-      if (!item) return Response.json({ error: "Этот снимок уже разобран или удалён." }, { status: 404 });
+      if (!item) return Response.json({ error: "Эта запись уже разобрана или удалена." }, { status: 404 });
+
+      // Запись голосом: файла нет, в note лежит расшифровка. Разбираем её как
+      // обычный текст — тем же разбором, что и описание еды словами.
+      if (!item.photoKey) {
+        if (!item.note) return Response.json({ error: "В этой записи нечего разбирать." }, { status: 404 });
+        const result = await getMealProvider().analyseMeal({ kind: "text", text: item.note });
+        await recordUsage(auth.user.id, "analyze_text", result.usage);
+        return Response.json({ analysis: result.analysis, photoKey: null, sourceText: item.note });
+      }
+
       const data = await readPhoto(item.photoKey);
       if (!data) return Response.json({ error: "Файл снимка не найден." }, { status: 404 });
 

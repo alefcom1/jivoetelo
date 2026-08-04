@@ -77,7 +77,11 @@ export function applyTheme(webApp: TelegramWebApp): void {
   set("--tg-bg", p.secondary_bg_color ?? p.bg_color);
   set("--tg-surface", p.section_bg_color ?? p.bg_color);
   set("--tg-text", p.text_color);
-  set("--tg-hint", p.hint_color);
+  // --tg-hint из темы НЕ берём намеренно. В части тем Telegram подсказочный
+  // цвет даёт контраст около 3,5–4,0 к фону — то есть весь мелкий текст Mini
+  // App читался бы хуже нормы, и от нас это не зависело бы вовсе. Вместо
+  // этого он выводится из текста и фона в tg.css: палитра остаётся
+  // пользовательской, а читаемость — нашей ответственностью.
   set("--tg-link", p.link_color);
   set("--tg-button", p.button_color);
   set("--tg-button-text", p.button_text_color);

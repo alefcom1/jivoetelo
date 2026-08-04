@@ -2,16 +2,18 @@ import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db";
-import { userConsents, users } from "@/db/schema";
+import { reportPreferences, userConsents, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
 import { PhotoConsent } from "./photo-consent";
 import { getBotPreferences } from "@/lib/bot/store";
 import { DEFAULT_DIGEST_HOUR } from "@/lib/reminders";
-import { setShowCalories } from "../meal-actions";
+import { DEFAULT_REPORT_PREFERENCES, isChannelSetting } from "@/lib/report-prefs";
+import { setShowCalories, setSimpleMode } from "../meal-actions";
 import { CameraSettings } from "../../camera-settings";
 import { BotReminders } from "./bot-reminders";
 import { DangerZone } from "./danger-zone";
+import { ReportSettings } from "./report-settings";
 import { TelegramLink } from "./telegram-link";
 import { UsagePanel } from "./usage-panel";
 
@@ -22,12 +24,28 @@ export default async function SettingsPage() {
   if (!user) redirect("/login");
 
   const db = getDb();
+  // Настройки отчётов читаются здесь, а не серверным действием: действие в
+  // «use server»-модуле вызывается кем угодно с любым аргументом, и функция
+  // вида getReportPreferences(userId) стала бы способом прочитать чужие
+  // настройки. Читать своё — работа страницы, которая уже знает, чья она.
   const rows = await db
-    .select({ telegramUserId: users.telegramUserId })
+    .select({
+      telegramUserId: users.telegramUserId,
+      email: users.email,
+      weekly: reportPreferences.weekly,
+      monthly: reportPreferences.monthly,
+      weightNumbers: reportPreferences.weightNumbers,
+    })
     .from(users)
+    .leftJoin(reportPreferences, eq(reportPreferences.userId, users.id))
     .where(eq(users.id, user.id))
     .limit(1);
   const linked = !!rows[0]?.telegramUserId;
+  const reportPrefs = {
+    weekly: isChannelSetting(rows[0]?.weekly) ? rows[0].weekly : DEFAULT_REPORT_PREFERENCES.weekly,
+    monthly: isChannelSetting(rows[0]?.monthly) ? rows[0].monthly : DEFAULT_REPORT_PREFERENCES.monthly,
+    weightNumbers: rows[0]?.weightNumbers ?? DEFAULT_REPORT_PREFERENCES.weightNumbers,
+  };
 
   const preferences = linked ? await getBotPreferences(user.id) : null;
 
@@ -48,6 +66,7 @@ export default async function SettingsPage() {
   const photoConsent = consents.find((consent) => consent.kind === "photo_publication" && !consent.withdrawnAt);
 
   const toggle = setShowCalories.bind(null, !user.showCalories);
+  const toggleSimple = setSimpleMode.bind(null, !user.simpleMode);
 
   return <main className="settings">
     <h1>Настройки</h1>
@@ -79,6 +98,10 @@ export default async function SettingsPage() {
         />
       </section>}
     <section className="settings-block">
+      <p className="settings-label">Недельный и месячный отчёты</p>
+      <ReportSettings prefs={reportPrefs} hasEmail={!!rows[0]?.email} hasTelegram={linked} />
+    </section>
+    <section className="settings-block">
       <p className="settings-label">Видимость калорий</p>
       <p>
         {user.showCalories
@@ -87,6 +110,26 @@ export default async function SettingsPage() {
       </p>
       <form action={toggle}>
         <button className="black-button" type="submit">{user.showCalories ? "Скрыть калории" : "Показывать калории"}</button>
+      </form>
+    </section>
+    <section className="settings-block">
+      <p className="settings-label">Как записывать еду</p>
+      <p>
+        {user.simpleMode
+          ? "Сейчас упрощённый режим: вы отмечаете, что было на тарелке и сколько её было, — без чисел. Состав считается внутри, и его видно в записи."
+          : "Сейчас подробный режим: состав и вес каждой позиции. Если это отнимает много сил, есть упрощённый — отметить тарелку в два нажатия."}
+      </p>
+      {/* Довод, а не уговоры: у упрощённого учёта приверженность 97% против
+          49% при той же потере веса на шести месяцах. Человек вправе знать,
+          что теряет и что приобретает, — и решить сам. */}
+      <p className="field-note">
+        В исследованиях упрощённый учёт дают доводить до конца почти все, а подробный — половина,
+        и вес при этом снижается одинаково. Точность записи от упрощённого режима падает, ритм — растёт.
+      </p>
+      <form action={toggleSimple}>
+        <button className="black-button" type="submit">
+          {user.simpleMode ? "Вернуть подробный режим" : "Включить упрощённый режим"}
+        </button>
       </form>
     </section>
     <section className="settings-block">

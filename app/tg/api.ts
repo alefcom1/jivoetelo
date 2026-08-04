@@ -1,5 +1,6 @@
 "use client";
 
+import type { StreakResult } from "@/lib/streak";
 import { getWebApp } from "./telegram.ts";
 
 export type TgTotals = { kcal: number; protein: number; fat: number; carbs: number; fiber: number };
@@ -31,6 +32,8 @@ export type TgWeight = { entries: TgWeightPoint[]; weeklyChangeKg: number | null
 
 export type TodayResponse = {
   showCalories: boolean;
+  /** Упрощённый режим учёта: тарелка вместо чисел (lib/simple-log.ts). */
+  simpleMode: boolean;
   day: string;
   totals: TgTotals;
   targets: TgTargets | null;
@@ -38,6 +41,12 @@ export type TodayResponse = {
   /** Снимки, присланные боту и ещё не подтверждённые — строка на «Сегодня». */
   inboxPending: number;
   weight: TgWeight | null;
+  /**
+   * Серия дней с записями. Числа приходят с сервера, текст к ним собирает
+   * lib/mascot.ts уже здесь — так реплики персонажа лежат рядом с картинкой,
+   * которую подписывают, а не двумя наборами слов в разных местах.
+   */
+  streak: StreakResult;
 };
 
 export type ApiFailure = { reason: "not_linked" | "invalid_signature" | "not_configured" | "error"; message?: string };
@@ -73,6 +82,8 @@ function initDataHeader(): Record<string, string> {
  * и раздумьями — полминуты там норма, а не сбой.
  */
 const ANALYZE_TIMEOUT_MS = 150_000;
+/** Расшифровка идёт на своём сервере, но с холодного старта модель едет дольше. */
+const TRANSCRIBE_TIMEOUT_MS = 45_000;
 const DEFAULT_TIMEOUT_MS = 20_000;
 
 /**
@@ -165,6 +176,26 @@ export async function analyzeMeal(formData: FormData): Promise<{
   return handle(response);
 }
 
+/**
+ * Расшифровка записи. Возвращает только текст — разбор остаётся отдельным
+ * шагом, и человек успевает прочитать услышанное до того, как оно станет
+ * калориями.
+ *
+ * Предел ожидания свой: расшифровка идёт на нашем сервере и укладывается в
+ * секунды, но с холодного старта модель едет дольше обычного запроса.
+ */
+export async function transcribeAudio(blob: Blob): Promise<{ text: string }> {
+  const formData = new FormData();
+  // Имя файла обязательно: без него часть серверов видит поле как строку.
+  formData.set("audio", blob, "voice.webm");
+  const response = await request(
+    "/api/tg/transcribe",
+    { method: "POST", headers: initDataHeader(), body: formData },
+    TRANSCRIBE_TIMEOUT_MS,
+  );
+  return handle<{ text: string }>(response);
+}
+
 export type AnalysisItemDto = {
   name: string;
   estimatedGrams: number;
@@ -188,7 +219,8 @@ export async function saveMeal(payload: unknown): Promise<{ ok: true; id: number
 
 export type InboxItemDto = {
   id: number;
-  photoKey: string;
+  /** null у записи голосом: показывать нечего, вся суть в `note`. */
+  photoKey: string | null;
   note: string | null;
   takenOn: string;
   takenTime: string;

@@ -13,8 +13,10 @@
 
 import { useState } from "react";
 import { parseNutrient, searchFoodReference, type ReferenceFood } from "@/lib/food-reference";
+import { BarcodeScanner } from "../barcode-scanner";
 import { FoodIcon } from "../food-icon";
-import { haptic } from "./telegram";
+import { productToItem, useProductSearch } from "../use-product-search";
+import { getWebApp, haptic } from "./telegram";
 
 const EMPTY_FORM = { name: "", grams: "100", kcal: "", protein: "", fat: "", carbs: "", fiber: "" };
 
@@ -69,16 +71,21 @@ export function AddItem({
   const [open, setOpen] = useState(startOpen);
   const [query, setQuery] = useState("");
   const [manual, setManual] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
 
   const found = searchFoodReference(query);
+  // Товары, заведённые людьми по штрихкоду: справочник в бандле маленький и
+  // курируемый, растущая база живёт на сервере (app/use-product-search.ts).
+  const fromBase = useProductSearch(query, "/api/tg/barcode", { "x-telegram-init-data": getWebApp()?.initData ?? "" }, found.map((f) => f.name));
 
   function reset() {
     // На экране, где блок открыт изначально, сворачивать его нельзя: это
     // оставило бы пустой экран без единого действия.
     setOpen(startOpen);
     setManual(false);
+    setScanning(false);
     setQuery("");
     setError(null);
     setForm(EMPTY_FORM);
@@ -121,14 +128,31 @@ export function AddItem({
     </button>;
   }
 
+  if (scanning) {
+    return <BarcodeScanner
+      endpoint="/api/tg/barcode"
+      headers={{ "x-telegram-init-data": getWebApp()?.initData ?? "" }}
+      onItem={(item) => { haptic("success"); onAdd(item); reset(); }}
+      onClose={() => setScanning(false)}
+    />;
+  }
+
   return <section className="tg-card tg-add-item">
     <div className="tg-add-item-head">
       <h3>Добавить позицию</h3>
       {!startOpen && <button className="tg-remove" aria-label="Закрыть" onClick={reset}>×</button>}
     </div>
 
+    {/* Штрихкод первым: у упакованного продукта это самый точный путь из
+        всех — числа с этикетки, а не оценка по названию. */}
+    <button className="tg-button tg-scan-open" onClick={() => { haptic("tap"); setScanning(true); }}>
+      Сканировать штрихкод
+    </button>
+
     {/* В ручном вводе строка поиска не нужна: название там задаётся своим
         полем, и два поля с одним и тем же словом только сбивают с толку.
+        Кнопка сканирования, наоборот, остаётся: руками числа переписывают
+        как раз с упаковки, которая в этот момент в руках.
         Фокус ставим, только когда блок раскрыт нажатием, — там это ровно то,
         чего человек хотел. Где блок открыт изначально, выскочившая при
         переключении экрана клавиатура закрыла бы пол-экрана. */}
@@ -151,9 +175,29 @@ export function AddItem({
       </li>)}
     </ul>}
 
+    {!manual && fromBase.length > 0 && <>
+      {/* Подпись обязательна: эти карточки завели люди, а не мы, и верить им
+          надо иначе, чем справочнику. */}
+      <p className="tg-hint tg-add-item-source">Из базы товаров — завели пользователи</p>
+      <ul className="tg-add-item-results">
+      {fromBase.map((item) => <li key={item.code}>
+        <button onClick={() => { haptic("success"); onAdd(productToItem(item)); reset(); }}>
+          <FoodIcon name={item.name} size="sm" />
+          <span className="tg-add-item-name">
+            {item.name}
+            {/* «Проверено людьми» — не украшение: карточку заводит кто угодно,
+                и число подтверждений говорит, насколько ей верить. */}
+            {item.confirmations > 0 && <i> · подтверждали {item.confirmations}</i>}
+          </span>
+          <span className="tg-add-item-kcal">{item.kcalPer100}<i> ккал/100 г</i></span>
+        </button>
+      </li>)}
+      </ul>
+    </>}
+
     {/* Пустой результат — не тупик: справочник намеренно небольшой, и путь
         дальше должен быть виден сразу, а не после второй попытки. */}
-    {!manual && query.trim().length >= 2 && found.length === 0 &&
+    {!manual && query.trim().length >= 2 && found.length === 0 && fromBase.length === 0 &&
       <p className="tg-hint">В справочнике этого нет. Введите числа с упаковки или опишите еду на вкладке «Камера» — там разберёт модель.</p>}
 
     {!manual

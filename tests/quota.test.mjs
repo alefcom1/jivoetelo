@@ -16,6 +16,25 @@ test("бесплатный тариф покрывает реальный ден
   assert.ok(free.suggest >= 10, `советы: ${free.suggest}`);
 });
 
+test("расшифровка речи считается, но денег не стоит", () => {
+  // Своя установка на нашем же сервере: наружу не уходит ни токена. Лимит ей
+  // всё равно нужен — точка приёма мегабайтных файлов без ограничения
+  // частоты занимает сервер целиком.
+  assert.equal(estimateCostUsd({ inputTokens: 1_000_000, outputTokens: 1_000_000 }, "transcribe"), 0);
+  assert.ok(PLAN_LIMITS.free.transcribe >= 20, `расшифровок: ${PLAN_LIMITS.free.transcribe}`);
+  assert.equal(typeof OPERATION_LABELS.transcribe, "string");
+});
+
+test("у каждой считаемой операции есть подпись и лимит", () => {
+  // Забытая подпись видна только на экране лимитов, и то как «undefined».
+  for (const operation of Object.keys(OPERATION_LABELS)) {
+    assert.equal(typeof PLAN_LIMITS.free[operation], "number", `нет лимита для ${operation}`);
+  }
+  for (const operation of Object.keys(PLAN_LIMITS.free)) {
+    assert.equal(typeof OPERATION_LABELS[operation], "string", `нет подписи для ${operation}`);
+  }
+});
+
 test("тариф premium существует как задел и не уже бесплатного", () => {
   for (const key of Object.keys(PLAN_LIMITS.free)) {
     assert.ok(

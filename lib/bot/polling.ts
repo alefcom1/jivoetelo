@@ -21,9 +21,10 @@
  * дешевле и без постоянного соединения.
  */
 
+import { networkDetail } from "../ai/failure.ts";
 import { handleUpdate } from "./handle-update.ts";
 import { botLinks } from "./links.ts";
-import { botStore } from "./store.ts";
+import { botStore, botTranscriber } from "./store.ts";
 import { botToken, createTelegramClient, type TelegramUpdate } from "../telegram-api.ts";
 
 /**
@@ -87,6 +88,7 @@ export function startPolling(): void {
           await handleUpdate(update, {
             client,
             store: botStore,
+            transcribe: botTranscriber(),
             now: new Date(),
             links: botLinks(),
           });
@@ -94,9 +96,12 @@ export function startPolling(): void {
       } catch (error) {
         // Обрыв висящего соединения — обычное дело для длинного опроса, и в
         // лог это писать незачем. Всё остальное показываем.
+        // Причину берём из глубины цепочки `cause` (lib/ai/failure.ts): у
+        // undici верхний уровень всегда «fetch failed», и по такому логу
+        // недоступный прокси не отличить от сбоя DNS или сертификата.
         const message = error instanceof Error ? error.message : String(error);
         if (!/timeout|aborted|socket|ECONNRESET/i.test(message)) {
-          console.error(`[bot] опрос сорвался: ${message}`);
+          console.error(`[bot] опрос сорвался: ${message}${networkDetail(error)}`);
         }
         await new Promise((resolve) => setTimeout(resolve, backoff));
         backoff = Math.min(backoff * 2, MAX_BACKOFF_MS);

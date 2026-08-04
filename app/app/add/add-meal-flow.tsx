@@ -3,9 +3,12 @@
 import { useRef, useState } from "react";
 import type { AnalysisItem, Clarification, MealAnalysis } from "@/lib/ai";
 import { MEAL_TYPE_LABELS } from "@/lib/dates";
-import { sumTotals } from "@/lib/nutrition";
+import { isBlankNutrition, sumTotals } from "@/lib/nutrition";
 import { scaleGrams } from "@/lib/portions";
 import { analyzeMeal, saveMeal } from "../meal-actions";
+import { AddFoodItem } from "../add-food-item";
+import { VoiceInput } from "../voice-input";
+import { PlateInput } from "../../plate-input";
 import { CameraCapture } from "./camera-capture";
 
 type DraftItem = {
@@ -58,7 +61,8 @@ function formatTakenAt(inbox: InboxDraft): string {
   const day = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(
     new Date(`${inbox.takenOn}T12:00:00Z`),
   );
-  return `Снято ${day} в ${inbox.takenTime}`;
+  // «Снято» про голосовое не скажешь — там ничего не снимали.
+  return `${inbox.photoKey ? "Снято" : "Записано"} ${day} в ${inbox.takenTime}`;
 }
 
 function guessMealType(time: string): string {
@@ -72,15 +76,27 @@ function guessMealType(time: string): string {
 /** Снимок из фото-инбокса, если разбор начат оттуда. */
 export type InboxDraft = {
   id: number;
-  photoKey: string;
+  /** null у записи голосом: показывать нечего, разбирать надо `note`. */
+  photoKey: string | null;
   note: string | null;
   takenOn: string;
   takenTime: string;
 };
 
-export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; inbox?: InboxDraft | null }) {
+export function AddMealFlow({
+  showCalories,
+  simpleMode = false,
+  inbox,
+}: {
+  showCalories: boolean;
+  /** Упрощённый режим: тарелка вместо чисел (lib/simple-log.ts). */
+  simpleMode?: boolean;
+  inbox?: InboxDraft | null;
+}) {
   const now = new Date();
   const [mode, setMode] = useState<"text" | "photo">(inbox ? "photo" : "text");
+  /** Разовый выход в подробный режим: упрощённый — умолчание, а не запрет. */
+  const [detailed, setDetailed] = useState(false);
   const [text, setText] = useState("");
   const [note, setNote] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
@@ -225,16 +241,60 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
     }
   }
 
+  /**
+   * Запись из тарелки уходит в дневник сразу, без промежуточного черновика.
+   * В этом весь смысл режима: два нажатия и «записать». Приём пищи и время
+   * подставляются по часам и правятся потом — открыв запись, если нужно.
+   */
+  async function saveSimple(items: Array<{ name: string; grams: number; kcalPer100: number; proteinPer100: number; fatPer100: number; carbsPer100: number; fiberPer100: number; confidence: string }>) {
+    setError(null);
+    setBusy(true);
+    try {
+      const result = await saveMeal({
+        inboxId: null,
+        eatenOn: date,
+        eatenTime: time,
+        mealType: guessMealType(time),
+        sourceText: null,
+        photoKey: null,
+        analysis: null,
+        items,
+      });
+      if (result && !result.ok) setError(result.error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!draft) {
-    if (inbox) {
+    if (simpleMode && !detailed && !inbox) {
       return <main className="addflow">
-        <h1>Снимок из инбокса</h1>
-        <p className="addflow-hint">{formatTakenAt(inbox)}. Разберём его и подставим это же время в приём пищи.</p>
-        <div className="addflow-photo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/api/photos/${inbox.photoKey}`} alt="Снимок еды из инбокса" />
-          {inbox.note && <p className="addflow-hint">Ваша подпись: «{inbox.note}»</p>}
-        </div>
+        <h1>Что вы ели?</h1>
+        <PlateInput showCalories={showCalories} busy={busy} onSave={(items) => void saveSimple(items)} />
+        {error && <p className="form-error">{error}</p>}
+        {/* Выход в подробный режим на один раз: упрощённый — не запрет, а
+            умолчание. Иногда человек хочет записать точно, и заставлять его
+            лезть в настройки ради одной записи незачем. */}
+        <p className="field-note">
+          Нужно записать точнее? <button className="link-button" type="button" onClick={() => { setDetailed(true); setMode("text"); }}>Опишите словами</button> — разбор посчитает состав.
+        </p>
+      </main>;
+    }
+
+    if (inbox) {
+      // Запись голосом отличается от снимка только тем, что показывать нечего:
+      // вместо фотографии — расшифровка, которую и будет разбирать модель.
+      const isVoice = !inbox.photoKey;
+      return <main className="addflow">
+        <h1>{isVoice ? "Запись голосом" : "Снимок из инбокса"}</h1>
+        <p className="addflow-hint">{formatTakenAt(inbox)}. Разберём и подставим это же время в приём пищи.</p>
+        {isVoice
+          ? <blockquote className="addflow-transcript">«{inbox.note}»</blockquote>
+          : <div className="addflow-photo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/photos/${inbox.photoKey}`} alt="Снимок еды из инбокса" />
+              {inbox.note && <p className="addflow-hint">Ваша подпись: «{inbox.note}»</p>}
+            </div>}
         {error && <p className="form-error">{error}</p>}
         <div className="addflow-actions">
           <button className="black-button" onClick={handleAnalyze} disabled={busy}>{busy ? "Разбираем…" : "Разобрать"}</button>
@@ -252,8 +312,16 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
       </div>
 
       {mode === "text"
-        ? <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3}
-            placeholder="Например: два сырника, ложка сметаны и капучино без сахара" autoFocus />
+        ? <>
+            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3}
+              placeholder="Например: два сырника, ложка сметаны и капучино без сахара" autoFocus />
+            {/* Расшифровка дописывается к набранному, а не затирает его:
+                человек мог начать печатать и досказать остальное голосом. */}
+            <VoiceInput
+              disabled={busy}
+              onText={(spoken) => setText((current) => (current.trim() ? `${current.trim()}, ${spoken}` : spoken))}
+            />
+          </>
         : <div className="addflow-photo">
             {/* Камера первой: человек с ноутбуком чаще хочет снять тарелку
                 сейчас, а не искать готовый файл. Кнопки нет вовсе, если
@@ -326,10 +394,17 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
           )}
         </div>
         <div className="draft-item-meta">
-          {item.confidence !== "high" && <i>{CONFIDENCE_LABELS[item.confidence]}</i>}
+          {/* Позиция, добавленная руками, приходит с нулями во всех числах, а
+              поля «на 100 г» спрятаны под раскрытием — сохранить пустую еду
+              легко и незаметно. В дневнике она потом выглядит как «Салат,
+              300 г — 0 ккал», и понять по ней, забыли числа или их правда
+              ноль, уже нельзя. */}
+          {isBlankNutrition(item)
+            ? <i>числа не заполнены</i>
+            : item.confidence !== "high" && <i>{CONFIDENCE_LABELS[item.confidence]}</i>}
           {showCalories && <span>{Math.round((item.kcalPer100 * item.grams) / 100)} ккал</span>}
           <span>белок {Math.round((item.proteinPer100 * item.grams) / 10) / 10} г</span>
-          <details>
+          <details open={isBlankNutrition(item)}>
             <summary>на 100 г</summary>
             <div className="per100-grid">
               <label>ккал<input type="number" min={0} max={900} value={item.kcalPer100} onChange={(e) => updateItem(index, { kcalPer100: Number(e.target.value) })} /></label>
@@ -341,7 +416,7 @@ export function AddMealFlow({ showCalories, inbox }: { showCalories: boolean; in
           </details>
         </div>
       </div>)}
-      <button className="link-button" onClick={() => setDraft((d) => d && { ...d, items: [...d.items, emptyItem()] })}>+ Добавить позицию</button>
+      <AddFoodItem onAdd={(item) => setDraft((d) => d && { ...d, items: [...d.items, { ...item, suggestedGrams: item.grams }] })} />
     </div>
 
     <div className="draft-summary">

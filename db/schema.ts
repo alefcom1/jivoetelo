@@ -57,6 +57,14 @@ export const users = pgTable("users", {
   // Режим «скрыть калории» (раздел 4.2 спеки): пользователь видит белок и
   // клетчатку, но не цифры энергии.
   showCalories: boolean("show_calories").notNull().default(true),
+  /**
+   * Упрощённый режим учёта (lib/simple-log.ts): тарелка вместо чисел.
+   *
+   * Отдельно от showCalories сознательно. Тот убирает цифры с экрана,
+   * оставляя полный ввод; этот упрощает саму работу. Человек может хотеть
+   * одно без другого — видеть калории, но не набирать состав руками.
+   */
+  simpleMode: boolean("simple_mode").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -158,7 +166,7 @@ export const aiUsage = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     onDate: date("on_date").notNull(),
-    kind: text("kind").notNull(), // analyze_photo | analyze_text | suggest
+    kind: text("kind").notNull(), // analyze_photo | analyze_text | suggest | transcribe
     inputTokens: integer("input_tokens").notNull().default(0),
     outputTokens: integer("output_tokens").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -201,9 +209,12 @@ export const photoInbox = pgTable(
     userId: integer("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    photoKey: text("photo_key").notNull(),
+    // null у расшифрованного голосового: файла у него нет, а содержимое —
+    // текст в note. Это же и признак «запись голосом», отдельного столбца
+    // под него нет (см. drizzle/0018_voice-inbox.sql).
+    photoKey: text("photo_key"),
     // Подпись к фото в Telegram, если она была: «омлет с сыром» экономит
-    // потом целый раунд уточнений.
+    // потом целый раунд уточнений. У голосового здесь вся расшифровка.
     note: text("note"),
     // Локальные дата и время съёмки. Сохраняем их сразу, иначе фото,
     // присланное в 23:50 и разобранное в 00:10, уедет на следующий день.
@@ -297,6 +308,19 @@ export const mealItems = pgTable("meal_items", {
     .notNull()
     .references(() => meals.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  /**
+   * Канонический ключ блюда (lib/dish-key.ts): `dish:ovsyanka` или `cat:cereal`.
+   *
+   * Нужен потому, что `name` — свободный текст от разбора снимка, и одна и та
+   * же тарелка называется каждый раз по-новому. Без устойчивого ключа у любого
+   * блюда в статистике будет n = 1 — это уже проверено на «как обычно?»
+   * (см. комментарий к repeatableMeals в lib/frequent-meals.ts).
+   *
+   * Nullable означает «ключ ещё не проставлен»: так выглядят записи, сделанные
+   * до миграции 0015. У опознанного, но неизвестного блюда ключ не пустой, а
+   * `cat:other`, и путать эти два состояния нельзя.
+   */
+  dishKey: text("dish_key"),
   grams: doublePrecision("grams").notNull(),
   kcalPer100: doublePrecision("kcal_per_100").notNull().default(0),
   proteinPer100: doublePrecision("protein_per_100").notNull().default(0),
@@ -486,6 +510,103 @@ export const passwordResets = pgTable(
   },
   // По пользователю — чтобы ограничивать частоту запросов, не сканируя таблицу.
   (table) => [index("password_resets_user").on(table.userId, table.createdAt)],
+);
+
+/**
+ * Настройки недельных и месячных отчётов. Строки может не быть — это
+ * нормально и означает «всё по умолчанию» (lib/report-prefs.ts). Заводить её
+ * каждому при регистрации незачем: большинство настройки не трогает.
+ */
+export const reportPreferences = pgTable("report_preferences", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** auto | email | telegram | both | off */
+  weekly: text("weekly").notNull().default("auto"),
+  monthly: text("monthly").notNull().default("auto"),
+  weightNumbers: boolean("weight_numbers").notNull().default(true),
+  /**
+   * Токен для заголовка List-Unsubscribe (RFC 8058). Nullable: строка
+   * настроек заводится и без него — токен появляется при первом письме.
+   */
+  unsubscribeToken: text("unsubscribe_token"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Журнал отправленных отчётов — он же защита от повторной отправки.
+ *
+ * Отдельно от `email_deliveries`: та привязана к анонимным подписчикам
+ * почтовой серии (`email_subscribers`), у которых нет `user_id`, и её
+ * обработчик при неожиданном содержимом навсегда прекращает попытки.
+ *
+ * Строки не создаются заранее, как у серии писем: период сначала должен
+ * закончиться. Планировщик вставляет строку через ON CONFLICT DO NOTHING —
+ * выигравший гонку получает право отправить, остальные не получают ничего.
+ */
+export const reportDeliveries = pgTable(
+  "report_deliveries",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** weekly | monthly */
+    kind: text("kind").notNull(),
+    /**
+     * Последний день периода. Именно он определяет тождество отчёта: отправка
+     * может сдвинуться на сутки из-за перезапуска, отчёт от этого другим не
+     * станет.
+     */
+    periodEnd: date("period_end").notNull(),
+    /** email | telegram */
+    channel: text("channel").notNull(),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    attempts: integer("attempts").notNull().default(0),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("report_deliveries_once").on(table.userId, table.kind, table.periodEnd, table.channel),
+    index("report_deliveries_due").on(table.sentAt, table.createdAt),
+  ],
+);
+
+/**
+ * Своя база штрихкодов.
+ *
+ * Единой открытой базы штрихкодов российских продуктов с составом не
+ * существует, поэтому база собирается из того, что вводят люди: отсканировал,
+ * не нашлось, ввёл КБЖУ с упаковки — и следующий, кто отсканирует ту же
+ * пачку, получит её сразу.
+ *
+ * Ключ — сам код, без суррогатного id: товар с этим кодом ровно один, и
+ * второй ключ позволил бы завести его дважды.
+ */
+export const barcodes = pgTable(
+  "barcodes",
+  {
+    code: text("code").primaryKey(),
+    name: text("name").notNull(),
+    kcalPer100: doublePrecision("kcal_per_100").notNull().default(0),
+    proteinPer100: doublePrecision("protein_per_100").notNull().default(0),
+    fatPer100: doublePrecision("fat_per_100").notNull().default(0),
+    carbsPer100: doublePrecision("carbs_per_100").notNull().default(0),
+    fiberPer100: doublePrecision("fiber_per_100").notNull().default(0),
+    /** Вес пачки. Ноль — «не знаем», тогда подставляем сто грамм. */
+    portionG: doublePrecision("portion_g").notNull().default(0),
+    /** Кто завёл. Человек уходит — товар остаётся: он принадлежит не ему. */
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    /**
+     * Сколько раз карточку подтвердили, сохранив по ней еду без правки чисел.
+     * Ноль отличает проверенную запись от заведённой однажды и наугад.
+     */
+    confirmations: integer("confirmations").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("barcodes_name").on(table.name)],
 );
 
 /**

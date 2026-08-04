@@ -5,8 +5,9 @@ import { and, eq, gte, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { mealItems, meals, profiles } from "@/db/schema";
 import type { DiaryItemRow, DiaryMealRow } from "./diary.ts";
+import { dishKey } from "./dish-key.ts";
 import type { PastMeal } from "./frequent-meals.ts";
-import { sumTotals, type NutritionTotals } from "./nutrition.ts";
+import { clampPer100, sumTotals, type NutritionTotals } from "./nutrition.ts";
 import type { PaceKey } from "./pace.ts";
 import { deletePhoto } from "./storage.ts";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
@@ -63,6 +64,20 @@ export async function getDaySummary(userId: number, day: string): Promise<DaySum
     }),
     targets: await getTargetsForUser(userId),
   };
+}
+
+/**
+ * Дни, в которых есть хотя бы одна запись, — за всё время.
+ *
+ * Окна здесь нет намеренно: счётчик дней и «недели с заботой» (lib/streak.ts)
+ * не сбрасываются никогда, и посчитать их по последним тридцати дням нельзя.
+ * Строк это даёт немного — одна дата на день, то есть сотни, а не тысячи, — и
+ * запрос идёт по тому же индексу (user_id, eaten_on), что и остальные чтения
+ * дневника.
+ */
+export async function listLoggedDays(userId: number): Promise<string[]> {
+  const rows = await getDb().selectDistinct({ day: meals.eatenOn }).from(meals).where(eq(meals.userId, userId));
+  return rows.map((row) => row.day);
 }
 
 /** Актуальные цели пользователя или null, если план ещё не настроен. */
@@ -123,16 +138,29 @@ export function normalizeMealItems(rawItems: unknown): SaveMealItem[] {
       return {
         name: String(item.name ?? "").trim().slice(0, 120),
         grams: clamp(item.grams, 1, 3000),
-        kcalPer100: clamp(item.kcalPer100, 0, 900),
-        proteinPer100: clamp(item.proteinPer100, 0, 100),
-        fatPer100: clamp(item.fatPer100, 0, 100),
-        carbsPer100: clamp(item.carbsPer100, 0, 100),
-        fiberPer100: clamp(item.fiberPer100, 0, 50),
+        kcalPer100: clampPer100("kcal", item.kcalPer100),
+        proteinPer100: clampPer100("protein", item.proteinPer100),
+        fatPer100: clampPer100("fat", item.fatPer100),
+        carbsPer100: clampPer100("carbs", item.carbsPer100),
+        fiberPer100: clampPer100("fiber", item.fiberPer100),
         confidence: ["high", "medium", "low"].includes(String(item.confidence)) ? String(item.confidence) : "medium",
       };
     })
     .filter((item) => item.name.length > 0)
     .slice(0, 30);
+}
+
+/**
+ * Проставляет канонический ключ блюда каждой позиции перед записью.
+ *
+ * Отдельной функцией, а не строкой в каждом из трёх мест вставки: разойдись
+ * они — часть позиций легла бы без ключа, и статистика молча считала бы по
+ * неполной выборке. Ключ выводится из названия и потому не может разойтись с
+ * ним; хранится он всё же в базе, чтобы разбор за 90 дней не пересчитывал
+ * словарь на каждой строке.
+ */
+export function withDishKeys<T extends { name: string }>(items: T[]): Array<T & { dishKey: string }> {
+  return items.map((item) => ({ ...item, dishKey: dishKey(item.name).key }));
 }
 
 /** Сохраняет приём пищи. Возвращает id созданной записи. */
@@ -152,7 +180,7 @@ export async function saveMeal(input: SaveMealInput): Promise<number> {
     .returning({ id: meals.id });
 
   const mealId = inserted[0].id;
-  await db.insert(mealItems).values(input.items.map((item) => ({ ...item, mealId })));
+  await db.insert(mealItems).values(withDishKeys(input.items).map((item) => ({ ...item, mealId })));
   return mealId;
 }
 
@@ -308,21 +336,36 @@ export async function getMealDetailForUser(userId: number, mealId: number): Prom
  * для пары delete/insert в одном обработчике риск рассинхронизации ничтожен,
  * а транзакция потребовала бы отдельно прокидывать соединение через getDb().
  * Возвращает false, если записи не было или она принадлежит другому пользователю.
+ *
+ * `eatenTime` необязательно: Mini App время не правит, а веб-кабинет правит.
+ * Формат проверяется здесь, а не у вызывающего, — значение приходит от
+ * клиента, и «25:99» не должно доехать до базы.
  */
 export async function replaceMealItemsForUser(
   userId: number,
   mealId: number,
   mealType: string,
   items: SaveMealItem[],
+  eatenTime?: string | null,
 ): Promise<boolean> {
   const db = getDb();
   const owned = await db.select({ id: meals.id }).from(meals).where(and(eq(meals.id, mealId), eq(meals.userId, userId))).limit(1);
   if (!owned[0]) return false;
 
   await db.delete(mealItems).where(eq(mealItems.mealId, mealId));
-  await db.insert(mealItems).values(items.map((item) => ({ ...item, mealId })));
-  await db.update(meals).set({ mealType: MEAL_TYPES.includes(mealType) ? mealType : "other" }).where(eq(meals.id, mealId));
+  await db.insert(mealItems).values(withDishKeys(items).map((item) => ({ ...item, mealId })));
+  await db
+    .update(meals)
+    .set({
+      mealType: MEAL_TYPES.includes(mealType) ? mealType : "other",
+      ...(isValidTime(eatenTime) ? { eatenTime } : {}),
+    })
+    .where(eq(meals.id, mealId));
   return true;
+}
+
+function isValidTime(value: unknown): value is string {
+  return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
 /**

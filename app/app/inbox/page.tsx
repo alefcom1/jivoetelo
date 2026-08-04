@@ -25,8 +25,8 @@ export default async function InboxPage() {
     return <main className="inbox">
       <h1>Инбокс пуст</h1>
       <p className="inbox-empty">
-        Сюда попадают фото, которые вы присылаете боту в Telegram. Сфотографировать можно в любой момент —
-        разобрать потом, когда будет минута.
+        Сюда попадает то, что вы присылаете боту в Telegram: фото еды и голосовые. Снять или сказать можно
+        в любой момент — разобрать потом, когда будет минута.
       </p>
       <p><Link className="link-button" href="/app/settings">Привязать Telegram →</Link></p>
     </main>;
@@ -34,8 +34,10 @@ export default async function InboxPage() {
 
   return <main className="inbox">
     <h1>Инбокс</h1>
+    {/* «Записей», а не «снимков»: в инбоксе теперь и расшифрованные
+        голосовые, и называть их снимками — врать в самой заметной строке. */}
     <p className="inbox-count">
-      {withPluralRu(items.length, ["снимок", "снимка", "снимков"])}{" "}
+      {withPluralRu(items.length, ["запись", "записи", "записей"])}{" "}
       {pluralRu(items.length, ["ждёт", "ждут", "ждут"])} разбора.
     </p>
 
@@ -44,9 +46,12 @@ export default async function InboxPage() {
         <li className="inbox-item" key={item.id}>
           {/* next/image здесь не нужен: файл отдаётся своим же обработчиком
               с проверкой владельца, а оптимизация в 200 пикселей превью
-              стоила бы больше, чем экономит. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/api/photos/${item.photoKey}`} alt="" />
+              стоила бы больше, чем экономит. У записи голосом файла нет —
+              вместо превью значок, иначе строка разъедется. */}
+          {item.photoKey
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={`/api/photos/${item.photoKey}`} alt="" />
+            : <span className="inbox-voice" aria-label="Запись голосом">🎤</span>}
           <div className="inbox-item-body">
             <p className="inbox-when">
               {item.takenOn === today ? "Сегодня" : formatDayRu(item.takenOn)}, {item.takenTime}
@@ -64,7 +69,7 @@ export default async function InboxPage() {
     </ul>
 
     <p className="inbox-note-foot">
-      «Отклонить» удаляет снимок с сервера. Разобранные снимки остаются вместе с приёмом пищи.
+      «Отклонить» удаляет запись: снимок стирается с сервера, расшифровка — из базы. Разобранное остаётся вместе с приёмом пищи.
     </p>
   </main>;
 }

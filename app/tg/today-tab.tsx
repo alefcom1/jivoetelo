@@ -3,11 +3,12 @@
 import { mealCategory } from "@/lib/food-category";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import { withPluralRu } from "@/lib/plural";
-import type { TgMeal, TodayResponse } from "./api";
+import type { TgMeal, TgTargets, TgTotals, TodayResponse } from "./api";
 import { FoodIcon, foodTint } from "../food-icon";
 import { IconInbox } from "./icons";
 import { ArtEmptyPlate } from "./illustrations";
 import { TgPhoto } from "./photo";
+import { StreakCard } from "./streak-card";
 import { SuggestCard } from "./suggest-card";
 import { haptic } from "./telegram";
 import { WeightTrend } from "./weight-trend";
@@ -54,6 +55,37 @@ function ProgressRing({ value, max, label, unit }: { value: number; max: number;
   </div>;
 }
 
+/**
+ * «Осталось на сегодня» — то, ради чего человек и открывает экран посреди
+ * дня. Кольцо отвечает на вопрос «сколько я уже съел», а решение принимается
+ * по остатку, и раньше его приходилось вычитать в уме.
+ *
+ * Ноль вместо отрицательного числа: «−140 ккал осталось» читается как ошибка.
+ * Перебор объясняется строкой ниже — тем же языком, что и недельный обзор
+ * (`lib/review.ts`): факт, а не оценка.
+ */
+function Remaining({ totals, targets, showCalories }: {
+  totals: TgTotals;
+  targets: TgTargets;
+  showCalories: boolean;
+}) {
+  const kcalLeft = targets.kcalTarget - totals.kcal;
+  const proteinLeft = Math.max(0, Math.round(targets.proteinTarget - totals.protein));
+  const fiberLeft = Math.max(0, Math.round(targets.fiberTarget - totals.fiber));
+
+  return <section className="tg-card tg-remaining">
+    <h2>Осталось на сегодня</h2>
+    <div className="tg-draft-total-row">
+      {showCalories && <div><strong>{Math.max(0, Math.round(kcalLeft))}</strong><span>ккал</span></div>}
+      <div><strong>{proteinLeft}</strong><span>белок, г</span></div>
+      <div><strong>{fiberLeft}</strong><span>клетчатка, г</span></div>
+    </div>
+    {showCalories && kcalLeft < 0 && <p className="tg-draft-total-note">
+      Сверх плана: {Math.round(-kcalLeft)} ккал. Это информация, а не оценка — один день картину не решает.
+    </p>}
+  </section>;
+}
+
 type MacroKey = "energy" | "protein" | "fat" | "carbs" | "fiber";
 
 function Bar({ label, value, target, unit, macro }: {
@@ -87,22 +119,32 @@ function MealThumb({ meal }: { meal: TgMeal }) {
   </span>;
 }
 
+/**
+ * Порядок блоков на «Сегодня»: сначала день целиком, потом что съедено, потом
+ * что съесть дальше, и только в конце вес.
+ *
+ * Он выведен из вопросов, с которыми человек открывает экран, в порядке их
+ * частоты: «как у меня сегодня» → «что я уже ел» → «что съесть сейчас» →
+ * «что с весом». Тренд веса стоял первым и занимал весь первый экран, хотя
+ * меняется он раз в день и на решение о ближайшей еде не влияет; подбор еды
+ * стоял выше списка приёмов, хотя без списка непонятно, от чего отталкиваться.
+ */
 export function TodayTab({
   data,
   firstName,
   onOpenCamera,
   onOpenInbox,
   onOpenMeal,
-  onReload,
+  onWeightAdded,
 }: {
   data: TodayResponse;
   firstName: string | null;
   onOpenCamera: () => void;
   onOpenInbox: () => void;
-  /** Правка приёма пищи живёт в «Дневнике» — туда и уводим. */
-  onOpenMeal: (mealId: number) => void;
-  /** Перечитать день: после замера веса тренд на этом же экране устарел. */
-  onReload: () => void;
+  /** Открыть правку сохранённого приёма пищи — тем же экраном, что и «Дневник». */
+  onOpenMeal: (id: number) => void;
+  /** Внесён новый замер веса: тренд на этом же экране устарел, день пора перечитать. */
+  onWeightAdded: () => void;
 }) {
   const { totals, targets, showCalories } = data;
   const kcalMid = targets?.kcalTarget ?? null;
@@ -115,11 +157,19 @@ export function TodayTab({
         : "Ваш день идёт."}</h1>
     </header>
 
+    {/* Живело стоит выше кольца сознательно: серия — это повод открыть
+        приложение, и повод должен быть виден до того, как человек начнёт
+        разбираться в цифрах дня. Ниже кольца его увидели бы только те, кто и
+        так дошёл до конца экрана. */}
+    <StreakCard streak={data.streak} />
+
     {/* Калории и макросы — крупно и сразу, без раскрытия (раздел «Три отличия
         от макета» спецификации Mini App v2, пункт 1). */}
     {showCalories && kcalMid
       ? <ProgressRing value={totals.kcal} max={kcalMid} label="Энергия" unit="ккал" />
       : null}
+
+    {targets && <Remaining totals={totals} targets={targets} showCalories={showCalories} />}
 
     <section className="tg-card tg-macros">
       {showCalories && !kcalMid && <Bar macro="energy" label="Энергия" value={totals.kcal} target={null} unit="ккал" />}
@@ -152,25 +202,34 @@ export function TodayTab({
             <p>Пока пусто. Запишите первый приём — это займёт меньше минуты.</p>
             <button className="tg-button" onClick={onOpenCamera}>Снять еду</button>
           </div>
-        : <ul className="tg-meals">
-            {/* Строка — кнопка: нажатие открывает правку. Раньше по ней не
-                происходило ничего, хотя выглядела она ровно как список в
-                «Дневнике», где нажатие работает. Молчащий элемент, похожий
-                на рабочий, хуже отсутствующего. */}
-            {data.meals.map((meal) => <li key={meal.id}>
-              <button className="tg-meal-row" onClick={() => { haptic("tap"); onOpenMeal(meal.id); }}>
-                <MealThumb meal={meal} />
-                <div>
-                  <b>{meal.title} <time>{meal.time}</time></b>
-                  <span>{meal.items.slice(0, 3).join(", ")}</span>
-                </div>
-                <strong>
-                  {showCalories && <>{meal.kcal}<small> ккал</small></>}
-                  <em>{meal.protein} г белка</em>
-                </strong>
-              </button>
-            </li>)}
-          </ul>}
+        : <>
+            {/* Строка списка — кнопка: нажатие открывает правку записи, тот же
+                экран, что и в «Дневнике». До этого нажатие на приём пищи не
+                делало ничего, хотя строка выглядела ровно как в «Дневнике»,
+                где нажатие работает. Молчащий элемент, похожий на рабочий,
+                хуже отсутствующего. */}
+            <ul className="tg-meals">
+              {data.meals.map((meal) => <li key={meal.id}>
+                <button className="tg-meal-row" onClick={() => { haptic("tap"); onOpenMeal(meal.id); }}>
+                  <MealThumb meal={meal} />
+                  {/* Внутри кнопки только строчные элементы: <div> здесь был бы
+                      невалидной разметкой — тем же приёмом собрана строка
+                      «Дневника» (.tg-diary-meal). */}
+                  <span className="tg-meal-row-body">
+                    <b>{meal.title} <time>{meal.time}</time></b>
+                    <span>{meal.items.slice(0, 3).join(", ")}</span>
+                  </span>
+                  <strong>
+                    {showCalories && <>{meal.kcal}<small> ккал</small></>}
+                    <em>{meal.protein} г белка</em>
+                  </strong>
+                </button>
+              </li>)}
+            </ul>
+            {/* Второй и последующие приёмы записывались только через нижнюю
+                панель: кнопка на «Сегодня» была лишь в пустом состоянии. */}
+            <button className="tg-button tg-button-block" onClick={onOpenCamera}>Добавить приём</button>
+          </>}
     </section>
 
     {/* Порядок блоков: сначала день, потом что в нём уже есть, потом
@@ -179,7 +238,7 @@ export function TodayTab({
         момент не задаёт. */}
     <SuggestCard showCalories={showCalories} />
 
-    <WeightTrend weight={data.weight} onAdded={onReload} />
+    <WeightTrend weight={data.weight} onAdded={onWeightAdded} />
 
     {/* Дисклеймер и документы должны быть доступны и внутри Telegram, а не
         только на сайте: для части людей Mini App — единственный вход. */}

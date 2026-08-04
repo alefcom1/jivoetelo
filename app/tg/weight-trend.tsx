@@ -27,16 +27,23 @@ const PADDING = 6;
  * Форма закрыта до нажатия. Открытое поле ввода в карточке, которую человек
  * видит каждый день, — это ежедневный молчаливый упрёк; кнопка честнее.
  *
- * Ничего не рендерит, если записей веса ещё нет: план без данных не может
- * посчитать ни цели, ни тренд, а пустой график хуже отсутствующего.
+ * Карточка показывается и без единого замера. Прятать её, пока замеров нет,
+ * заманчиво — пустой график и правда хуже отсутствующего, — но тогда первый
+ * вес записать неоткуда: единственная кнопка живёт внутри той самой
+ * карточки, которой ещё нет. Поэтому график ждёт второй точки, а карточка
+ * не ждёт ничего.
  */
-export function WeightTrend({ weight, onAdded }: { weight: TgWeight | null; onAdded?: () => void }) {
-  const [adding, setAdding] = useState(false);
+export function WeightTrend({ weight, onAdded }: { weight: TgWeight | null; onAdded: () => void }) {
+  const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleAdd() {
+  const entries = weight?.entries ?? [];
+  const last = entries.length > 0 ? entries[entries.length - 1] : null;
+  const points = sparklinePoints(entries.map((e) => e.trendKg), WIDTH, HEIGHT, PADDING);
+
+  async function handleSave() {
     const parsed = Number(value.trim().replace(",", "."));
     if (!Number.isFinite(parsed) || parsed < 30 || parsed > 300) {
       setError("Вес должен быть от 30 до 300 кг.");
@@ -48,8 +55,12 @@ export function WeightTrend({ weight, onAdded }: { weight: TgWeight | null; onAd
       await addMeasurement(parsed);
       haptic("success");
       setValue("");
-      setAdding(false);
-      onAdded?.();
+      setOpen(false);
+      // Перерисовать карточку нечем: тренд считает сервер (lib/trend.ts), и
+      // после нового замера пересчитывается весь ряд, а не только последняя
+      // точка. Поэтому не дописываем точку локально, а просим оболочку
+      // перезагрузить «Сегодня».
+      onAdded();
     } catch {
       haptic("error");
       setError("Не получилось сохранить замер.");
@@ -58,28 +69,48 @@ export function WeightTrend({ weight, onAdded }: { weight: TgWeight | null; onAd
     }
   }
 
-  if (!weight || weight.entries.length === 0) return null;
-
-  const { entries, weeklyChangeKg } = weight;
-  const last = entries[entries.length - 1];
-  const points = sparklinePoints(entries.map((e) => e.trendKg), WIDTH, HEIGHT, PADDING);
-
   return <section className="tg-card tg-weight">
     <div className="tg-weight-head">
       <div>
         <p className="tg-hint">Тренд веса</p>
-        <strong>{last.trendKg} <small>кг</small></strong>
+        {last
+          ? <strong>{last.trendKg} <small>кг</small></strong>
+          : <strong className="tg-weight-empty">пока нет замеров</strong>}
       </div>
-      {weeklyChangeKg !== null && <span className="tg-weight-change">
-        {weeklyChangeKg > 0 ? "+" : ""}{weeklyChangeKg} кг за неделю
-      </span>}
+      <div className="tg-weight-actions">
+        {weight?.weeklyChangeKg != null && <span className="tg-weight-change">
+          {weight.weeklyChangeKg > 0 ? "+" : ""}{weight.weeklyChangeKg} кг за неделю
+        </span>}
+        <button
+          className="tg-weight-add"
+          aria-expanded={open}
+          onClick={() => { haptic("tap"); setError(null); setOpen((current) => !current); }}
+        >{open ? "Отмена" : "Добавить"}</button>
+      </div>
     </div>
+
+    {open && <div className="tg-weight-form">
+      <input
+        className="tg-input"
+        type="number" inputMode="decimal" step="0.1" min={30} max={300}
+        placeholder="вес сегодня, кг"
+        value={value}
+        autoFocus
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter" && value.trim() !== "") void handleSave(); }}
+      />
+      <button className="tg-button" onClick={() => void handleSave()} disabled={busy || value.trim() === ""}>
+        {busy ? "…" : "Сохранить"}
+      </button>
+    </div>}
+    {error && <p className="tg-error">{error}</p>}
+
     {entries.length > 1 && <svg
       className="tg-weight-svg"
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       preserveAspectRatio="none"
       role="img"
-      aria-label={`Тренд веса: ${last.trendKg} кг`}
+      aria-label={`Тренд веса: ${last?.trendKg} кг`}
     >
       <defs>
         {/* Заливка под линией: одинокая линия на пустом поле выглядела
@@ -94,22 +125,9 @@ export function WeightTrend({ weight, onAdded }: { weight: TgWeight | null; onAd
       <polyline points={pointsToPolyline(points)} />
     </svg>}
 
-    {adding
-      ? <div className="tg-weight-add">
-          <input
-            className="tg-input" type="number" inputMode="decimal" step="0.1" min={30} max={300}
-            placeholder="вес сегодня, кг" autoFocus
-            value={value} onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && value.trim()) void handleAdd(); }}
-          />
-          <button className="tg-button" onClick={() => void handleAdd()} disabled={busy || value.trim() === ""}>
-            {busy ? "…" : "Сохранить"}
-          </button>
-          <button className="tg-link" onClick={() => { setAdding(false); setError(null); }}>Отмена</button>
-        </div>
-      : <button className="tg-link tg-weight-add-open" onClick={() => { haptic("tap"); setAdding(true); }}>
-          + Добавить замер
-        </button>}
-    {error && <p className="tg-error">{error}</p>}
+    {/* Одного замера на график не хватает, но и молчать о нём нельзя: человек
+        только что его внёс и ждёт подтверждения, что число дошло. */}
+    {entries.length === 1 && <p className="tg-hint">Первый замер записан. Линия тренда появится со вторым.</p>}
+    {entries.length === 0 && <p className="tg-hint">Взвешивайтесь в одно и то же время — тренд сглаживает дневные колебания воды и еды.</p>}
   </section>;
 }
