@@ -44,6 +44,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/raschet/plan", label: "Персональный план" },
       { href: "/skolko-kalorij", label: "Калорийность блюд" },
       { href: "/produkty", label: "Калорийность продуктов" },
+      { href: "/kak-schitaem", label: "Как мы считаем" },
       { href: "/pro", label: "Для специалистов" },
     ],
     art: {
@@ -59,6 +60,9 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/raschet/energiya", label: "Сколько калорий в день" },
       { href: "/raschet/belok", label: "Сколько белка в день" },
       { href: "/raschet/temp", label: "С какой скоростью снижать вес" },
+      { href: "/raschet/suhoe-varenoe", label: "Сухая и варёная крупа" },
+      { href: "/raschet/porcii", label: "Порция без весов" },
+      { href: "/slovar", label: "Словарь" },
       { href: "/raschet/kviz", label: "Стоит ли снижать вес" },
       { href: "/raschet", label: "Все расчёты" },
     ],

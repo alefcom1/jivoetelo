@@ -6,6 +6,7 @@ import { formatLegalDate, LegalMeta } from "./nav";
 export const metadata: Metadata = {
   title: "Документы — Живое Тело",
   description: "Соглашение, политика конфиденциальности, согласие на обработку данных и cookie.",
+  alternates: { canonical: "/legal" },
 };
 
 const documents = [

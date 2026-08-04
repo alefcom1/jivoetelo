@@ -7,6 +7,7 @@ import { formatLegalDate, LegalMeta, LegalNav } from "../nav";
 export const metadata: Metadata = {
   title: "Пользовательское соглашение — Живое Тело",
   description: "Условия использования сервиса «Живое Тело»: что сервис делает, чего не делает и на каких условиях предоставляется.",
+  alternates: { canonical: "/legal/terms" },
 };
 
 export const dynamic = "force-dynamic";

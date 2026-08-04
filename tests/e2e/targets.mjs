@@ -35,7 +35,9 @@ try {
   const dayText = await page.textContent("main");
   // На «Сегодня» показываем точечный ориентир: диапазон живёт на странице расчёта
   // и в предложении по плану, а в дневной сводке от него больше шума, чем пользы.
-  if (!dayText.includes("из ~1870")) throw new Error(`Нет ориентира по калориям: ${dayText.slice(0, 300)}`);
+  // Кольцо day-visuals пишет «из 1870 ккал» без тильды — приблизительность
+  // проговаривается в расчёте плана, а не в каждой цифре сводки.
+  if (!dayText.includes("из 1870")) throw new Error(`Нет ориентира по калориям: ${dayText.slice(0, 300)}`);
   if (!dayText.includes("104")) throw new Error("Нет цели по белку");
   if (dayText.includes("Настройте стартовый план")) throw new Error("Баннер онбординга не исчез");
 
@@ -69,7 +71,7 @@ try {
   step("7. Изменение плана: цель «снижение» уменьшает диапазон");
   await completeOnboarding(page, BASE, { goal: "lose" });
   const loseText = await page.textContent("main");
-  const match = loseText.match(/из ~(\d{4})/);
+  const match = loseText.match(/из (\d{4})/);
   if (!match || Number(match[1]) >= 1870) throw new Error(`Ориентир не уменьшился: ${match?.[0]}`);
 
   console.log("E2E M3 OK");

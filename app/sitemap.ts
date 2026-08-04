@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { DISHES, dishUpdatedAt } from "@/lib/dishes";
+import { GLOSSARY } from "@/lib/glossary";
 import { PRODUCTS } from "@/lib/products";
 import { LEGAL_UPDATED_AT } from "@/lib/legal";
 
@@ -22,6 +23,10 @@ const STATIC_PAGES: Array<{ path: string; priority: number; changeFrequency: "mo
   { path: "/raschet/belok", priority: 0.8, changeFrequency: "monthly" },
   { path: "/raschet/temp", priority: 0.8, changeFrequency: "monthly" },
   { path: "/raschet/kviz", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/raschet/suhoe-varenoe", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/raschet/porcii", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/kak-schitaem", priority: 0.8, changeFrequency: "monthly" },
+  { path: "/slovar", priority: 0.7, changeFrequency: "monthly" },
   { path: "/skolko-kalorij", priority: 0.8, changeFrequency: "monthly" },
   { path: "/produkty", priority: 0.8, changeFrequency: "monthly" },
   { path: "/pro", priority: 0.7, changeFrequency: "monthly" },
@@ -56,6 +61,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified,
       changeFrequency: "monthly" as const,
       priority: 0.7,
+    })),
+    ...GLOSSARY.map((term) => ({
+      url: `${SITE_URL}/slovar/${term.slug}`,
+      lastModified,
+      changeFrequency: "yearly" as const,
+      priority: 0.6,
     })),
     ...DISHES.map((dish) => ({
       url: `${SITE_URL}/skolko-kalorij/${dish.slug}`,

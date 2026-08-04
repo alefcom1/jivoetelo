@@ -60,6 +60,7 @@ export default function DishesIndexPage() {
       </p>
       <div className="raschet-actions">
         <Link className="black-button" href="/raschet/energiya">Сколько калорий нужно вам в день</Link>
+        <Link className="link-button" href="/kak-schitaem">Методология целиком</Link>
       </div>
     </section>
 

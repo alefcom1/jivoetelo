@@ -29,10 +29,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   const [from, to] = portionRange(dish);
   return {
-    // Формула заголовка: дифференциатор впереди, головная фраза хвостом.
-    // Обещать «точную калорийность» мы не можем и не хотим, а честный
-    // диапазон — это ровно то, чего нет у таблиц-конкурентов.
-    title: `Сколько калорий ${dish.inDish}: честный диапазон, а не одно число — Живое Тело`,
+    // Формула заголовка: головная фраза, затем дифференциатор. Обещать
+    // «точную калорийность» мы не можем и не хотим, а честный диапазон —
+    // это ровно то, чего нет у таблиц-конкурентов. Хвост короткий, чтобы
+    // дифференциатор пережил обрезку выдачи (~65 символов у Яндекса).
+    title: `Сколько калорий ${dish.inDish}: честный диапазон — Живое Тело`,
     description:
       `${dish.kcal[0]}–${dish.kcal[1]} ккал на 100 г, ${from}–${to} ккал на ${dish.portionLabel}. ` +
       `Объясняем, от чего зависит цифра внутри диапазона и почему точное число ${dish.inDish} — выдумка.`,
@@ -184,7 +185,8 @@ export default async function DishPage({ params }: Params) {
     </section>
 
     <p className="raschet-disclaimer field-note">
-      {NOT_MEDICAL_DISCLAIMER} <Link href="/legal/health">Подробнее о границах сервиса →</Link>
+      {NOT_MEDICAL_DISCLAIMER} <Link href="/kak-schitaem">Как мы считаем →</Link>{" "}
+      <Link href="/legal/health">Границы сервиса →</Link>
     </p>
 
     {/* `FAQPage` оставлен сознательно: сниппетов он больше не даёт, но из

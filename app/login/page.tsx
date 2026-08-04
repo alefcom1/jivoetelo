@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { botUsername } from "@/lib/telegram";
 import { LoginForm } from "./login-form";
+
+export const metadata: Metadata = {
+  title: "Вход — Живое Тело",
+  description: "Вход в дневник питания «Живое Тело» — по паролю или через Telegram.",
+  alternates: { canonical: "/login" },
+};
 
 /**
  * Серверная обёртка ради одного значения: имени бота для кнопки «Войти через

@@ -4,6 +4,9 @@ import { SiteHeader } from "../site-header";
 // колонкой текста, и заводить им отдельную типографику значило бы разойтись
 // с остальным сайтом ради одного каталога.
 import "../raschet/raschet.css";
+// Таблицы состава на страницах блюд размечены классами legal-table — без
+// этого импорта они остаются голыми: legal.css грузится только в /legal/*.
+import "../legal/legal.css";
 import { SiteFooter } from "../site-footer";
 
 export const metadata: Metadata = {

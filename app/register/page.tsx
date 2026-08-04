@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import { botUsername } from "@/lib/telegram";
 import { RegisterForm } from "./register-form";
+
+export const metadata: Metadata = {
+  title: "Регистрация — Живое Тело",
+  description:
+    "Создайте аккаунт «Живого Тела»: дневник питания по фотографиям, персональная норма калорий и план, который подстраивается под ваш вес.",
+  alternates: { canonical: "/register" },
+};
 
 /** См. app/login/page.tsx — обёртка нужна ради имени бота из окружения. */
 /**

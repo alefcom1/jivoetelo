@@ -37,7 +37,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const photoNote = photos.length > 0 ? " С фотографиями настоящих порций от читателей." : "";
 
   return {
-    title: `Сколько калорий ${product.inProduct}: на порцию, на ложку, на 100 г — Живое Тело`,
+    // Хвост короткий: Яндекс показывает ~65 символов, и запрос с ответом
+    // должны уцелеть даже у «творога обезжиренного».
+    title: `Сколько калорий ${product.inProduct}: порция, ложка, 100 г — Живое Тело`,
     description:
       `${product.kcal} ккал на 100 г и ${portionKcal} ккал в порции ${product.portionG} г. ` +
       `Бытовые меры вместо весов, состав и то, что двигает цифру.${photoNote}`,
@@ -209,7 +211,8 @@ export default async function ProductPage({ params }: Params) {
     </section>
 
     <p className="raschet-disclaimer field-note">
-      {NOT_MEDICAL_DISCLAIMER} <Link href="/legal/health">Подробнее о границах сервиса →</Link>
+      {NOT_MEDICAL_DISCLAIMER} <Link href="/kak-schitaem">Как мы считаем →</Link>{" "}
+      <Link href="/legal/health">Границы сервиса →</Link>
     </p>
 
     <script

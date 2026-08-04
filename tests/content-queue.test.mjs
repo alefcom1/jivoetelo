@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { test } from "node:test";
 import { parseQueue, pickBatch, slugify } from "../scripts/content-queue.mjs";
 
@@ -162,15 +162,23 @@ test("выборка не переполняется, когда очередь 
   assert.equal(pickBatch(queue, 3, new Set(["omlet"])).length, 0);
 });
 
-test("настоящая очередь читается и рассчитана на тридцать ночей", () => {
+test("настоящий план — девяносто позиций, и все они читаются", () => {
   // Защита от того, что кто-то поправит разметку документа так, что скрипт
   // перестанет её понимать, — и ночной конвейер молча начнёт видеть пустую
   // очередь вместо девяноста позиций.
-  const all = parseQueue(REAL_QUEUE.replace(/^>\s*ЖДЁТ РАЗДЕЛА:.*$/gm, ""));
-  assert.equal(all.length, 90, `в очереди ${all.length} позиций, а план был на 90`);
+  //
+  // Считаем план целиком: и выполненные, и затворённые. Остаток меняется
+  // каждую ночь, а план — предмет договорённости, и его изменение должно
+  // быть заметным.
+  const all = parseQueue(
+    REAL_QUEUE.replace(/^>\s*ЖДЁТ РАЗДЕЛА:.*$/gm, "").replace(/^- \[x\]/gm, "- [ ]"),
+  );
+  assert.equal(all.length, 90, `в плане ${all.length} позиций, а договаривались о 90`);
 
   // Разделы очереди обязаны быть известны скрипту: незнакомый он молча
   // пропускает, и раздел, видный человеку, для конвейера не существует.
+  // Проверяем по плану целиком, а не по остатку: выполненный раздел из
+  // остатка исчезает, и проверка перестала бы что-либо сторожить.
   const kinds = new Set(all.map((i) => i.kind));
   assert.deepEqual([...kinds].sort(), ["calculator", "dish", "glossary", "methodology", "product"]);
 
@@ -184,11 +192,24 @@ test("настоящая очередь читается и рассчитана
   assert.equal(new Set(all.map((i) => i.slug)).size, all.length, "слаги повторяются");
 });
 
-test("сегодня конвейеру доступно то, чему есть куда лечь", () => {
-  // Открыты блюда и продукты каталога; глоссарий, методология и
-  // калькуляторы ждут своих разделов в коде. Если это соотношение
-  // изменилось — значит, затвор сняли, и раздел должен быть построен.
-  const open = parseQueue(REAL_QUEUE);
-  assert.deepEqual([...new Set(open.map((i) => i.kind))].sort(), ["dish", "product"]);
-  assert.equal(open.length, 64);
+test("у каждого открытого раздела есть страница, куда класть текст", () => {
+  // Затвор снимают, когда раздел построен, — и легко снять раньше времени.
+  // Тогда конвейер ночь за ночью выдаёт отчёт «раздела нет»: пустой прогон,
+  // который в списке веток выглядит как работа.
+  const HOMES = {
+    dish: "app/skolko-kalorij/[dish]/page.tsx",
+    product: "app/produkty/[slug]/page.tsx",
+    glossary: "app/slovar/[slug]/page.tsx",
+    methodology: "app/kak-schitaem/page.tsx",
+    calculator: "app/raschet/page.tsx",
+  };
+
+  for (const kind of new Set(parseQueue(REAL_QUEUE).map((i) => i.kind))) {
+    const home = HOMES[kind];
+    assert.ok(home, `вид «${kind}» открыт, но неизвестно, куда он ложится`);
+    assert.ok(
+      existsSync(new URL(`../${home}`, import.meta.url)),
+      `раздел «${kind}» открыт для конвейера, но ${home} нет — затвор сняли раньше времени`,
+    );
+  }
 });
