@@ -786,3 +786,120 @@
 
 /* Пояснение под результатом не должно прилипать к числам над ним. */
 .raschet-range-card .raschet-hint { margin-top: 12px; }
+
+/* ===== Вторая волна калькуляторов ===== */
+
+/* Полоса «сколько от предела»: соль и кофеин. Отметка нормы стоит не в
+   конце шкалы, а внутри неё — иначе превышение некуда рисовать, и человек
+   с двойной нормой видит ту же заполненную полосу, что и с нормой. */
+.limit-bar {
+  position: relative; display: block; height: 12px; margin: 20px 0 8px;
+  background: var(--line); border-radius: 6px; overflow: hidden;
+}
+.limit-bar-fill { display: block; height: 100%; border-radius: 6px; background: var(--lime); transition: width 0.2s; }
+.limit-bar-fill[data-zone="above"], .limit-bar-fill[data-zone="high"] { background: var(--coral); }
+.limit-bar-fill[data-zone="near"] { background: #e8b45a; }
+.limit-bar-mark {
+  position: absolute; top: -3px; width: 2px; height: 18px;
+  background: var(--black); transform: translateX(-1px);
+}
+.limit-bar-legend {
+  display: flex; justify-content: space-between; gap: 8px; margin: 0 0 4px;
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.limit-bar-legend span:nth-child(2) { flex: 1; text-align: center; }
+.limit-bar-legend span:last-child { text-align: right; }
+
+/* Отмеченные позиции в счётчике источников подсвечиваем: в списке из
+   двенадцати строк иначе не видно, что уже выбрано. Отступ добавляем всем
+   строкам сразу, а не только отмеченным, — иначе строка дёргается вбок при
+   каждом нажатии, и глаз теряет место в списке. */
+.measure-list li { padding-left: 10px; padding-right: 2px; border-left: 3px solid transparent; }
+.counter-picked { background: var(--paper); border-left-color: var(--coral); }
+.counter-reset { margin-top: 14px; }
+
+/* Подпись обязана уметь сжиматься: у flex-элемента min-width по умолчанию
+   auto, поэтому длинное название («Досаливание за столом») распирало строку
+   и выталкивало счётчик за экран. Тринадцати пикселей отступа хватило,
+   чтобы это проявилось на 280px. */
+.measure-name { min-width: 0; overflow-wrap: anywhere; }
+.measure-stepper { flex: none; }
+
+@media (max-width: 340px) {
+  .measure-list li { padding-left: 5px; gap: 6px; }
+  .measure-stepper button { width: 38px; }
+}
+
+/* Ложки сахара: девять граммов воображению не поддаются, девять ложек — да. */
+.sugar-spoons { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin: 18px 0 6px; }
+.sugar-spoons i {
+  width: 12px; height: 22px; background: var(--coral); opacity: 0.85;
+  border-radius: 6px 6px 3px 3px;
+}
+.sugar-spoons b { font-size: 13px; font-weight: 700; color: var(--muted); }
+
+/* Кривая выведения кофеина: столбики с подписями под ними. */
+.caffeine-curve {
+  display: flex; align-items: flex-end; gap: 6px;
+  height: 150px; margin: 20px 0 8px; padding: 10px 0 0;
+  border-bottom: 1px solid var(--line);
+}
+.caffeine-bar { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; min-width: 0; }
+.caffeine-bar > span { display: block; width: 100%; background: var(--coral); border-radius: 3px 3px 0 0; transition: height 0.2s; }
+.caffeine-bar > span[data-low] { background: var(--lime); }
+.caffeine-bar i, .caffeine-bar b {
+  display: block; text-align: center; font-style: normal;
+  font-size: 11px; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.caffeine-bar b { order: -1; font-weight: 700; font-variant-numeric: tabular-nums; }
+.caffeine-bar i { margin-top: 6px; color: var(--muted); }
+
+/* Шкала здорового веса: сама полоса и есть диапазон нормы — так виднее,
+   что «правильной точки» внутри него нет. */
+.weight-scale { margin: 22px 0 6px; }
+.weight-scale-bar { position: relative; height: 14px; background: var(--line); border-radius: 7px; }
+.weight-scale-healthy { position: absolute; inset: 0; background: var(--lime); border-radius: 7px; }
+.weight-scale-marker {
+  position: absolute; top: -5px; width: 3px; height: 24px;
+  background: var(--black); border-radius: 2px; transform: translateX(-1px);
+}
+.weight-scale-legend {
+  display: flex; justify-content: space-between; gap: 8px; margin: 10px 0 0;
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.weight-scale-legend span:nth-child(2) { flex: 1; text-align: center; }
+.weight-scale-legend span:last-child { text-align: right; }
+
+/* Группы нутриентов внутри выбора: двенадцать кнопок подряд не читаются. */
+.nutrient-group + .nutrient-group { margin-top: 14px; }
+.nutrient-group-title {
+  margin: 0 0 8px; font-size: 11px; font-weight: 800;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+/* Список источников под текстом страницы — часть E-E-A-T, а не сноска
+   мелким шрифтом: читателю должно быть видно, на чём стоят цифры. */
+.raschet-sources { margin: 0 0 14px; padding-left: 20px; }
+.raschet-sources li { margin-bottom: 8px; font-size: 14px; line-height: 1.65; }
+
+/* Заголовки третьего уровня внутри текстовых блоков раздела. */
+.raschet-section h3 {
+  margin: 22px 0 8px; font: 500 20px var(--serif); letter-spacing: -0.02em;
+}
+
+@media (max-width: 520px) {
+  /* Семь столбиков кривой на узком экране слипаются подписями. */
+  .caffeine-curve { height: 130px; gap: 4px; }
+  .caffeine-bar i, .caffeine-bar b { font-size: 10px; }
+  .limit-bar-legend, .weight-scale-legend { font-size: 10px; letter-spacing: 0; }
+}
+
+@media (max-width: 340px) {
+  /* Galaxy Fold: подписи шкал не помещаются в строку — прячем среднюю,
+     она дублирует то, что написано в тексте рядом. */
+  .limit-bar-legend span:nth-child(2), .weight-scale-legend span:nth-child(2) { display: none; }
+  .caffeine-curve { height: 110px; }
+  .sugar-spoons i { width: 10px; height: 18px; }
+}

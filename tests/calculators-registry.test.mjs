@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { CALCULATORS, CALCULATOR_GROUPS, calculatorsIn } from "../lib/calculators.ts";
+import { CALCULATORS, CALCULATOR_GROUPS, calculatorsIn, calculatorsWord } from "../lib/calculators.ts";
 
 /**
  * Реестр раздела расчётов. На него смотрят хаб, меню и сайтмап — ошибка
@@ -49,6 +49,21 @@ test("адреса уникальны, группы заполнены", () => {
     0,
     "калькулятор с группой вне списка не попадёт на хаб",
   );
+});
+
+test("подпись на хабе согласуется с числом расчётов", () => {
+  // Пока их было пятнадцать, окончание стояло в разметке строкой и совпадало
+  // случайно. На двадцати трёх «23 расчётов» стало ошибкой — а такую подпись
+  // никто не перечитывает после добавления страницы.
+  assert.equal(calculatorsWord(1), "расчёт");
+  assert.equal(calculatorsWord(2), "расчёта");
+  assert.equal(calculatorsWord(5), "расчётов");
+  assert.equal(calculatorsWord(11), "расчётов", "одиннадцать — не «расчёт»");
+  assert.equal(calculatorsWord(14), "расчётов");
+  assert.equal(calculatorsWord(21), "расчёт");
+  assert.equal(calculatorsWord(23), "расчёта");
+  assert.equal(calculatorsWord(25), "расчётов");
+  assert.equal(calculatorsWord(112), "расчётов");
 });
 
 test("подписи карточек влезают и отвечают на вопрос", () => {

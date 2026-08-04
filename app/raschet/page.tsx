@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CALCULATORS, CALCULATOR_GROUPS, GROUP_NOTES, calculatorsIn } from "@/lib/calculators";
+import { CALCULATORS, CALCULATOR_GROUPS, GROUP_NOTES, calculatorsIn, calculatorsWord } from "@/lib/calculators";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import { breadcrumbsJsonLd, itemListJsonLd, jsonLdScript } from "@/lib/schema-org";
 
 export const metadata: Metadata = {
   title: "Калькуляторы питания: калории, БЖУ, ИМТ, порции — Живое Тело",
   description:
-    "Пятнадцать бесплатных калькуляторов питания: норма калорий и БЖУ, ИМТ с талией, прогноз веса, калорийность блюда по ингредиентам, меры и порции. Без регистрации.",
+    "Двадцать три бесплатных калькулятора питания: норма калорий и БЖУ, витамины, ИМТ и процент жира, соль и сахар, калорийность блюда, меры и порции. Без регистрации.",
   alternates: { canonical: "/raschet" },
 };
 
@@ -16,9 +16,9 @@ export default function RaschetHubPage() {
     <p className="kicker">Расчёты <i /></p>
     <h1>Калькуляторы питания</h1>
     <p className="raschet-lead">
-      {CALCULATORS.length} расчётов, которые работают без регистрации. Любой расчёт нормы — это
-      оценка, а не измерение: мы показываем границы, внутри которых почти наверняка находится ваша
-      настоящая потребность, и честно говорим, чего формула не знает.
+      {CALCULATORS.length} {calculatorsWord(CALCULATORS.length)}, которые работают без регистрации.
+      Любой расчёт нормы — это оценка, а не измерение: мы показываем границы, внутри которых почти
+      наверняка находится ваша настоящая потребность, и честно говорим, чего формула не знает.
     </p>
 
     {CALCULATOR_GROUPS.map((group) => <section className="raschet-section" key={group}>
@@ -45,7 +45,10 @@ export default function RaschetHubPage() {
       </p>
       <p>
         Расчёты из группы «Кухня и порции» не спрашивают о вас ничего — они про еду, а не про тело.
-        Их удобно держать под рукой во время готовки.
+        Их удобно держать под рукой во время готовки. Группа «Границы» устроена иначе, чем
+        остальные: там нет нормы, которую нужно набрать, — есть предел, за которым начинается
+        перебор. Соль и <Link href="/raschet/sahar">добавленный сахар</Link> чаще всего оказываются
+        за ним, и почти всегда — не из-за солонки и не из-за сахарницы.
       </p>
       <div className="raschet-callout">
         <p>

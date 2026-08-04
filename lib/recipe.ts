@@ -149,6 +149,109 @@ function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
+/* ===== Пересчёт закладки на другое число порций =====
+ *
+ * Рецепт написан на четыре порции, а готовить надо на шесть. Арифметика
+ * школьная, но в уме её делают с ошибками — особенно когда в списке
+ * полтора десятка позиций и половина в неудобных числах.
+ *
+ * Главное, что стоит сказать человеку и чего не говорит ни один
+ * пересчётчик: **КБЖУ одной порции при пересчёте не меняется**. Меняется
+ * закладка и вес кастрюли, но порция остаётся той же. Это снимает
+ * типичный страх «если приготовлю больше, будет калорийнее».
+ */
+
+/** Ингредиент после пересчёта: было, стало и на сколько изменилось. */
+export type ScaledItem = { name: string; from: number; to: number; delta: number };
+
+export type ScaleResult = {
+  /** Во сколько раз изменилась закладка. */
+  factor: number;
+  items: ScaledItem[];
+  /** Сумма сырых весов до и после. */
+  rawWeightFrom: number;
+  rawWeightTo: number;
+  /** КБЖУ одной порции — одинаковое до и после, в этом весь смысл. */
+  perPortion: { kcal: number; protein: number; fat: number; carbs: number; fiber: number };
+  /** КБЖУ всей новой закладки. */
+  totalTo: { kcal: number; protein: number; fat: number; carbs: number; fiber: number };
+};
+
+/**
+ * Пересчитывает список ингредиентов с `fromPortions` порций на `toPortions`.
+ *
+ * Округляем до целых граммов: доли грамма на кухне не отмерить, а сумма
+ * ошибок округления на десятке позиций меньше погрешности самих весов.
+ */
+export function scaleRecipe(
+  items: RecipeItem[],
+  fromPortions: number,
+  toPortions: number,
+): ScaleResult {
+  const from = Math.max(1, Math.round(fromPortions));
+  const to = Math.max(1, Math.round(toPortions));
+  const factor = to / from;
+
+  const scaled: ScaledItem[] = items
+    .filter((item) => item.grams > 0)
+    .map((item) => {
+      const next = Math.round(item.grams * factor);
+      return { name: item.name, from: Math.round(item.grams), to: next, delta: next - Math.round(item.grams) };
+    });
+
+  const totals = sumRecipe(items);
+  const perPortion = {
+    kcal: Math.round(totals.kcal / from),
+    protein: round1(totals.protein / from),
+    fat: round1(totals.fat / from),
+    carbs: round1(totals.carbs / from),
+    fiber: round1(totals.fiber / from),
+  };
+
+  return {
+    factor: Math.round(factor * 100) / 100,
+    items: scaled,
+    rawWeightFrom: totals.rawWeight,
+    rawWeightTo: scaled.reduce((sum, item) => sum + item.to, 0),
+    perPortion,
+    totalTo: {
+      kcal: perPortion.kcal * to,
+      protein: round1(perPortion.protein * to),
+      fat: round1(perPortion.fat * to),
+      carbs: round1(perPortion.carbs * to),
+      fiber: round1(perPortion.fiber * to),
+    },
+  };
+}
+
+/**
+ * Что в рецепте не масштабируется линейно. Это и есть содержательная часть
+ * страницы: умножить на 1,5 умеет калькулятор в телефоне, а знать, что соль
+ * и разрыхлитель так умножать нельзя, — нет.
+ */
+export const SCALING_NOTES = [
+  {
+    title: "Соль, специи и острое — по вкусу, а не по коэффициенту",
+    text:
+      "Восприятие солёного и острого нелинейно: двойная порция супа с двойной солью кажется пересоленной. Умножайте на коэффициент всё, кроме приправ, а приправы добавляйте примерно на треть меньше расчётного и досаливайте в конце.",
+  },
+  {
+    title: "Разрыхлитель, сода и дрожжи — отдельный случай",
+    text:
+      "В выпечке разрыхлители работают в паре с объёмом теста и температурой, и прямое умножение даёт либо плоский корж, либо привкус соды. Для теста надёжнее приготовить две закладки по исходному рецепту, чем одну удвоенную.",
+  },
+  {
+    title: "Время готовки не умножается",
+    text:
+      "Двойная порция варится не вдвое дольше, а немного дольше — на прогрев большей массы. А вот жарить двойную порцию на той же сковороде нельзя: продукты начнут тушиться в собственном соку вместо того, чтобы жариться. Либо большая сковорода, либо две партии.",
+  },
+  {
+    title: "Посуда — ограничение жёстче арифметики",
+    text:
+      "Полуторная закладка в ту же кастрюлю обычно влезает, двойная — почти никогда. Прикиньте объём заранее: сумма сырых весов в граммах примерно равна объёму в миллилитрах, и кастрюлю стоит брать с запасом в треть.",
+  },
+] as const;
+
 /** Поиск по справочнику для подсказок ввода. */
 export function searchFoods(query: string, limit = 8): ReferenceFood[] {
   const needle = query.trim().toLowerCase();
