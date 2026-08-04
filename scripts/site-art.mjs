@@ -48,15 +48,26 @@ const ART = [
   // вместо тарелки. Середина кадра здесь как раз то, ради чего он снят.
   { name: "day-morning", as: "menu-product", width: 1120, height: 460, position: "centre" },
   { name: "calculators", as: "menu-calculators", width: 1120, height: 460 },
+  // Полоса блока «Меню на день» на главной. Это тот же обеденный кадр, что в
+  // триптихе, но взятый другой областью: там он стоит вертикальной колонкой в
+  // 400 CSS, здесь — широкой полосой, где тарелка занимает левую половину, а
+  // правая остаётся под заголовок. Кадрируем вручную (crop), а не «умным»
+  // cover: нужен именно низ снимка с гречкой, курицей и огурцами — ровно та
+  // еда, из которой генератор и собирает рационы.
+  { name: "day-noon", as: "menu-day", width: 1600, crop: { left: 0, top: 760, width: 1122, height: 450 } },
 ];
 
 await mkdir(outDir, { recursive: true });
 
-for (const { name, as, width, height, position } of ART) {
+for (const { name, as, width, height, position, crop } of ART) {
   const out = as ?? name;
+  const source = sharp(resolve(root, `docs/illustrations/${name}.webp`));
+  // crop — ручная область кадра: когда нужна конкретная часть снимка, а не
+  // та, которую sharp сочтёт самой контрастной.
+  if (crop) source.extract(crop);
   // height задан — режем под нужные пропорции по центру кадра; без него
   // масштабируем по ширине, сохраняя исходное соотношение.
-  const info = await sharp(resolve(root, `docs/illustrations/${name}.webp`))
+  const info = await source
     .resize(height ? { width, height, fit: "cover", position: position ?? "attention" } : { width })
     .webp({ quality: 82 })
     .toFile(resolve(outDir, `${out}.webp`));

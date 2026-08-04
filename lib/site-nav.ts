@@ -62,6 +62,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/raschet/bzhu", label: "Калькулятор БЖУ" },
       { href: "/raschet/imt", label: "Калькулятор ИМТ" },
       { href: "/raschet/zdorovyy-ves", label: "Идеальный вес" },
+      { href: "/raschet/menyu", label: "Меню на день" },
       { href: "/raschet/kaloriynost-blyuda", label: "Калорийность блюда" },
       { href: "/raschet/vitaminy", label: "Витамины и минералы" },
       { href: "/raschet/voda", label: "Норма воды" },
