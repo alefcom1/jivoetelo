@@ -51,6 +51,21 @@ APP_HOST_PORT="$(sed -n 's/^APP_HOST_PORT=//p' .env | tail -n1 | tr -d "\"' \r")
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${APP_HOST_PORT:-3000}/api/health}"
 echo "▶ Проверять живость будем по $HEALTH_URL"
 
+# Сервис распознавания речи живёт в наложении, а не в основном compose:
+# без него сайт поднимается как раньше, и включение остаётся осознанным.
+# Но список файлов надо собирать здесь, а не полагаться на память: выкатка
+# без наложения оставила бы контейнер speech сиротой — compose перестал бы
+# им управлять, а первый же `--remove-orphans` его снёс бы.
+#
+# Условие — заполненный SPEECH_URL в .env. Оно же включает расшифровку в
+# приложении, так что «сервис поднят» и «расшифровка работает» не могут
+# разъехаться: либо и то и другое, либо ничего.
+COMPOSE_FILES=(-f docker-compose.yml)
+if sed -n 's/^SPEECH_URL=//p' .env | tail -n1 | tr -d "\"' \r" | grep -q .; then
+  COMPOSE_FILES+=(-f deploy/speech/compose.yml)
+  echo "▶ SPEECH_URL задан — поднимаем и сервис распознавания"
+fi
+
 # Проверка окружения не обязательна, но если Node на сервере есть — она
 # ловит забытый токен прокси до того, как это заметят пользователи.
 if command -v node > /dev/null 2>&1; then
@@ -62,7 +77,7 @@ if command -v node > /dev/null 2>&1; then
 fi
 
 echo "▶ Собираем и поднимаем контейнеры"
-docker compose up -d --build
+docker compose "${COMPOSE_FILES[@]}" up -d --build
 
 echo "▶ Применяем миграции"
 bash deploy/migrate.sh
@@ -82,8 +97,8 @@ for attempt in $(seq 1 30); do
 done
 
 echo "✖ Приложение не ответило за две минуты. Последние строки логов:" >&2
-docker compose logs --tail 60 app >&2 || true
+docker compose "${COMPOSE_FILES[@]}" logs --tail 60 app >&2 || true
 echo "" >&2
-echo "Откатиться вручную: cd $DEPLOY_PATH && git reset --hard $PREVIOUS_SHA && docker compose up -d --build" >&2
+echo "Откатиться вручную: cd $DEPLOY_PATH && git reset --hard $PREVIOUS_SHA && docker compose ${COMPOSE_FILES[*]} up -d --build" >&2
 echo "Учтите: миграции откатом не отменяются — сначала посмотрите, что именно упало." >&2
 exit 1
