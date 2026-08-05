@@ -340,8 +340,31 @@ a.header-cta{display:inline-flex;align-items:center}
 .onboarding-numbers label,.weight-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
 .onboarding-numbers input,.weight-form input{padding:11px;border:1px solid var(--line);background:white;font-size:14px;width:130px}
 .onboarding-form .black-button{align-self:flex-start}
-.weight-form{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.weight-form{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px}
 .weight-saved{font-size:12px;color:var(--muted)}
+
+/* Снимок весов. Второстепенным начертанием, а не рядом с «Записать»: числом
+   вес вводят чаще и быстрее, а распознавание — удобство для тех, кому лень
+   набирать. Кнопка того же веса, что и основная, обещала бы обратное. */
+.weight-entry{max-width:560px}
+/* Обе кнопки одной строкой. Полная ширина строки в flex-контейнере формы —
+   чтобы они всегда переносились вместе, а не так, что «Записать» осталось у
+   полей, а снимок уехал вниз: это два способа одного действия. */
+.weight-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.scale-scan{display:inline-block;position:relative}
+.scale-scan input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.scale-scan input:disabled{cursor:progress}
+/* Высота и радиус — как у .black-button рядом: разное начертание не должно
+   означать разный размер, иначе строка выглядит съехавшей. */
+.scale-scan span{display:inline-block;padding:13px 16px;border:1px solid var(--line);border-radius:3px;font-size:12px;font-weight:800;color:#5c5e57}
+.scale-scan:hover span,.scale-scan input:focus-visible+span{border-color:var(--black);color:var(--black)}
+/* Ответ распознавания — своей строкой с воздухом: без отступа он слипался с
+   текстом страницы и читался как её часть, а не как ответ на действие. */
+.scale-read,.scale-warning{margin:14px 0 0;font-size:13px;line-height:1.5;max-width:460px}
+.scale-read{color:var(--muted)}
+/* Предупреждение — не ошибка: число прочитано и сохранить его можно.
+   Коралловый без рамки, а не красная плашка: это повод посмотреть, а не стоп. */
+.scale-warning{color:var(--coral-text)}
 .suggestions{display:flex;flex-direction:column;gap:12px;max-width:640px;align-items:flex-start}
 .suggestion{width:100%;background:var(--white);border:1px solid var(--line);padding:18px 20px}
 .suggestion h3{margin:0 0 6px;font:500 21px var(--serif)}

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  AI_OPERATIONS,
   estimateCostUsd,
   normalizePlan,
   OPERATION_LABELS,
@@ -26,12 +27,31 @@ test("расшифровка речи считается, но денег не �
 });
 
 test("у каждой считаемой операции есть подпись и лимит", () => {
-  // Забытая подпись видна только на экране лимитов, и то как «undefined».
-  for (const operation of Object.keys(OPERATION_LABELS)) {
+  // Список берётся из AI_OPERATIONS, а не из самих таблиц: раньше они
+  // сверялись друг с другом, и операция, забытая в обеих сразу, проходила
+  // молча. Именно так чуть не уехало чтение весов — новая операция требует
+  // записи в четырёх таблицах, и «забыл везде» выглядит как «всё сходится».
+  for (const operation of AI_OPERATIONS) {
     assert.equal(typeof PLAN_LIMITS.free[operation], "number", `нет лимита для ${operation}`);
-  }
-  for (const operation of Object.keys(PLAN_LIMITS.free)) {
     assert.equal(typeof OPERATION_LABELS[operation], "string", `нет подписи для ${operation}`);
+  }
+  assert.equal(Object.keys(OPERATION_LABELS).length, AI_OPERATIONS.length, "в подписях есть лишнее");
+  assert.equal(Object.keys(PLAN_LIMITS.free).length, AI_OPERATIONS.length, "в лимитах есть лишнее");
+});
+
+test("у каждой операции своя ставка, а не запасная", () => {
+  // Забытая цена не ломает ничего заметного: предохранитель просто начинает
+  // считать по самой дорогой ставке и обрубает разбор раньше времени.
+  // Ровно это уже случалось, когда на всё стояла одна ставка Opus.
+  const MILLION = { inputTokens: 1_000_000, outputTokens: 1_000_000 };
+  const fallback = estimateCostUsd(MILLION, undefined);
+  for (const operation of AI_OPERATIONS) {
+    if (operation === "transcribe") continue; // Своя установка, цена честный ноль.
+    assert.notEqual(
+      estimateCostUsd(MILLION, operation),
+      fallback,
+      `${operation} считается по запасной ставке — цены для него нет`,
+    );
   }
 });
 

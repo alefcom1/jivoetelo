@@ -76,6 +76,27 @@ export async function addMeasurement(weightKg: number): Promise<{ ok: true }> {
   }));
 }
 
+/**
+ * Ответ распознавания весов. `ok: false` — не сбой, а нормальный исход:
+ * индикатор не разобрать, и человеку возвращается совет, а не ошибка.
+ */
+export type ScaleScanResponse =
+  | { ok: true; weightKg: number; warning: string | null }
+  | { ok: false; message: string };
+
+/** Прочитать показания весов со снимка. Замер не сохраняется — только читает. */
+export async function scanScale(photo: File): Promise<ScaleScanResponse> {
+  const body = new FormData();
+  body.set("photo", photo);
+  // Заголовок с подписью ставится вручную, Content-Type — нет: границу
+  // multipart проставляет браузер, и заданный руками тип её потеряет.
+  return handle(await fetch("/api/tg/profile/weight/scan", {
+    method: "POST",
+    headers: initDataHeader(),
+    body,
+  }));
+}
+
 export async function saveReminders(payload: { remindersEnabled: boolean; digestHour: number }): Promise<{ ok: true }> {
   return handle(await fetch("/api/tg/profile/reminders", {
     method: "POST",

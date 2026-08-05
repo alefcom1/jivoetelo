@@ -5,7 +5,7 @@
 // база рецептов — их в продукте нет, а заглушка хуже отсутствующего раздела
 // (раздел 3 docs/miniapp-v2.md).
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LEGAL_PAGES, NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 import { PACE_OPTIONS, type PaceKey } from "@/lib/pace";
 import { MAX_DIGEST_HOUR, MIN_DIGEST_HOUR } from "@/lib/reminders";
@@ -14,12 +14,17 @@ import {
   fetchProfile,
   saveGoals,
   saveReminders,
+  scanScale,
   snoozeReminders,
   unlinkTelegram,
   type ProfileResponse,
 } from "./plan-profile-api";
+import { ApiError } from "./api";
 import { haptic } from "./telegram";
 import { CameraSettings } from "../camera-settings";
+
+/** Число по-русски: десятые через запятую. В поля ввода не идёт — только в текст. */
+const ru = (value: number) => String(value).replace(".", ",");
 
 const DIGEST_HOURS = Array.from({ length: MAX_DIGEST_HOUR - MIN_DIGEST_HOUR + 1 }, (_, i) => MIN_DIGEST_HOUR + i);
 
@@ -131,6 +136,47 @@ function MeasurementsSection({ profile, onSaved }: { profile: ProfileResponse; o
   const [weight, setWeight] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Снимок весов: читает число, но не сохраняет его.
+   *
+   * Подставляется в то же поле, где вес набирают руками, и записывается той же
+   * кнопкой. Почему не сохраняем сразу — в lib/scale-reading.ts: ошибка в
+   * разряде десятков на семисегментном индикаторе выглядит обычным весом,
+   * уходит в тренд и двигает план.
+   */
+  const [scanning, setScanning] = useState(false);
+  const [scanNote, setScanNote] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleScan(file: File | null) {
+    if (!file) return;
+    setScanning(true);
+    setScanNote(null);
+    setError(null);
+    try {
+      const result = await scanScale(file);
+      if (result.ok) {
+        haptic("success");
+        // В поле — точка, и только точка. Оно `type="number"`, а число с
+        // запятой такое поле молча считает недействительным и показывает
+        // пустым: в состоянии значение есть, на экране его нет. Русская
+        // запятая остаётся человеку — в тексте рядом.
+        setWeight(String(result.weightKg));
+        setScanNote(result.warning ?? `Прочитала ${ru(result.weightKg)} кг — проверьте и добавьте.`);
+      } else {
+        haptic("error");
+        setScanNote(result.message);
+      }
+    } catch (e) {
+      haptic("error");
+      setScanNote((e instanceof ApiError ? e.failure.message : null) ?? "Не получилось прочитать снимок.");
+    } finally {
+      setScanning(false);
+      // Сброс выбора: повторный снимок того же файла иначе не вызовет change,
+      // и человеку покажется, что кнопка перестала работать.
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   async function handleAdd() {
     const value = Number(weight.trim().replace(",", "."));
@@ -167,10 +213,28 @@ function MeasurementsSection({ profile, onSaved }: { profile: ProfileResponse; o
           className="tg-input" type="number" inputMode="decimal" step="0.1" min={30} max={300}
           placeholder="вес сегодня, кг" value={weight} onChange={(e) => setWeight(e.target.value)}
         />
+      </div>
+
+      {/* Обе кнопки одной строкой: это два способа одного действия, и
+          разнесённые по строкам они читались бы как разные по важности. Поле
+          занимает свою строку целиком — втроём на телефоне не помещаются.
+
+          Ярлык поверх скрытого input: системная кнопка выбора файла подписана
+          на языке телефона и посреди русского экрана выглядит чужой. Сам input
+          остаётся в разметке — прячем размером, а не display:none. */}
+      <div className="tg-weight-actions">
         <button className="tg-button" onClick={() => void handleAdd()} disabled={busy || weight.trim() === ""}>
           {busy ? "…" : "Добавить"}
         </button>
+        <label className="tg-scale-scan">
+          <input
+            ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={scanning}
+            onChange={(e) => void handleScan(e.target.files?.[0] ?? null)}
+          />
+          <span>{scanning ? "Читаю…" : "Снять с весов"}</span>
+        </label>
       </div>
+      {scanNote && <p className="tg-hint">{scanNote}</p>}
       {error && <p className="tg-error">{error}</p>}
 
       {profile.recentWeights.length > 0 && <ul className="tg-profile-weights">

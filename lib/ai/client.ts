@@ -78,6 +78,10 @@ const TIMEOUTS: Record<ModelOperation, number> = {
   analyze_photo: 120_000,
   analyze_text: 40_000,
   suggest: 40_000,
+  // Прочитать четыре цифры — работа зрения, а не разбора: ответ приходит за
+  // секунды. Держать здесь двухминутный предел значило бы заставлять человека
+  // столько же смотреть на крутилку, когда до модели просто не достучались.
+  read_scale: 40_000,
 };
 
 /**
@@ -104,6 +108,7 @@ const RETRIES: Record<ModelOperation, number> = {
   analyze_photo: 0,
   analyze_text: 1,
   suggest: 1,
+  read_scale: 1,
 };
 
 export function timeoutFor(operation: ModelOperation): number {
@@ -164,12 +169,17 @@ const DEFAULT_MODEL_BY_OPERATION: Record<ModelOperation, string> = {
   analyze_photo: "claude-sonnet-5",
   analyze_text: "claude-haiku-4-5-20251001",
   suggest: "claude-haiku-4-5-20251001",
+  // Не haiku, хотя задача выглядит крошечной: семисегментные цифры под бликом
+  // на тёмном стекле — не «прочитать текст», а разобрать плохую картинку, и
+  // цена ошибки здесь выше, чем экономия на модели.
+  read_scale: "claude-sonnet-5",
 };
 
 const MODEL_ENV_BY_OPERATION: Record<ModelOperation, string> = {
   analyze_photo: "ANTHROPIC_MODEL_VISION",
   analyze_text: "ANTHROPIC_MODEL_TEXT",
   suggest: "ANTHROPIC_MODEL_SUGGEST",
+  read_scale: "ANTHROPIC_MODEL_SCALE",
 };
 
 /**
