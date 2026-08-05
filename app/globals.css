@@ -657,3 +657,36 @@ input[type=checkbox],input[type=radio]{width:24px;height:24px;flex:none;margin:0
   .menu-promo-copy { padding: 22px 20px 26px; }
   .menu-promo-copy > p:not(.kicker) { font-size: 14px; }
 }
+
+/* Взятая награда в кабинете. Полосой на месте .streak-strip — тот же
+   персонаж и то же место, только повод другой. Лаймовая заливка отличает
+   событие от ежедневной строки: рубеж берётся один раз. */
+.award-strip{display:flex;gap:14px;align-items:center;background:var(--lime);border:1px solid #c3cf83;padding:14px 16px;margin-bottom:20px}
+.award-strip img{width:64px;height:64px;flex:none}
+.award-strip>div{display:flex;flex-direction:column;gap:4px;align-items:flex-start;min-width:0}
+.award-strip b{font-size:16px;color:#1d2410}
+.award-strip p{margin:0;font-size:13px;line-height:1.5;color:#3c4626}
+.award-strip .link-button{color:#5a3a1e;min-height:36px;padding:4px 0}
+.award-note{font-size:12px;color:#3c4626}
+
+/* Срез месяц-к-месяцу и список наград в «Обзоре». */
+.review-season,.review-awards{margin-top:34px}
+.review-season h2,.review-awards h2{margin:0 0 14px;font:500 24px var(--serif);letter-spacing:-.03em}
+.season-scroll{max-width:640px;overflow-x:auto}
+.season-table{width:100%;min-width:420px;border-collapse:collapse;background:var(--white);border:1px solid var(--line)}
+.season-table th,.season-table td{padding:10px 14px;text-align:right;font-size:14px;font-variant-numeric:tabular-nums}
+.season-table thead th{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+.season-table tbody th,.season-table thead th:first-child{text-align:left;font-weight:700}
+.season-table tbody tr+tr th,.season-table tbody tr+tr td{border-top:1px solid var(--line)}
+/* Месяц, не идущий в сравнение, приглушён — но показан: человек должен
+   видеть, что месяц был, и понимать, почему он не участвует. */
+.season-thin th,.season-thin td{color:var(--muted)}
+.season-notes{list-style:none;margin:16px 0 0;padding:0;max-width:640px;display:flex;flex-direction:column;gap:9px}
+.season-notes li{position:relative;padding-left:16px;font-size:14px;line-height:1.6}
+.season-notes li::before{content:"";position:absolute;left:0;top:9px;width:6px;height:6px;border-radius:50%;background:var(--coral)}
+.awards-list{list-style:none;margin:0;padding:0;max-width:640px;display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line)}
+.awards-list li{display:flex;align-items:flex-start;gap:14px;background:var(--white);padding:14px 16px}
+.awards-list b{font-size:15px}
+.awards-list p{margin:3px 0 0;font-size:13px;line-height:1.5;color:var(--muted)}
+.awards-list time{margin-left:auto;flex:none;font-size:12px;color:var(--muted);white-space:nowrap}
+@media(max-width:560px){.season-table th,.season-table td{padding:9px 8px;font-size:13px}}

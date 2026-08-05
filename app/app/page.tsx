@@ -10,6 +10,8 @@ import type { PaceKey } from "@/lib/pace";
 import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
 import { listLoggedDays } from "@/lib/meals";
 import { nextHint, passedByData } from "@/lib/first-run";
+import { freshest, newlyEarned } from "@/lib/awards";
+import { awardCounters, grantAwards, storedAwardKeys } from "@/lib/awards-store";
 import { everUsedInbox } from "@/lib/inbox";
 import { mascotSpeech } from "@/lib/mascot";
 import { computeStreak } from "@/lib/streak";
@@ -19,6 +21,7 @@ import { MealIcon } from "../food-icon";
 import { EnergyRing, MacroBar } from "./day-visuals";
 import { GoalReporter } from "./goal-reporter";
 import { FirstRunHint } from "./first-run-hint";
+import { AwardStrip } from "./award-strip";
 import { markHints } from "./hint-actions";
 import { StreakStrip } from "./streak-strip";
 
@@ -84,6 +87,20 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     diaryOpened: day !== today,
     showCalories: user.showCalories,
   };
+  /**
+   * Награды. Считаются и записываются здесь же — иначе тот, кто пользуется
+   * только веб-кабинетом, не получил бы ни одной: до этого их выдавала
+   * единственная точка — «Сегодня» в Mini App.
+   */
+  const awardState = {
+    totalDays: streak.totalDays,
+    bestStreak: streak.bestStreak,
+    ...(await awardCounters(user.id)),
+  };
+  const freshAwards = newlyEarned(awardState, await storedAwardKeys(user.id));
+  if (freshAwards.length > 0) await grantAwards(user.id, freshAwards, today);
+  const freshAward = freshest(freshAwards);
+
   const hint = nextHint(firstRunState);
   /**
    * Одна реплика Живело за раз: подсказка и полоса серии — это один и тот же
@@ -93,7 +110,9 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
    * становится, только когда её закрыли или по ней перешли.
    */
   const milestoneToday = !!mascotSpeech(streak).milestone;
-  const shownHint = milestoneToday ? null : hint;
+  // Награда старше и вехи, и подсказки: рубеж берётся один раз, подсказка
+  // вернётся при следующей загрузке.
+  const shownHint = freshAward || milestoneToday ? null : hint;
   const alreadyPassed = new Set(firstRunState.seen);
   const freshlyPassed = passedByData(firstRunState).filter((key) => !alreadyPassed.has(key));
   if (freshlyPassed.length > 0) await markHints(freshlyPassed);
@@ -101,6 +120,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   return <main className="day">
     <GoalReporter saved={saved} loggedDays={streak.totalDays} telegramLinked={user.telegramLinked} />
     {shownHint && <FirstRunHint hint={shownHint} />}
+    {freshAward && <AwardStrip award={freshAward} />}
     <div className="day-nav">
       <Link href={`/app?date=${shiftDay(day, -1)}`} aria-label="Предыдущий день">←</Link>
       <h1>{formatDayRu(day)}</h1>
@@ -116,7 +136,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         Листающему прошлую неделю серия ничего не сообщает, а человеку, у
         которого записей нет вовсе, «серия: 0» на первом же экране читается
         как упрёк за то, чего он ещё не делал. */}
-    {day === today && streak.totalDays > 0 && !shownHint && <StreakStrip streak={streak} />}
+    {day === today && streak.totalDays > 0 && !shownHint && !freshAward && <StreakStrip streak={streak} />}
 
     {/* Те же пять чисел, что и раньше, — но кольцом и полосами, а не пятью
         одинаковыми прямоугольниками с рамкой. В Mini App итоги дня так

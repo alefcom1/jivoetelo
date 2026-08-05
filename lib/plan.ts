@@ -9,6 +9,10 @@ import { meals, profiles, weightEntries } from "@/db/schema";
 import { computeAdherence, hasEnoughAdherenceData, type AdherenceResult } from "./adherence.ts";
 import { localToday, shiftDay } from "./dates.ts";
 import { getDishImpact } from "./dish-impact.ts";
+import { seasonDays } from "./awards-store.ts";
+import { lastMonths, seasonReport, type SeasonReport } from "./season.ts";
+import { seasonWindow } from "./season-window.ts";
+import { listLoggedDays } from "./meals.ts";
 import { computeMealStats, hasEnoughMealStats, type MealStats } from "./meal-stats.ts";
 import { computeTdee, computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
 import { weeklyTrendChange, weightTrend, type TrendPoint } from "./trend.ts";
@@ -41,6 +45,15 @@ export type PlanData = {
    * она в одном месте (lib/impact-text.ts), чтобы экран и письмо не разошлись.
    */
   impact: { title: string; text: string } | null;
+  /**
+   * Срез месяц-к-месяцу (lib/season.ts) — то, что обещает веха «Три месяца».
+   *
+   * Появляется, как только наберётся два сравнимых месяца, а окно растёт
+   * вместе с человеком: три месяца, полгода, год. Награда обещает именно
+   * размах, а не сам факт появления, — иначе рабочую возможность пришлось бы
+   * держать выключенной до девяностого дня ради красивой лестницы.
+   */
+  season: SeasonReport;
 };
 
 export async function getPlanData(userId: number): Promise<PlanData> {
@@ -96,8 +109,23 @@ export async function getPlanData(userId: number): Promise<PlanData> {
   );
   const mealStats = computeMealStats(windowMeals, today, adherenceEarliest);
 
+  /**
+   * Срез месяц-к-месяцу. Окно берётся от числа дней с записями, а не от даты
+   * регистрации: человек, заведший аккаунт год назад и записавший десять
+   * дней, находится там же, где новичок.
+   */
+  const loggedDays = await listLoggedDays(userId);
+  const months = seasonWindow(loggedDays.length);
+  const season = seasonReport(
+    await seasonDays(userId, lastMonths(today, months)[0] + "-01"),
+    weightRows.map((row) => ({ day: row.onDate, weightKg: row.weightKg })),
+    today,
+    months,
+  );
+
   return {
     impact: impact.section,
+    season,
     mealStats,
     hasEnoughMealStats: {
       week: hasEnoughMealStats(mealStats.week),
