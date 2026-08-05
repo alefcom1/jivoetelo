@@ -11,7 +11,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return <div className="shell">
     <header className="shell-header">
-      <Link className="logo" href="/app"><span><Logo /></span>Живое Тело</Link>
+      {/* Слово в <b>, а не текстовым узлом: на узком экране оно прячется, и
+          освободившееся место достаётся навигации. Знак остаётся всегда — по
+          нему возвращаются на «Сегодня». */}
+      <Link className="logo" href="/app"><span><Logo /></span><b>Живое Тело</b></Link>
       <nav className="shell-nav">
         <Link href="/app">Сегодня</Link>
         <Link href="/app/add">Добавить</Link>

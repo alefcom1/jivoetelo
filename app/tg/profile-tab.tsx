@@ -335,6 +335,13 @@ export function ProfileTab({ onUnlinked }: { onUnlinked?: () => void }) {
       <a className="tg-link" href="/app/settings" target="_blank" rel="noreferrer">Данные, согласия и удаление аккаунта — в веб-версии →</a>
     </section>
 
+    {/* Шпаргалка. Подсказки на «Сегодня» показываются один раз и не
+        возвращаются — здесь их можно перечитать, когда вопрос возникнет. */}
+    <section className="tg-card">
+      <p className="tg-hint">Все объяснения на одной странице: запись еды, кольцо, дневник, вес, неделя.</p>
+      <a className="tg-link" href="/app/pomosch" target="_blank" rel="noreferrer">Как всё устроено →</a>
+    </section>
+
     <GoalsSection profile={data} onSaved={load} />
     <MeasurementsSection profile={data} onSaved={load} />
     <RemindersSection profile={data} onSaved={load} />

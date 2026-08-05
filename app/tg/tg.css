@@ -1054,29 +1054,37 @@
    видит «нажмите сюда» и не видит куда.
 
    Крестик обязателен и он настоящая тач-цель: закрытая подсказка не
-   возвращается никогда, и промахнуться по ней человек не должен. */
-.tg-hint-card {
+   возвращается никогда, и промахнуться по ней человек не должен.
+
+   Класс `.tg-first`, а не `.tg-hint-card`: последний уже занят карточкой
+   «здесь пока нечего показать» на четырёх вкладках. Первая версия называлась
+   так же — и молча получала от неё `flex-direction: column`: енот уезжал
+   наверх, текст под него, и карточка переставала выглядеть карточкой. */
+.tg-first {
   position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 40px 12px 12px;
   margin: 0 0 12px;
-  background: var(--tg-card);
+  background: var(--tg-surface);
   border-radius: 16px;
   animation: tg-say-in 320ms ease-out both;
 }
-.tg-hint-mascot {
+.tg-first-mascot {
   display: block;
   width: 52px;
   height: 52px;
   flex-shrink: 0;
   animation: tg-mascot-in 320ms ease-out both, tg-mascot-breathe 4s ease-in-out 320ms infinite;
 }
-.tg-hint-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.tg-hint-body p { margin: 0; font-size: 13px; line-height: 1.45; }
-.tg-hint-action {
+.tg-first-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.tg-first-body p { margin: 0; font-size: 13px; line-height: 1.45; }
+.tg-first-action {
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -1084,12 +1092,12 @@
   font-size: 13px;
   font-weight: 700;
 }
-.tg-hint-close {
+.tg-first-close {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 36px;
-  height: 36px;
+  top: 2px;
+  right: 2px;
+  width: 40px;
+  height: 40px;
   border: 0;
   background: transparent;
   color: var(--tg-hint);
@@ -1098,5 +1106,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tg-hint-card, .tg-hint-mascot { animation: none; }
+  .tg-first, .tg-first-mascot { animation: none; }
 }

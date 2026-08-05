@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { localToday } from "@/lib/dates";
 import { nextHint, passedByData } from "@/lib/first-run";
+import { mascotSpeech } from "@/lib/mascot";
 import { shouldRefresh } from "@/lib/refresh";
 import { ApiError, fetchToday, markHints, type InboxItemDto, type TodayResponse } from "./api";
 import { CameraTab } from "./camera-tab";
@@ -172,6 +173,21 @@ export default function MiniApp() {
         showCalories: today.showCalories,
       })
     : null;
+
+  /**
+   * Одна реплика Живело за раз.
+   *
+   * Подсказка и карточка серии — это один и тот же персонаж с одной и той же
+   * картинкой. Рядом они читаются как два сообщения подряд от одного
+   * собеседника, а мы обещали обратное: одна мысль за раз.
+   *
+   * Приоритет у вехи: она бывает один день и не повторяется, а подсказка
+   * вернётся при следующей загрузке — отмеченной пройденной она становится
+   * только когда её закрыли или по ней перешли. В остальные дни карточка
+   * серии уступает: подсказка говорит про сейчас, серия — про вообще.
+   */
+  const milestoneToday = today ? !!mascotSpeech(today.streak).milestone : false;
+  const shownHint = milestoneToday ? null : hint;
 
   useEffect(() => {
     if (!today) return;
@@ -371,19 +387,24 @@ export default function MiniApp() {
         : <>
             {/* Подсказка первых шагов — над содержимым «Сегодня», а не поверх
                 него: перекрывать действие, о котором рассказываешь, нельзя. */}
-            {tab === "today" && hint && <FirstRunHint
-              hint={hint}
-              onDismiss={() => { haptic("tap"); setDismissed((d) => [...d, hint.key]); void markHints([hint.key]); }}
+            {tab === "today" && shownHint && <FirstRunHint
+              hint={shownHint}
+              onDismiss={() => { haptic("tap"); setDismissed((d) => [...d, shownHint.key]); void markHints([shownHint.key]); }}
               onAction={(target) => {
-                setDismissed((d) => [...d, hint.key]);
-                void markHints([hint.key]);
+                setDismissed((d) => [...d, shownHint.key]);
+                void markHints([shownHint.key]);
                 if (target === "camera") openCamera("today");
-                else switchTab(target);
+                // Намерение переводится во вкладку здесь: «неделя» живёт на
+                // «Плане», а вносится вес в «Профиле» — там же, где рост и
+                // цель. В вебе это три разных адреса, и знать про оба набора
+                // разметок модулю правил незачем.
+                else switchTab(target === "week" ? "plan" : target === "weight" ? "profile" : target);
               }}
             />}
             {tab === "today" && <TodayTab
               data={today}
               firstName={firstName}
+              hideStreak={!!shownHint}
               onOpenCamera={() => openCamera("today")}
               onOpenInbox={() => { haptic("tap"); setInboxOpen(true); }}
               onOpenMeal={(id) => { haptic("tap"); setTodayMealId(id); }}

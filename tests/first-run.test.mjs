@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { FIRST_RUN_HINTS, isHintKey, nextHint, passedByData } from "../lib/first-run.ts";
+import { FIRST_RUN_HINTS, hintSheet, isHintKey, nextHint, passedByData } from "../lib/first-run.ts";
 import { mascotImage } from "../lib/mascot.ts";
 import { existsSync } from "node:fs";
 
@@ -31,7 +31,7 @@ const state = (patch) => ({ ...NEW_USER, ...patch });
 test("новичку с планом первым делом говорят про запись", () => {
   const hint = nextHint(NEW_USER);
   assert.equal(hint.key, "firstMeal");
-  assert.equal(hint.action.tab, "camera");
+  assert.equal(hint.action.target, "camera");
 });
 
 test("пока план не настроен, объяснять нечего", () => {
@@ -152,6 +152,50 @@ test("каждый шаг достижим и его поза существуе
       existsSync(new URL(`../public${mascotImage(hint.pose)}`, import.meta.url)),
       `${hint.key}: нет файла позы ${hint.pose}`,
     );
+  }
+});
+
+test("кнопка ведёт туда, где действие возможно", () => {
+  // Ошибка, которую легко не заметить: «Внести вес» вело на анкету плана,
+  // где вес не вносят, а «Посмотреть» неделю — туда же. Кнопка, ведущая не
+  // туда, хуже отсутствующей: человек решает, что не нашёл, и не ищет второй раз.
+  const byKey = Object.fromEntries(allHints().map((h) => [h.key, h]));
+  assert.equal(byKey.weight.action.target, "weight");
+  assert.equal(byKey.week.action.target, "week");
+  assert.equal(byKey.firstMeal.action.target, "camera");
+  assert.equal(byKey.diary.action.target, "diary");
+  assert.equal(byKey.calories.action.target, "profile");
+});
+
+/* ===== Шпаргалка ===== */
+
+test("в шпаргалке есть каждый шаг и ровно один раз", () => {
+  // Забытая запись означает объяснение, которое человек видел мельком и
+  // больше не найдёт нигде.
+  const sheet = hintSheet();
+  assert.deepEqual(sheet.map((e) => e.key), [...FIRST_RUN_HINTS]);
+});
+
+test("шпаргалка объясняет подробнее подсказки, а не повторяет её", () => {
+  const short = Object.fromEntries(allHints().map((h) => [h.key, h.text]));
+  for (const entry of hintSheet()) {
+    assert.ok(entry.title.length > 0 && entry.title.length <= 48, `заголовок «${entry.title}» не годится`);
+    assert.ok(!entry.title.endsWith("."), `заголовок «${entry.title}» с точкой`);
+    assert.ok(
+      entry.text.length > short[entry.key].length,
+      `${entry.key}: в шпаргалке не больше, чем в подсказке, — тогда она не нужна`,
+    );
+    assert.notEqual(entry.text, short[entry.key], `${entry.key}: текст скопирован из подсказки`);
+  }
+});
+
+test("тон шпаргалки тот же, что у подсказок", () => {
+  const FORBIDDEN = [/вы должны/i, /не забудьте/i, /обязательно/i, /молодец/i];
+  for (const entry of hintSheet()) {
+    for (const bad of FORBIDDEN) {
+      assert.ok(!bad.test(entry.text), `«${entry.title}» нарушает ${bad}`);
+    }
+    assert.ok(!entry.text.includes("!"), `«${entry.title}»: восклицание не в голосе персонажа`);
   }
 });
 

@@ -75,6 +75,14 @@ export default async function SettingsPage() {
       <p>{user.email ?? "Вход через Telegram — почта не указана"}</p>
       <p className="field-note">Тариф: бесплатный — доступны все возможности сервиса.</p>
     </section>
+    {/* Шпаргалка стоит вторым блоком, а не в подвале настроек: подсказки на
+        «Сегодня» показываются один раз и не возвращаются, и это единственное
+        место, где потом можно перечитать объяснение. */}
+    <section className="settings-block">
+      <p className="settings-label">Как всё устроено</p>
+      <p>Все объяснения Живело на одной странице: запись еды, кольцо, дневник, вес, неделя.</p>
+      <Link className="black-button" href="/app/pomosch">Открыть шпаргалку</Link>
+    </section>
     <section className="settings-block">
       <p className="settings-label">Распознавание сегодня</p>
       <UsagePanel userId={user.id} plan={user.plan} />

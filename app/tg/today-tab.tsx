@@ -136,6 +136,7 @@ export function TodayTab({
   onOpenInbox,
   onOpenMeal,
   onWeightAdded,
+  hideStreak = false,
 }: {
   data: TodayResponse;
   firstName: string | null;
@@ -145,6 +146,14 @@ export function TodayTab({
   onOpenMeal: (id: number) => void;
   /** Внесён новый замер веса: тренд на этом же экране устарел, день пора перечитать. */
   onWeightAdded: () => void;
+  /**
+   * Сверху уже стоит подсказка первых шагов — карточка серии уступает место.
+   *
+   * Персонаж один и картинка одна: две его реплики подряд читаются как поток
+   * сообщений от одного собеседника, а не как объяснение. Решение принимает
+   * оболочка (app/tg/page.tsx) — она одна видит оба блока сразу.
+   */
+  hideStreak?: boolean;
 }) {
   const { totals, targets, showCalories } = data;
   const kcalMid = targets?.kcalTarget ?? null;
@@ -161,7 +170,7 @@ export function TodayTab({
         приложение, и повод должен быть виден до того, как человек начнёт
         разбираться в цифрах дня. Ниже кольца его увидели бы только те, кто и
         так дошёл до конца экрана. */}
-    <StreakCard streak={data.streak} />
+    {!hideStreak && <StreakCard streak={data.streak} />}
 
     {/* Калории и макросы — крупно и сразу, без раскрытия (раздел «Три отличия
         от макета» спецификации Mini App v2, пункт 1). */}

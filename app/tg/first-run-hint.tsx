@@ -20,12 +20,12 @@ export function FirstRunHint({
 }: {
   hint: Hint;
   onDismiss: () => void;
-  onAction: (tab: NonNullable<Hint["action"]>["tab"]) => void;
+  onAction: (tab: NonNullable<Hint["action"]>["target"]) => void;
 }) {
-  return <section className="tg-hint-card" role="status">
+  return <section className="tg-first" role="status">
     {/* eslint-disable-next-line @next/next/no-img-element */}
     <img
-      className="tg-hint-mascot"
+      className="tg-first-mascot"
       key={hint.pose as MascotPose}
       src={mascotImage(hint.pose)}
       alt=""
@@ -33,12 +33,12 @@ export function FirstRunHint({
       width={288}
       height={288}
     />
-    <div className="tg-hint-body">
+    <div className="tg-first-body">
       <p>{hint.text}</p>
-      {hint.action && <button className="tg-hint-action" onClick={() => onAction(hint.action!.tab)}>
+      {hint.action && <button className="tg-first-action" onClick={() => onAction(hint.action!.target)}>
         {hint.action.label} →
       </button>}
     </div>
-    <button className="tg-hint-close" onClick={onDismiss} aria-label="Скрыть подсказку">×</button>
+    <button className="tg-first-close" onClick={onDismiss} aria-label="Скрыть подсказку">×</button>
   </section>;
 }

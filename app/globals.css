@@ -45,8 +45,35 @@ footer>.footer-links:first-child{margin-top:0;padding-top:0;border-top:0}.footer
 .shell{min-height:100vh}
 .shell-header{height:64px;padding:0 max(20px,calc((100% - 960px)/2));display:flex;align-items:center;gap:28px;background:var(--white);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
 .shell-nav{display:flex;gap:20px;margin-left:8px}
-.shell-nav a{font-size:12px;font-weight:700}
+/* Отступ по вертикали, а не голая строка: 18px текста — это не тач-цель,
+   а по семи ссылкам подряд промахиваются постоянно. */
+.shell-nav a{padding:11px 0;font-size:12px;font-weight:700;white-space:nowrap}
 .shell-header form{margin-left:auto}
+/* На телефоне семь ссылок в строку не помещаются, и раньше вбок ехала вся
+   страница: шапка растягивала документ до 690px, и каждый экран кабинета
+   таскался горизонтально. Прокручивается теперь сама навигация, а документ
+   стоит на месте. Перенос по строкам не годится — шапка липкая, и в три
+   строки она съела бы треть экрана. */
+@media(max-width:860px){
+  .shell-header{gap:14px;padding-left:16px;padding-right:16px}
+  .shell-nav{flex:1;min-width:0;margin-left:0;gap:2px;overflow-x:auto;scrollbar-width:none}
+  .shell-nav::-webkit-scrollbar{display:none}
+  /* Отступ внутрь, а не расстояние между: у коротких слов («Вес», «Обзор»)
+     цель иначе получается уже пальца, а промежуток на глаз тот же. */
+  .shell-nav a{padding:11px 9px}
+  .shell-header form{margin-left:0;flex:none}
+}
+/* Ниже 560px словесная часть логотипа уходит: знак остаётся, а освободившиеся
+   80 пикселей достаются навигации, ради которой человек сюда и смотрит. */
+@media(max-width:560px){
+  .shell-header .logo{min-width:40px}
+  .shell-header .logo b{display:none}
+  /* Растворяющийся край — единственный признак того, что ссылки продолжаются:
+     без него «Обзор», «Настройки» и «Доступ» просто перестают существовать
+     для того, кто зашёл с телефона. Только на этой ширине, где переполнение
+     гарантировано: на широком экране такой край съедал бы последнее слово. */
+  .shell-nav{mask-image:linear-gradient(90deg,#000 calc(100% - 24px),#0000)}
+}
 .shell-content{max-width:960px;margin:0 auto;padding:28px 20px 80px}
 
 /* День */
@@ -216,6 +243,45 @@ footer>.footer-links:first-child{margin-top:0;padding-top:0;border-top:0}.footer
 .streak-strip p{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
 .streak-strip em{font-style:normal;font-size:13px;font-weight:700;color:var(--coral-text)}
 
+/* Первые шаги: объяснение от Живело.
+   Стоит над содержимым дня, а не поверх него: подсказка, перекрывающая то,
+   о чём рассказывает, — самая частая ошибка обучающих слоёв.
+   Оформлена как .streak-strip, только с крестиком и левой чертой, — это
+   один и тот же персонаж, а не второй жанр сообщений. Черта отличает
+   разовое объяснение от постоянной полосы серии. */
+.first-hint{position:relative;display:flex;gap:14px;align-items:center;background:var(--white);border:1px solid var(--line);border-left:3px solid var(--coral);padding:14px 52px 14px 16px;margin-bottom:20px;animation:hint-in 320ms ease-out both}
+.first-hint>img{width:64px;height:64px;flex:none;animation:hint-breathe 4s ease-in-out 320ms infinite}
+.first-hint>div{display:flex;flex-direction:column;gap:8px;align-items:flex-start;min-width:0}
+.first-hint p{margin:0;font-size:14px;line-height:1.55}
+.first-hint-action{display:inline-flex;align-items:center;min-height:40px;font-size:13px;font-weight:700;color:var(--coral-text)}
+/* Крестик — настоящая тач-цель: закрытая подсказка не возвращается никогда,
+   и промахнуться по ней человек не должен. */
+.first-hint>button{position:absolute;top:6px;right:6px;width:40px;height:40px;border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1}
+.first-hint>button:hover{color:var(--black)}
+@keyframes hint-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes hint-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.015)}}
+@media(prefers-reduced-motion:reduce){.first-hint,.first-hint>img{animation:none}}
+@media(max-width:560px){.first-hint>img{width:52px;height:52px}}
+
+/* Страница-шпаргалка. Колонка уже кабинетной (640px): это сплошной текст,
+   а не таблицы и карточки, и строка в 90 знаков читается тяжело.
+   Нумерация у списка — своя, счётчиком: браузерная ставит цифру вне карточки,
+   а нужна она внутри, рядом с заголовком шага. */
+.help{max-width:640px}
+.help-head{display:flex;gap:18px;align-items:center;margin-bottom:28px}
+.help-head img{width:96px;height:96px;flex:none}
+.help-head h1{margin:0 0 8px;font:500 34px/1 var(--serif);letter-spacing:-.03em}
+.help-head p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+.help-list{list-style:none;counter-reset:help;margin:0 0 36px;padding:0;display:flex;flex-direction:column;gap:14px}
+.help-list li{counter-increment:help;background:var(--white);border:1px solid var(--line);padding:20px 22px}
+.help-list h2{display:flex;gap:12px;align-items:baseline;margin:0 0 10px;font:500 21px var(--serif);letter-spacing:-.03em}
+.help-list h2::before{content:counter(help);flex:none;font:800 12px var(--sans);color:var(--coral-text)}
+.help-list p{margin:0;font-size:14px;line-height:1.65}
+.help-action{display:inline-block;margin-top:12px;font-size:13px;font-weight:700;color:var(--coral-text)}
+.help-more-title{margin:0 0 14px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.help-foot{max-width:640px;margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+@media(max-width:560px){.help-head{gap:14px}.help-head img{width:72px;height:72px}.help-head h1{font-size:28px}}
+
 /* Добавление позиции: поиск по справочнику, а под ним — ручной ввод.
    Раньше кнопка «+ Добавить позицию» сразу давала форму с нулями, и записи
    без единого числа заводились сами собой. */
@@ -317,7 +383,10 @@ label.consent input{margin:0;padding:0;border:0;flex:0 0 auto}
 .consent a:hover{color:var(--coral-text)}
 .footer-disclaimer{max-width:640px;margin:64px 0 0;color:var(--muted);font-size:12px;line-height:1.65}
 .auth-note{max-width:360px;margin:22px auto 0;color:var(--muted);font-size:12px;line-height:1.55}
-.legal-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:26px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:700}
+.legal-links{display:flex;flex-wrap:wrap;gap:2px 14px;margin-top:26px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:700}
+/* Ссылки на документы стоят отдельным рядом, а не внутри абзаца, — значит,
+   это самостоятельные цели, и 18px высоты им мало. */
+.legal-links a{display:inline-flex;align-items:center;min-height:40px}
 .legal-links a:hover{color:var(--coral-text)}
 .danger-zone{border-color:#e8c9c1}
 .danger-zone .settings-label{color:#a8503c}
