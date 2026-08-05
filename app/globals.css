@@ -690,3 +690,10 @@ input[type=checkbox],input[type=radio]{width:24px;height:24px;flex:none;margin:0
 .awards-list p{margin:3px 0 0;font-size:13px;line-height:1.5;color:var(--muted)}
 .awards-list time{margin-left:auto;flex:none;font-size:12px;color:var(--muted);white-space:nowrap}
 @media(max-width:560px){.season-table th,.season-table td{padding:9px 8px;font-size:13px}}
+
+/* Доступ и код в настройках. Поле кода шире прочих: в него вставляют из
+   буфера, и обрезанный посередине код выглядит как чужой. */
+.access-panel{display:flex;flex-direction:column;gap:12px}
+.voucher-form{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.voucher-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
+.voucher-form input{padding:11px;border:1px solid var(--line);background:var(--white);font-size:15px;letter-spacing:.08em;width:180px;text-transform:uppercase}

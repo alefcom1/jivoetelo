@@ -70,6 +70,7 @@ export const LEGAL_PAGES = [
   { href: "/legal/terms", title: "Пользовательское соглашение", short: "Соглашение" },
   { href: "/legal/privacy", title: "Политика конфиденциальности", short: "Конфиденциальность" },
   { href: "/legal/consent", title: "Согласие на обработку персональных данных", short: "Согласие" },
+  { href: "/legal/tarify", title: "Тарифы и оферта", short: "Тарифы" },
   { href: "/legal/health", title: "Медицинский дисклеймер", short: "Границы сервиса" },
   { href: "/legal/cookies", title: "Файлы cookie", short: "Cookie" },
 ] as const;

@@ -305,3 +305,70 @@
 @media (max-width: 720px) {
   .admin-photo-queue > li { grid-template-columns: 1fr; }
 }
+
+/* ── Навигация ──────────────────────────────────────────────────────────
+   Появилась, когда разделов стало больше двух. Прокручивается на узком
+   экране, как навигация кабинета: админку открывают и с телефона, когда
+   нужно быстро посмотреть на цифры или ответить автору снимка. */
+.adm-nav { display: flex; gap: 16px; margin-left: 4px; overflow-x: auto; scrollbar-width: none; }
+.adm-nav::-webkit-scrollbar { display: none; }
+.adm-nav a { font-size: 12px; font-weight: 700; white-space: nowrap; padding: 10px 0; }
+.adm-nav a:hover { color: var(--coral-text); }
+
+.adm-page { display: flex; flex-direction: column; gap: 34px; }
+
+/* ── Плитки чисел ───────────────────────────────────────────────────────
+   Число крупно, подпись мелко: на эту страницу заходят посмотреть на
+   цифры, а не читать. Ширина от содержимого — плитки с «43%» и
+   «записей за неделю, медиана» не обязаны быть одинаковыми. */
+.adm-tiles { display: flex; flex-wrap: wrap; gap: 12px; }
+.adm-tile {
+  flex: 1 1 auto; min-width: 130px;
+  background: var(--white); border: 1px solid var(--line); padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.adm-tile strong { font: 600 26px var(--serif); letter-spacing: -0.02em; }
+.adm-tile span { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+
+/* Столбики регистраций. SVG прямо в разметке: тридцать чисел — это
+   тридцать прямоугольников, и библиотека тут была бы дороже задачи. */
+.adm-bars { display: block; width: 100%; height: 60px; margin-bottom: 14px; }
+.adm-bars rect { fill: var(--coral); }
+
+/* ── Воронка ────────────────────────────────────────────────────────────
+   Доля от предыдущего шага важнее доли от всех: она и показывает, где
+   именно люди останавливаются. */
+.adm-funnel { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.adm-funnel li { display: flex; align-items: baseline; gap: 14px; background: var(--white); padding: 12px 16px; }
+.adm-funnel b { font-size: 14px; min-width: 190px; }
+.adm-funnel span { font: 600 20px var(--serif); }
+.adm-funnel em, .adm-funnel i { font-style: normal; font-size: 12px; color: var(--muted); }
+.adm-funnel i { margin-left: auto; font-weight: 700; color: var(--coral-text); }
+
+/* ── Поиск и карточка человека ──────────────────────────────────────────*/
+.adm-search { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.adm-search input { padding: 10px 12px; border: 1px solid var(--line); background: var(--white); font-size: 14px; min-width: 240px; }
+.adm-back { font-size: 12px; font-weight: 700; color: var(--muted); }
+.adm-back:hover { color: var(--coral-text); }
+.adm-grant { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/* ── Ваучеры ────────────────────────────────────────────────────────────*/
+.adm-voucher-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.adm-voucher-form label { display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.adm-voucher-form input { padding: 10px 12px; border: 1px solid var(--line); background: var(--white); font-size: 14px; width: 110px; }
+.adm-voucher-note { flex: 1 1 220px; }
+.adm-voucher-note input { width: 100%; }
+
+.adm-codes { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.adm-codes li { background: var(--white); border: 1px solid var(--line); padding: 10px 14px; display: flex; flex-direction: column; gap: 3px; }
+/* Моноширинный и разрядка: код переписывают с экрана и диктуют по телефону. */
+.adm-codes code, .adm-table code { font: 700 15px/1 var(--sans); letter-spacing: 0.08em; }
+.adm-codes span { font-size: 11px; color: var(--muted); }
+
+@media (max-width: 720px) {
+  .adm-header { height: auto; flex-wrap: wrap; padding: 10px 16px; gap: 12px; }
+  .adm-you { display: none; }
+  .adm-funnel li { flex-wrap: wrap; }
+  .adm-funnel b { min-width: 0; flex: 1 1 100%; }
+  .adm-funnel i { margin-left: 0; }
+}

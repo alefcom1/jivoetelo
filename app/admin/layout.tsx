@@ -27,7 +27,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link className="adm-logo" href="/">
           Живое Тело
         </Link>
-        <span className="adm-title">Админка · Живое Тело Pro</span>
+        <span className="adm-title">Админка</span>
+        {/* Навигация появилась, когда разделов стало больше двух. До этого
+            админка была одной страницей, и ссылка «сюда же» на ней выглядела
+            бы странно. */}
+        <nav className="adm-nav">
+          <Link href="/admin">Обзор</Link>
+          <Link href="/admin/users">Люди</Link>
+          <Link href="/admin/photos">Снимки</Link>
+          <Link href="/admin/vouchers">Ваучеры</Link>
+          <Link href="/admin/pro">Специалисты</Link>
+        </nav>
         <span className="adm-you">{admin.email}</span>
       </header>
       <main className="adm-main">{children}</main>

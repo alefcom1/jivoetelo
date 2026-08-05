@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { reportPreferences, userConsents, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { daysLeft } from "@/lib/paid";
 import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
 import { PhotoConsent } from "./photo-consent";
 import { getBotPreferences } from "@/lib/bot/store";
@@ -16,8 +17,10 @@ import { DangerZone } from "./danger-zone";
 import { ReportSettings } from "./report-settings";
 import { TelegramLink } from "./telegram-link";
 import { UsagePanel } from "./usage-panel";
+import { AccessPanel } from "./access-panel";
 
 const consentDate = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+const accessDate = consentDate;
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
@@ -73,7 +76,13 @@ export default async function SettingsPage() {
     <section className="settings-block">
       <p className="settings-label">Аккаунт</p>
       <p>{user.email ?? "Вход через Telegram — почта не указана"}</p>
-      <p className="field-note">Тариф: бесплатный — доступны все возможности сервиса.</p>
+    </section>
+    <section className="settings-block">
+      <p className="settings-label">Доступ</p>
+      <AccessPanel
+        daysLeft={daysLeft(user.accessUntil, new Date())}
+        until={user.accessUntil ? accessDate.format(user.accessUntil) : null}
+      />
     </section>
     {/* Шпаргалка стоит вторым блоком, а не в подвале настроек: подсказки на
         «Сегодня» показываются один раз и не возвращаются, и это единственное

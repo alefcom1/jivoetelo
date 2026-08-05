@@ -54,6 +54,7 @@ const STATIC_PAGES: Array<{ path: string; priority: number; changeFrequency: "mo
   { path: "/legal/terms", priority: 0.2, changeFrequency: "yearly" },
   { path: "/legal/privacy", priority: 0.2, changeFrequency: "yearly" },
   { path: "/legal/consent", priority: 0.2, changeFrequency: "yearly" },
+  { path: "/legal/tarify", priority: 0.3, changeFrequency: "yearly" },
   { path: "/legal/health", priority: 0.3, changeFrequency: "yearly" },
   { path: "/legal/cookies", priority: 0.2, changeFrequency: "yearly" },
 ];
