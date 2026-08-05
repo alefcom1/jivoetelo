@@ -3,7 +3,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { getDb } from "@/db";
 import { telegramLinkCodes, users } from "@/db/schema";
 import type { CurrentUser } from "./auth.ts";
-import { normalizePlan } from "./quota-policy.ts";
+import { effectivePlan } from "./paid.ts";
 
 // Проверка подписей вынесена в ./telegram-auth.ts: там чистая криптография
 // без базы, и её можно проверять тестами. Здесь — всё, что ходит в БД.
@@ -25,13 +25,15 @@ const LINK_CODE_TTL_MINUTES = 15;
 /** Находит пользователя сервиса по привязанному Telegram-аккаунту. */
 export async function findUserByTelegram(telegramUserId: string): Promise<CurrentUser | null> {
   const rows = await getDb()
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan, simpleMode: users.simpleMode, firstRunHints: users.firstRunHints })
+    .select({ id: users.id, email: users.email, showCalories: users.showCalories, simpleMode: users.simpleMode, firstRunHints: users.firstRunHints, accessUntil: users.accessUntil })
     .from(users)
     .where(eq(users.telegramUserId, telegramUserId))
     .limit(1);
   const row = rows[0];
   // Пользователь найден по самой привязке — она заведомо есть.
-  return row ? { ...row, plan: normalizePlan(row.plan), telegramLinked: true } : null;
+  // Тариф вычисляется из срока — как в lib/auth.ts, одним способом на обе
+  // точки входа.
+  return row ? { ...row, plan: effectivePlan(row.accessUntil, new Date()), telegramLinked: true } : null;
 }
 
 /** Разбирает initData и возвращает пользователя; бросает not_linked, если привязки нет. */
@@ -87,11 +89,13 @@ export async function consumeLinkCode(code: string, telegramUserId: string): Pro
   await db.update(telegramLinkCodes).set({ usedAt: new Date() }).where(eq(telegramLinkCodes.code, normalized));
 
   const linked = await db
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan, simpleMode: users.simpleMode, firstRunHints: users.firstRunHints })
+    .select({ id: users.id, email: users.email, showCalories: users.showCalories, simpleMode: users.simpleMode, firstRunHints: users.firstRunHints, accessUntil: users.accessUntil })
     .from(users)
     .where(eq(users.id, row.userId))
     .limit(1);
   const linkedRow = linked[0];
   // Код привязки только что применён к этому аккаунту — привязка есть.
-  return linkedRow ? { ...linkedRow, plan: normalizePlan(linkedRow.plan), telegramLinked: true } : null;
+  return linkedRow
+    ? { ...linkedRow, plan: effectivePlan(linkedRow.accessUntil, new Date()), telegramLinked: true }
+    : null;
 }

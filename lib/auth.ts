@@ -3,7 +3,8 @@ import { and, eq, gt } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { getDb } from "@/db";
 import { sessions, users } from "@/db/schema";
-import { normalizePlan, type Plan } from "./quota-policy.ts";
+import { effectivePlan } from "./paid.ts";
+import type { Plan } from "./quota-policy.ts";
 
 const SESSION_COOKIE = "jt_session";
 const SESSION_DAYS = 30;
@@ -13,8 +14,13 @@ export type CurrentUser = {
   /** null у аккаунта из Mini App: там почты нет и не требуется. */
   email: string | null;
   showCalories: boolean;
-  /** Тариф. Сейчас у всех "free" — все функции доступны бесплатно. */
+  /**
+   * Действующий тариф. Вычисляется из `accessUntil` при каждом чтении, а не
+   * хранится рядом с ним (lib/paid.ts).
+   */
   plan: Plan;
+  /** До какого момента открыт платный доступ. `null` — не открывался. */
+  accessUntil: Date | null;
   /**
    * Привязан ли Telegram. Именно флаг, а не сам идентификатор: он нужен
    * интерфейсу и аналитике, а таскать по коду чужой числовой идентификатор
@@ -66,10 +72,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       id: users.id,
       email: users.email,
       showCalories: users.showCalories,
-      plan: users.plan,
       simpleMode: users.simpleMode,
       firstRunHints: users.firstRunHints,
       telegramUserId: users.telegramUserId,
+      accessUntil: users.accessUntil,
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
@@ -79,5 +85,11 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const row = rows[0];
   if (!row) return null;
   const { telegramUserId, ...user } = row;
-  return { ...user, plan: normalizePlan(row.plan), telegramLinked: telegramUserId !== null };
+  // Тариф вычисляется из срока, а не читается из колонки: источник истины
+  // один и рассогласовать его нечем (lib/paid.ts).
+  return {
+    ...user,
+    plan: effectivePlan(row.accessUntil, new Date()),
+    telegramLinked: telegramUserId !== null,
+  };
 }

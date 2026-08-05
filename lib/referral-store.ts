@@ -97,3 +97,55 @@ export async function invitedCount(userId: number): Promise<number> {
   const rows = await getDb().select({ id: users.id }).from(users).where(eq(users.invitedBy, userId));
   return rows.length;
 }
+
+/**
+ * Сколько дней дневника должен провести приглашённый, чтобы награда
+ * начислилась обоим.
+ *
+ * Семь, а не ноль: награда в день регистрации — это способ накрутить доступ
+ * ботами, а не привести живого человека. Семь дней с записями отличает
+ * пришедшего от заведённого.
+ */
+export const REFERRAL_REWARD_AFTER_DAYS = 7;
+
+/** Сколько дней доступа получает каждый. */
+export const REFERRAL_REWARD_DAYS = 30;
+
+export type ReferralReward = { rewarded: true; days: number } | { rewarded: false };
+
+/**
+ * Начислить награду за приглашение, если пора.
+ *
+ * Вызывается при обычной загрузке «Сегодня» — там уже посчитаны дни с
+ * записями, и отдельного обхода по расписанию не нужно. Cron здесь был бы
+ * лишней движущейся частью: начислять некому, пока человек не зашёл.
+ *
+ * Однократность обеспечивает не проверка в коде, а `IS NULL` прямо в WHERE:
+ * человек может открыть «Сегодня» в вебе и в Mini App одновременно, и обе
+ * загрузки увидят одинаковое состояние.
+ */
+export async function rewardReferralIfDue(
+  userId: number,
+  loggedDays: number,
+  now = new Date(),
+): Promise<ReferralReward> {
+  if (loggedDays < REFERRAL_REWARD_AFTER_DAYS) return { rewarded: false };
+
+  const db = getDb();
+  const claimed = await db
+    .update(users)
+    .set({ referralRewardedAt: now })
+    .where(and(eq(users.id, userId), isNull(users.referralRewardedAt)))
+    .returning({ inviterId: users.invitedBy });
+  const row = claimed[0];
+  // Не обновилось — награда уже начислена. Нет пригласившего — начислять не
+  // за что, но отметку всё равно ставим: иначе этот запрос будет выполняться
+  // при каждой загрузке экрана до конца времён.
+  if (!row) return { rewarded: false };
+  if (!row.inviterId) return { rewarded: false };
+
+  const { grantAccessDays } = await import("./vouchers-store.ts");
+  await grantAccessDays(userId, REFERRAL_REWARD_DAYS, now);
+  await grantAccessDays(row.inviterId, REFERRAL_REWARD_DAYS, now);
+  return { rewarded: true, days: REFERRAL_REWARD_DAYS };
+}

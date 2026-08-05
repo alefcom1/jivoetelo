@@ -86,6 +86,61 @@ export const users = pgTable("users", {
    * а факт «пришёл от него» — нет.
    */
   invitedBy: integer("invited_by"),
+  /**
+   * До какого момента открыт платный доступ. `null` — никогда не открывался.
+   *
+   * Источник истины один на оплату и на ваучеры; `plan` из него вычисляется
+   * (lib/paid.ts) и больше нигде не пишется. Флаг вместо срока пришлось бы
+   * снимать по расписанию, и упавший cron оставлял бы доступ неоплаченным.
+   */
+  accessUntil: timestamp("access_until", { withTimezone: true }),
+  /**
+   * Когда начислена награда за приглашение. Отметка стоит у ПРИГЛАШЁННОГО:
+   * у него она одна на всю жизнь, у пригласившего их было бы столько,
+   * сколько друзей. Условие `IS NULL` в WHERE делает начисление однократным.
+   */
+  referralRewardedAt: timestamp("referral_rewarded_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Ваучеры: код на бесплатный доступ.
+ *
+ * Строка живёт и после погашения — по ней отвечают на вопрос «кому и когда мы
+ * это выдали», а он возникает не в день выдачи.
+ */
+export const vouchers = pgTable("vouchers", {
+  id: serial("id").primaryKey(),
+  /** Канонический вид: заглавные, без дефиса (lib/vouchers.ts). */
+  code: text("code").notNull().unique(),
+  /** Днями, а не тарифом: тариф подорожает, а обещание «месяц» уже роздано. */
+  days: integer("days").notNull(),
+  /** Кто выдал. null — начислено автоматически за приглашение. */
+  issuedBy: integer("issued_by"),
+  /** Кому предназначен, если известно заранее. */
+  issuedTo: integer("issued_to"),
+  note: text("note"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  usedBy: integer("used_by"),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Журнал обращений администратора к персональным данным.
+ *
+ * Доступ полный — так решено владельцем. Журнал его не ограничивает, а
+ * записывает: при жалобе или проверке спрашивают именно «кто и когда
+ * смотрел». Сводные цифры сюда не идут — в них нет ничьего дневника.
+ */
+export const adminAccessLog = pgTable("admin_access_log", {
+  id: serial("id").primaryKey(),
+  adminId: integer("admin_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  subjectId: integer("subject_id"),
+  /** profile | diary | photos */
+  scope: text("scope").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -704,7 +759,19 @@ export const catalogPhotos = pgTable(
     caption: text("caption").notNull(),
     /** pending | approved | rejected */
     status: text("status").notNull().default("pending"),
+    /** Причина отказа — её читает автор. */
     rejectionReason: text("rejection_reason"),
+    /**
+     * Внутренняя заметка модератора: «лицо в отражении», «дубль вчерашнего».
+     * Отдельно от причины отказа сознательно — первое автор прочитает,
+     * второе не должен.
+     */
+    moderatorNote: text("moderator_note"),
+    /**
+     * Когда решение ушло автору. `null` — не отправляли. Без этого признака
+     * повторный разбор очереди слал бы одно и то же сообщение дважды.
+     */
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
     /**
      * Редакция документов на момент согласия. Та же логика, что в
      * `user_consents`: через год надо уметь показать, на что именно человек
