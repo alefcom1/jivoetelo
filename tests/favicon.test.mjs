@@ -101,3 +101,44 @@ test("всё, что обещано в разметке, лежит в public", 
     assert.ok(expected.includes(file), `${file} объявлен, но его никто не собирает`);
   }
 });
+
+test("растровые значки собраны из текущего SVG, а не из прошлого", async () => {
+  /**
+   * Единственная ошибка в этой области, которую невозможно заметить глазами.
+   *
+   * Растр собирается из `public/favicon.svg` скриптом `scripts/favicon.mjs`,
+   * но собирается вручную. Правка SVG без повторного запуска скрипта даёт
+   * сайт с двумя разными значками: в браузере новый (он читает SVG), а у
+   * роботов поиска — старый, потому что они забирают PNG и ICO. Проверить это
+   * своим браузером нельзя вовсе, а поиск покажет расхождение через недели.
+   *
+   * Сравниваем с допуском по каналу: пересжатие PNG и разные версии sharp
+   * дают разброс в единицы, и требовать побайтового совпадения значило бы
+   * ломать тест на каждом обновлении зависимостей.
+   */
+  const TOLERANCE = 24;
+  for (const { file, size } of [
+    { file: "public/favicon-32.png", size: 32 },
+    { file: "public/favicon-96.png", size: 96 },
+  ]) {
+    const fromSvg = await sharp("public/favicon.svg", { density: 400 })
+      .resize(size, size, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer();
+    const expected = await sharp(fromSvg).ensureAlpha().raw().toBuffer();
+    const actual = await sharp(file).ensureAlpha().raw().toBuffer();
+
+    assert.equal(actual.length, expected.length, `${file}: другой размер`);
+    let differing = 0;
+    for (let i = 0; i < expected.length; i += 4) {
+      const colour = Math.abs(expected[i] - actual[i]) > TOLERANCE;
+      const alpha = Math.abs(expected[i + 3] - actual[i + 3]) > TOLERANCE;
+      if (colour || alpha) differing += 1;
+    }
+    const share = (differing * 100) / (expected.length / 4);
+    assert.ok(
+      share < 2,
+      `${file}: разошлось ${share.toFixed(1)}% пикселей — SVG правили без «node scripts/favicon.mjs»`,
+    );
+  }
+});
