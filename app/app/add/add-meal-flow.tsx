@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { AnalysisItem, Clarification, MealAnalysis } from "@/lib/ai";
 import { MEAL_TYPE_LABELS } from "@/lib/dates";
+import { applyClarification as applyClarify } from "@/lib/clarify";
 import { isBlankNutrition, sumTotals } from "@/lib/nutrition";
 import { scaleGrams } from "@/lib/portions";
 import { analyzeMeal, saveMeal } from "../meal-actions";
@@ -184,13 +185,23 @@ export function AddMealFlow({
     setDraft((d) => d && { ...d, items: d.items.filter((_, i) => i !== index) });
   }
 
+  /**
+   * Ответ на уточняющий вопрос. Заменить позицию или добавить новую —
+   * решает `lib/clarify.ts`, общий с Mini App: раньше здесь и там лежали два
+   * отдельных обработчика, и оба одинаково задваивали уточнённую позицию.
+   */
   function applyClarification(clarIndex: number, optionIndex: number) {
     setDraft((d) => {
       if (!d) return d;
-      const option = d.clarifications[clarIndex]?.options[optionIndex];
+      const question = d.clarifications[clarIndex];
+      if (!question) return d;
+      const drafted = {
+        ...question,
+        options: question.options.map((o) => ({ label: o.label, addItem: o.addItem && toDraftItem(o.addItem) })),
+      };
       return {
         ...d,
-        items: option?.addItem ? [...d.items, toDraftItem(option.addItem)] : d.items,
+        items: applyClarify(d.items, drafted, optionIndex),
         clarifications: d.clarifications.filter((_, i) => i !== clarIndex),
       };
     });

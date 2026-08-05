@@ -30,6 +30,15 @@ export type ClarificationOption = {
 export type Clarification = {
   question: string;
   options: ClarificationOption[];
+  /**
+   * Номер позиции в `items`, которую этот вопрос уточняет.
+   *
+   * Без него уточнение умело только добавлять: на вопрос «какой йогурт?»
+   * выбор греческого дописывал его к списку, а исходный «Йогурт» оставался,
+   * и в приёме пищи оказывалось два йогурта. Когда индекс задан, выбранный
+   * вариант заменяет позицию, а не дополняет список (`lib/clarify.ts`).
+   */
+  refinesIndex?: number;
 };
 
 export type MealAnalysis = {

@@ -10,6 +10,7 @@ import {
   type FrequentMealDto,
   type InboxItemDto,
 } from "./api";
+import { applyClarification as applyClarify } from "@/lib/clarify";
 import { CONFIDENCE_LABELS, confidenceRange, overallConfidence, type Confidence } from "@/lib/confidence";
 import { formatDayAgoRu, formatDayRu } from "@/lib/dates";
 import { mealCategory } from "@/lib/food-category";
@@ -432,10 +433,27 @@ export function CameraTab({
     setItems((current) => current && current.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   }
 
+  /**
+   * Ответ на уточняющий вопрос.
+   *
+   * Раньше выбранный вариант всегда дописывался к списку, и на вопрос «какой
+   * йогурт?» в приёме пищи оказывалось два йогурта. Теперь решение —
+   * заменить или добавить — принимает `lib/clarify.ts`, общий с веб-версией:
+   * два одинаковых обработчика в разных вкладках уже однажды разъехались.
+   */
   function applyClarification(clarIndex: number, optionIndex: number) {
     haptic("tap");
-    const option = clarifications[clarIndex]?.options[optionIndex];
-    if (option?.addItem) setItems((current) => (current ? [...current, toDraft(option.addItem!)] : current));
+    const question = clarifications[clarIndex];
+    if (question) {
+      setItems((current) => {
+        if (!current) return current;
+        const drafted = {
+          ...question,
+          options: question.options.map((o) => ({ label: o.label, addItem: o.addItem && toDraft(o.addItem) })),
+        };
+        return applyClarify(current, drafted, optionIndex);
+      });
+    }
     dismissClarification(clarIndex);
   }
 

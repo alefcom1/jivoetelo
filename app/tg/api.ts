@@ -212,6 +212,8 @@ export type AnalysisItemDto = {
 export type ClarificationDto = {
   question: string;
   options: Array<{ label: string; addItem?: AnalysisItemDto }>;
+  /** Позиция, которую вопрос уточняет: вариант заменит её, а не добавится. */
+  refinesIndex?: number;
 };
 
 export async function saveMeal(payload: unknown): Promise<{ ok: true; id: number }> {
