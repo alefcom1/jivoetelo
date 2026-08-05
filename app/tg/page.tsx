@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { localToday } from "@/lib/dates";
+import { nextHint, passedByData } from "@/lib/first-run";
 import { shouldRefresh } from "@/lib/refresh";
-import { ApiError, fetchToday, type InboxItemDto, type TodayResponse } from "./api";
+import { ApiError, fetchToday, markHints, type InboxItemDto, type TodayResponse } from "./api";
 import { CameraTab } from "./camera-tab";
+import { FirstRunHint } from "./first-run-hint";
 import { DiaryTab } from "./diary-tab";
 import { IconAdd, IconInbox, IconPlan, IconProfile, IconToday } from "./icons";
 import { InboxTab } from "./inbox-tab";
@@ -62,6 +64,25 @@ export default function MiniApp() {
    * вкладки размонтирует экран, и после «Камеры» человек возвращался бы на
    * сегодня, а не на тот день, с которого уходил. */
   const [diaryDay, setDiaryDay] = useState(() => localToday());
+
+  /**
+   * Первые шаги. `diaryOpened` живёт в localStorage, а не на сервере: это
+   * единственное условие, которое не выводится из данных — «человек заходил
+   * в дневник» нигде не записано, а заводить ради подсказки таблицу событий
+   * несоразмерно. Локальная память тут честнее: на новом устройстве
+   * подсказка появится снова, и это правильно — интерфейс там тоже новый.
+   *
+   * `dismissed` — закрытые в этой сессии. Сервер узнает о них тем же
+   * запросом, но экран должен убрать подсказку сразу, не дожидаясь ответа.
+   */
+  const [diaryOpened, setDiaryOpened] = useState(() => {
+    // Инициализатор, а не эффект: чтение в эффекте вызывает лишний проход
+    // рендера. Проверка на window обязательна — этот же код исполняется при
+    // серверном рендере страницы, где localStorage нет.
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem("jt-diary-opened") === "1"; } catch { return false; }
+  });
+  const [dismissed, setDismissed] = useState<string[]>([]);
   /**
    * Как выйти из черновика разбора. Живёт здесь, а не в «Камере», хотя
    * состояние черновика там: нативной кнопкой «назад» должен владеть кто-то
@@ -132,6 +153,42 @@ export default function MiniApp() {
    * секунд: он гасит щелчки по вкладкам туда-сюда и не мешает вернуться к
    * свежим числам через минуту.
    */
+  /**
+   * Какую подсказку показать. Состояние собирается из уже пришедших данных —
+   * отдельного запроса ради подсказок нет.
+   *
+   * `passedByData` досылается на сервер при каждой загрузке: тот, кто сделал
+   * действие сам, не увидев подсказки, не должен получить её после.
+   */
+  const hint = today
+    ? nextHint({
+        seen: [...today.firstRun.seen, ...dismissed],
+        hasPlan: today.firstRun.hasPlan,
+        loggedDays: today.firstRun.loggedDays,
+        mealsToday: today.meals.length,
+        botEverUsed: today.firstRun.botEverUsed,
+        hasWeight: today.weight !== null,
+        diaryOpened,
+        showCalories: today.showCalories,
+      })
+    : null;
+
+  useEffect(() => {
+    if (!today) return;
+    const already = new Set(today.firstRun.seen);
+    const fresh = passedByData({
+      seen: today.firstRun.seen,
+      hasPlan: today.firstRun.hasPlan,
+      loggedDays: today.firstRun.loggedDays,
+      mealsToday: today.meals.length,
+      botEverUsed: today.firstRun.botEverUsed,
+      hasWeight: today.weight !== null,
+      diaryOpened,
+      showCalories: today.showCalories,
+    }).filter((key) => !already.has(key));
+    if (fresh.length > 0) void markHints(fresh);
+  }, [today, diaryOpened]);
+
   const refreshIfStale = useCallback(() => {
     const decision = shouldRefresh({
       dataDay: today?.day ?? null,
@@ -210,6 +267,11 @@ export default function MiniApp() {
     // других вкладках, он мог записать приём пищи оттуда, а бот — принять
     // снимок в переписке.
     if (next === "today") refreshIfStale();
+    if (next === "diary" && !diaryOpened) {
+      setDiaryOpened(true);
+      try { localStorage.setItem("jt-diary-opened", "1"); } catch { /* приватный режим */ }
+      void markHints(["diary"]);
+    }
   }
 
   /** Открыть «Камеру», запомнив, куда возвращаться и за какой день писать. */
@@ -307,6 +369,18 @@ export default function MiniApp() {
             onChanged={() => { setTodayMealId(null); void load(); }}
           />
         : <>
+            {/* Подсказка первых шагов — над содержимым «Сегодня», а не поверх
+                него: перекрывать действие, о котором рассказываешь, нельзя. */}
+            {tab === "today" && hint && <FirstRunHint
+              hint={hint}
+              onDismiss={() => { haptic("tap"); setDismissed((d) => [...d, hint.key]); void markHints([hint.key]); }}
+              onAction={(target) => {
+                setDismissed((d) => [...d, hint.key]);
+                void markHints([hint.key]);
+                if (target === "camera") openCamera("today");
+                else switchTab(target);
+              }}
+            />}
             {tab === "today" && <TodayTab
               data={today}
               firstName={firstName}

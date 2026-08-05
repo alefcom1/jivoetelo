@@ -25,7 +25,7 @@ const LINK_CODE_TTL_MINUTES = 15;
 /** Находит пользователя сервиса по привязанному Telegram-аккаунту. */
 export async function findUserByTelegram(telegramUserId: string): Promise<CurrentUser | null> {
   const rows = await getDb()
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan, simpleMode: users.simpleMode })
+    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan, simpleMode: users.simpleMode, firstRunHints: users.firstRunHints })
     .from(users)
     .where(eq(users.telegramUserId, telegramUserId))
     .limit(1);
@@ -87,7 +87,7 @@ export async function consumeLinkCode(code: string, telegramUserId: string): Pro
   await db.update(telegramLinkCodes).set({ usedAt: new Date() }).where(eq(telegramLinkCodes.code, normalized));
 
   const linked = await db
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan, simpleMode: users.simpleMode })
+    .select({ id: users.id, email: users.email, showCalories: users.showCalories, plan: users.plan, simpleMode: users.simpleMode, firstRunHints: users.firstRunHints })
     .from(users)
     .where(eq(users.id, row.userId))
     .limit(1);

@@ -53,7 +53,29 @@ export type TodayResponse = {
    * которую подписывают, а не двумя наборами слов в разных местах.
    */
   streak: StreakResult;
+  /** Состояние первых шагов — из чего собирается подсказка (lib/first-run.ts). */
+  firstRun: {
+    seen: string[];
+    hasPlan: boolean;
+    loggedDays: number;
+    botEverUsed: boolean;
+  };
 };
+
+/** Отметить объяснения пройденными. Ошибку глушим: подсказка — не данные. */
+export async function markHints(hints: string[]): Promise<void> {
+  if (hints.length === 0) return;
+  try {
+    await request("/api/tg/hints", {
+      method: "POST",
+      headers: { ...initDataHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify({ hints }),
+    });
+  } catch {
+    // Неудачная отметка означает, что подсказка появится ещё раз. Это
+    // терпимо; ронять из-за неё экран — нет.
+  }
+}
 
 export type ApiFailure = { reason: "not_linked" | "invalid_signature" | "not_configured" | "error"; message?: string };
 

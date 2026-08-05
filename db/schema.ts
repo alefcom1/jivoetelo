@@ -65,6 +65,14 @@ export const users = pgTable("users", {
    * одно без другого — видеть калории, но не набирать состав руками.
    */
   simpleMode: boolean("simple_mode").notNull().default(false),
+  /**
+   * Пройденные объяснения первых шагов — массив ключей из lib/first-run.ts.
+   *
+   * Массив, а не столбец на каждый шаг: шагов семь, и каждый новый иначе
+   * стоил бы миграции. Отметка ставится и когда человек закрыл подсказку, и
+   * когда он сделал действие сам, не увидев её.
+   */
+  firstRunHints: jsonb("first_run_hints").notNull().default([]).$type<string[]>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

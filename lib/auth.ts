@@ -23,6 +23,8 @@ export type CurrentUser = {
   telegramLinked: boolean;
   /** Упрощённый режим учёта: тарелка вместо чисел (lib/simple-log.ts). */
   simpleMode: boolean;
+  /** Пройденные объяснения первых шагов (lib/first-run.ts). */
+  firstRunHints: string[];
 };
 
 function hashToken(token: string): string {
@@ -66,6 +68,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       showCalories: users.showCalories,
       plan: users.plan,
       simpleMode: users.simpleMode,
+      firstRunHints: users.firstRunHints,
       telegramUserId: users.telegramUserId,
     })
     .from(sessions)

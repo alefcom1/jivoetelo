@@ -1,5 +1,5 @@
 import { localToday, MEAL_TYPE_LABELS } from "@/lib/dates";
-import { countPending } from "@/lib/inbox";
+import { countPending, everUsedInbox } from "@/lib/inbox";
 import { splitMacroTargets } from "@/lib/macro-split";
 import { getDaySummary, listLoggedDays } from "@/lib/meals";
 import { isSpeechEnabled } from "@/lib/speech/mode";
@@ -15,11 +15,14 @@ export async function GET(request: Request) {
   const today = localToday();
   // Независимые чтения — параллельно, а не одно за другим: ни одно не зависит
   // от результата другого.
-  const [summary, inboxPending, weights, loggedDays] = await Promise.all([
+  const [summary, inboxPending, weights, loggedDays, botEverUsed] = await Promise.all([
     getDaySummary(auth.user.id, today),
     countPending(auth.user.id),
     listRecentWeights(auth.user.id, 30),
     listLoggedDays(auth.user.id),
+    // Для первых шагов: подсказку про бота показываем только тому, кто им
+    // ни разу не пользовался (lib/first-run.ts).
+    everUsedInbox(auth.user.id),
   ]);
 
   const trend = weightTrend(weights);
@@ -55,5 +58,16 @@ export async function GET(request: Request) {
     // Числа серии считаются здесь, а текст — на клиенте (lib/mascot.ts):
     // реплики персонажа живут рядом с картинкой, которую они подписывают.
     streak: computeStreak(loggedDays, today),
+    /**
+     * Всё, что нужно первым шагам сверх уже отданного. Отдельного запроса
+     * ради подсказок не делаем — состояние собирается из того, что и так
+     * приходит на экран.
+     */
+    firstRun: {
+      seen: auth.user.firstRunHints ?? [],
+      hasPlan: summary.targets !== null,
+      loggedDays: loggedDays.length,
+      botEverUsed,
+    },
   });
 }
