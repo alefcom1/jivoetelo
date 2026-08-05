@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { localToday } from "@/lib/dates";
+import { shouldRefresh } from "@/lib/refresh";
 import { ApiError, fetchToday, type InboxItemDto, type TodayResponse } from "./api";
 import { CameraTab } from "./camera-tab";
 import { DiaryTab } from "./diary-tab";
@@ -79,17 +80,68 @@ export default function MiniApp() {
     setDiscardDraft(() => discard);
   }, []);
 
-  const load = useCallback(async () => {
+  /**
+   * Когда «Сегодня» в последний раз успешно загрузилось.
+   *
+   * Нужно, чтобы фоновое обновление не превращалось в шквал запросов: между
+   * вкладками люди щёлкают быстро, и без порога каждый щелчок бил бы по сети.
+   */
+  const loadedAt = useRef(0);
+
+  /**
+   * Загрузка «Сегодня».
+   *
+   * `silent` — фоновое обновление: экран уже показан, и ронять его в ошибку
+   * из-за одного неудачного запроса нельзя. Пропавшая на секунду сеть не
+   * повод стирать цифры дня; человек этого не просил и не поймёт, что
+   * произошло. Поэтому в тихом режиме неудача просто ничего не меняет.
+   */
+  const load = useCallback(async (silent = false) => {
     try {
       const data = await fetchToday();
       setToday(data);
       setStatus("ready");
+      loadedAt.current = Date.now();
     } catch (error) {
+      if (silent) return;
       if (error instanceof ApiError && error.failure.reason === "not_linked") setStatus("needs_link");
       else if (error instanceof ApiError && error.failure.reason === "invalid_signature") setStatus("no_telegram");
       else setStatus("error");
     }
   }, []);
+
+  /**
+   * Обновить «Сегодня», если данные могли устареть.
+   *
+   * ## Почему это вообще понадобилось
+   *
+   * Экран загружался ровно один раз — при монтировании. Переключение вкладок
+   * монтирование не повторяет, а Telegram, когда приложение сворачивают, не
+   * убивает webview: он остаётся жив со всем состоянием. Отсюда и жалоба —
+   * цифры не менялись, пока приложение не закроешь совсем.
+   *
+   * Устареть за это время может многое, и не только от своих же действий:
+   * снимок, отправленный боту в переписке, приходит в инбокс мимо
+   * приложения, а `inboxPending` показывается на «Сегодня».
+   *
+   * ## Три правила
+   *
+   * Данных нет — грузим обычным порядком, со всеми состояниями ошибок.
+   * День сменился — грузим всегда: показывать вчерашние итоги под заголовком
+   * «сегодня» нельзя ни при каком пороге. В остальных случаях порог в десять
+   * секунд: он гасит щелчки по вкладкам туда-сюда и не мешает вернуться к
+   * свежим числам через минуту.
+   */
+  const refreshIfStale = useCallback(() => {
+    const decision = shouldRefresh({
+      dataDay: today?.day ?? null,
+      today: localToday(),
+      lastLoadedAt: loadedAt.current,
+      now: Date.now(),
+    });
+    if (decision === "skip") return;
+    void load(decision === "silent");
+  }, [load, today]);
 
   useEffect(() => {
     const webApp = getWebApp();
@@ -115,6 +167,31 @@ export default function MiniApp() {
     return () => webApp.offEvent("themeChanged", onThemeChanged);
   }, [load]);
 
+  /**
+   * Возвращение в приложение.
+   *
+   * Telegram при сворачивании webview не убивает — он остаётся жив со всем
+   * состоянием, и React ничего не перемонтирует. Поэтому «открыл заново» для
+   * приложения выглядит как «ничего не произошло», и цифры оставались
+   * вчерашними до полного закрытия.
+   *
+   * Слушаем `visibilitychange` браузера, а не событие Telegram: оно есть во
+   * всех клиентах и в вебе, тогда как `activated` появился только в Bot API
+   * 8.0 и на десктопе доезжает не везде. `focus` добавлен для десктопа —
+   * там переключение между окнами видимость страницы не меняет.
+   */
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshIfStale();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", refreshIfStale);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", refreshIfStale);
+    };
+  }, [refreshIfStale]);
+
   /** Переключение нижней панели всегда закрывает инбокс поверх неё. */
   function switchTab(next: Tab) {
     haptic("tap");
@@ -129,6 +206,10 @@ export default function MiniApp() {
     // последнего, что открывали с «Сегодня».
     setOpenMealId(null);
     setTab(next);
+    // Возврат на «Сегодня» — повод свериться с сервером: пока человек был на
+    // других вкладках, он мог записать приём пищи оттуда, а бот — принять
+    // снимок в переписке.
+    if (next === "today") refreshIfStale();
   }
 
   /** Открыть «Камеру», запомнив, куда возвращаться и за какой день писать. */
