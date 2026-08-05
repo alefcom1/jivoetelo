@@ -974,3 +974,75 @@
   border: 0; border-radius: 14px; min-height: 48px;
   background: color-mix(in srgb, var(--tg-text) 8%, transparent);
 }
+
+/* ===== Живело: движение =====
+
+   Позы — статические картинки, и менять это ради движения незачем:
+   анимированный webp весил бы в разы больше ради секунды, которая нужна
+   только при появлении. Всё движение делает CSS.
+
+   Три вещи, и все короткие:
+     — появление: подъём на 6px с проявлением, 320 мс;
+     — покой: очень медленное «дыхание», 4 секунды на цикл, амплитуда 1,5%.
+       Именно медленное: заметная анимация рядом с числами дня отвлекает от
+       чисел, а незаметная просто не даёт картинке выглядеть наклейкой;
+     — смена позы: короткий толчок, чтобы переход был виден.
+
+   Всё выключается при prefers-reduced-motion — в приложении о питании
+   движение на экране не должно мешать тем, кому оно физически неприятно. */
+
+@keyframes tg-mascot-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes tg-mascot-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.015); }
+}
+
+@keyframes tg-say-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Реплика по поводу: енот слева, строка справа. Тон подложки тот же, что у
+   подсказок, — это пояснение, а не тревога. */
+.tg-say {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 12px 0;
+  background: var(--tg-card);
+  border-radius: 14px;
+  animation: tg-say-in 320ms ease-out both;
+}
+.tg-say p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--tg-hint);
+}
+.tg-say-mascot {
+  display: block;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  animation: tg-mascot-in 320ms ease-out both, tg-mascot-breathe 4s ease-in-out 320ms infinite;
+}
+.tg-say-compact { padding: 8px 10px; margin: 8px 0; }
+.tg-say-compact .tg-say-mascot { width: 34px; height: 34px; }
+.tg-say-compact p { font-size: 12px; }
+
+/* Карточка серии: то же дыхание, чтобы персонаж был один и тот же. Появление
+   там не нужно — карточка стоит на экране с самого открытия. */
+.tg-mascot { animation: tg-mascot-breathe 4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-say,
+  .tg-say-mascot,
+  .tg-mascot {
+    animation: none;
+  }
+}

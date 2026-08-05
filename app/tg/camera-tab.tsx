@@ -17,6 +17,7 @@ import { mealCategory } from "@/lib/food-category";
 import { withPluralRu } from "@/lib/plural";
 import { scaleGrams } from "@/lib/portions";
 import { AddItem, type NewItem } from "./add-item";
+import { MascotSay } from "./mascot-say";
 import { FoodIcon } from "../food-icon";
 import { ArtCamera } from "./illustrations";
 import { haptic, useInsideTelegram, useMainButton } from "./telegram";
@@ -500,7 +501,9 @@ export function CameraTab({
           </>
         : <blockquote className="tg-transcript">«{inbox.note}»</blockquote>}
 
-      {error ? <p className="tg-error">{error}</p> : <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
+      {error
+        ? <><p className="tg-error">{error}</p><MascotSay event={{ kind: "analysisFailed" }} compact /></>
+        : <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
 
       {/* Кнопка нужна только для повтора после ошибки — при первом заходе разбор уже запущен сам. */}
       {error && <button className="tg-button tg-button-block" onClick={() => void handleAnalyze()} disabled={busy}>
@@ -753,6 +756,13 @@ export function CameraTab({
         ? "Добавьте всё, что было в этом приёме пищи, и поправьте вес."
         : "Оценка приблизительная — поправьте вес, если нужно."}</p>
     </header>
+
+    {/* Живело о том, насколько он уверен. Это самая частая минута в
+        приложении, и до сих пор она была молчаливой: человек видел числа и
+        значок уверенности, но не понимал, что с этим делать. Реплика говорит
+        ровно одно — стоит ли лезть в граммы. У собранного руками черновика
+        оценивать нечего, поэтому там енот молчит. */}
+    {!handMade && <MascotSay event={{ kind: "analyzed", confidence }} />}
 
     {/* Варианты модели — это её догадки, а не список всего возможного. Поэтому
         рядом с ними два выхода: назвать своё и отказаться отвечать.
