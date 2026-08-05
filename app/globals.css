@@ -697,3 +697,16 @@ input[type=checkbox],input[type=radio]{width:24px;height:24px;flex:none;margin:0
 .voucher-form{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
 .voucher-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
 .voucher-form input{padding:11px;border:1px solid var(--line);background:var(--white);font-size:15px;letter-spacing:.08em;width:180px;text-transform:uppercase}
+
+/* Лимиты и тарифы на главной. Числами в ряд, а не строкой текста: их
+   сравнивают глазами, а перечисление через запятую заставляет читать.
+   Числа приходят из PLAN_LIMITS и TARIFFS — см. комментарий в app/page.tsx. */
+.price-limits,.price-tariffs{list-style:none;margin:0 0 22px;padding:0;display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line)}
+.price-limits li,.price-tariffs li{flex:1 1 130px;background:var(--white);padding:14px 16px;display:flex;flex-direction:column;gap:3px}
+.price-limits b{font:600 24px var(--serif)}
+.price-limits span,.price-tariffs span{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+/* Цена крупнее лимита: это то, ради чего блок и открывают. */
+.price-tariffs strong{font:600 30px var(--serif);letter-spacing:-.02em}
+.price-note{font-size:13px;color:var(--muted)}
+.price-note a{text-decoration:underline;text-underline-offset:3px}
+.price-note a:hover{color:var(--coral-text)}
