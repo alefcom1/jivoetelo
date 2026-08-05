@@ -124,12 +124,28 @@ export function HeroAdaptive() {
   </Frame>;
 }
 
+/** Три одинаковые тарелки, под каждой — своя лента чисел разной длины. */
+export function HeroMismatch() {
+  const plates = [190, 400, 610];
+  const bars = [130, 210, 165];
+  return <Frame>
+    {plates.map((cx, i) => <g key={cx}>
+      <circle cx={cx} cy={165} r={62} fill={PALETTE.white} stroke={PALETTE.ink} strokeWidth="4" />
+      <circle cx={cx} cy={165} r={40} fill="none" stroke={PALETTE.line} strokeWidth="3" />
+      <rect x={cx - bars[i] / 2} y={278} width={bars[i]} height="22" rx="11"
+        fill={i === 1 ? PALETTE.coral : PALETTE.lime} stroke={PALETTE.ink} strokeWidth="3" />
+    </g>)}
+    <path d="M190 227 V 278 M400 227 V 278 M610 227 V 278" stroke={PALETTE.line} strokeWidth="3" strokeDasharray="2 10" />
+  </Frame>;
+}
+
 export const HEROES: Record<string, () => React.ReactElement> = {
   "kak-ustroen-dnevnik-po-foto": HeroPhoto,
   "sravnenie-prilozhenij-dlya-podscheta-kalorij": HeroCompare,
   "dnevnik-pitaniya-v-telegram": HeroTelegram,
   "pochemu-diapazon-chestnee-tochnogo-chisla": HeroRange,
   "norma-kalorij-kotoraya-uchitsya": HeroAdaptive,
+  "pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor": HeroMismatch,
 };
 
 /**

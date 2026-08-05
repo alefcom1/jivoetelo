@@ -11,6 +11,7 @@ import Sravnenie from "../content/sravnenie-prilozhenij-dlya-podscheta-kalorij";
 import Telegram from "../content/dnevnik-pitaniya-v-telegram";
 import Diapazon from "../content/pochemu-diapazon-chestnee-tochnogo-chisla";
 import Norma from "../content/norma-kalorij-kotoraya-uchitsya";
+import RazniyeCifry from "../content/pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor";
 
 /**
  * Тексты статей — компоненты, а не markdown: им нужны скриншоты с
@@ -24,6 +25,7 @@ const CONTENT: Record<string, () => React.ReactElement> = {
   "dnevnik-pitaniya-v-telegram": Telegram,
   "pochemu-diapazon-chestnee-tochnogo-chisla": Diapazon,
   "norma-kalorij-kotoraya-uchitsya": Norma,
+  "pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor": RazniyeCifry,
 };
 
 type Params = { params: Promise<{ slug: string }> };
