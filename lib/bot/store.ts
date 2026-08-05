@@ -8,6 +8,7 @@ import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { botPreferences } from "@/db/schema";
 import { addToInbox, countInboxToday } from "../inbox.ts";
+import { rememberInvite } from "../referral-store.ts";
 import { getSpeechProvider, isSpeechEnabled } from "../speech/index.ts";
 import { savePhoto } from "../storage.ts";
 import { consumeLinkCode, findUserByTelegram } from "../telegram.ts";
@@ -55,6 +56,10 @@ export const botStore: BotStore = {
 
   async snoozeReminders(userId, until) {
     await upsertPreferences(userId, { snoozedUntil: until });
+  },
+
+  async rememberInvite(telegramUserId, code) {
+    await rememberInvite(telegramUserId, code);
   },
 };
 

@@ -116,3 +116,12 @@ export async function snoozeReminders(): Promise<{ ok: true }> {
 export async function unlinkTelegram(): Promise<{ ok: true }> {
   return handle(await fetch("/api/tg/unlink", { method: "POST", headers: initDataHeader() }));
 }
+
+/** Текст приглашения с личной ссылкой. `award` — если делятся наградой. */
+export async function fetchShareText(award?: string): Promise<{ text: string; invited: number }> {
+  return handle(await fetch("/api/tg/share", {
+    method: "POST",
+    headers: { ...initDataHeader(), "Content-Type": "application/json" },
+    body: JSON.stringify(award ? { award } : {}),
+  }));
+}

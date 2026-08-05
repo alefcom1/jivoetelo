@@ -8,6 +8,7 @@ import { FoodIcon, foodTint } from "../food-icon";
 import { IconInbox } from "./icons";
 import { ArtEmptyPlate } from "./illustrations";
 import { TgPhoto } from "./photo";
+import { AwardCard, type FreshAward } from "./award-card";
 import { StreakCard } from "./streak-card";
 import { SuggestCard } from "./suggest-card";
 import { haptic } from "./telegram";
@@ -137,6 +138,9 @@ export function TodayTab({
   onOpenMeal,
   onWeightAdded,
   hideStreak = false,
+  award = null,
+  onShareAward,
+  onInvite,
 }: {
   data: TodayResponse;
   firstName: string | null;
@@ -154,6 +158,19 @@ export function TodayTab({
    * оболочка (app/tg/page.tsx) — она одна видит оба блока сразу.
    */
   hideStreak?: boolean;
+  /**
+   * Награда, взятая сегодня. Занимает место карточки серии — это тот же
+   * персонаж и то же место на экране, только повод другой.
+   */
+  award?: FreshAward | null;
+  onShareAward?: () => void;
+  /**
+   * Позвать друга. Строка стоит внизу экрана, под записями, а не наверху:
+   * верх — это кольцо и числа дня, и кнопка «расскажите о нас» там читается
+   * как просьба рекламировать вместо того, ради чего человек открыл экран.
+   * Внизу же он оказывается, когда с днём уже закончил.
+   */
+  onInvite?: () => void;
 }) {
   const { totals, targets, showCalories } = data;
   const kcalMid = targets?.kcalTarget ?? null;
@@ -170,7 +187,9 @@ export function TodayTab({
         приложение, и повод должен быть виден до того, как человек начнёт
         разбираться в цифрах дня. Ниже кольца его увидели бы только те, кто и
         так дошёл до конца экрана. */}
-    {!hideStreak && <StreakCard streak={data.streak} />}
+    {award
+      ? <AwardCard award={award} onShare={onShareAward ?? (() => {})} />
+      : !hideStreak && <StreakCard streak={data.streak} />}
 
     {/* Калории и макросы — крупно и сразу, без раскрытия (раздел «Три отличия
         от макета» спецификации Mini App v2, пункт 1). */}
@@ -248,6 +267,15 @@ export function TodayTab({
     <SuggestCard showCalories={showCalories} />
 
     <WeightTrend weight={data.weight} onAdded={onWeightAdded} />
+
+    {/* Позвать друга — здесь, в самом низу, и одной строкой.
+        Наверху, рядом с кольцом, эта кнопка соревновалась бы с тем, ради чего
+        человек открыл экран, и читалась бы как просьба. Внизу он оказывается,
+        когда с днём уже закончил, — и тогда это предложение, а не помеха. */}
+    {onInvite && <button className="tg-invite-row" onClick={onInvite}>
+      <span>Позвать друга</span>
+      <em>Дневник, где еду можно просто сфотографировать →</em>
+    </button>}
 
     {/* Дисклеймер и документы должны быть доступны и внутри Telegram, а не
         только на сайте: для части людей Mini App — единственный вход. */}

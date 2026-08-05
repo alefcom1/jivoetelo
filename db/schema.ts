@@ -73,6 +73,55 @@ export const users = pgTable("users", {
    * когда он сделал действие сам, не увидев её.
    */
   firstRunHints: jsonb("first_run_hints").notNull().default([]).$type<string[]>(),
+  /**
+   * Код приглашения — хвост ссылки t.me/<бот>?start=ref_<код>.
+   *
+   * Пусто до первого нажатия «Позвать друга»: заводить код всем заранее нечего,
+   * а миграция по живой таблице тем более. Уникален среди существующих —
+   * частичный индекс в drizzle/0023.
+   */
+  referralCode: text("referral_code"),
+  /**
+   * Кто пригласил. Ссылка на человека, а не копия кода: код можно перевыпустить,
+   * а факт «пришёл от него» — нет.
+   */
+  invitedBy: integer("invited_by"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Взятые награды (lib/awards.ts). Строка на награду, не удаляется никогда:
+ * награда, которую можно потерять, наказывает за болезнь и отпуск.
+ */
+export const userAwards = pgTable(
+  "user_awards",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    awardKey: text("award_key").notNull(),
+    earnedOn: date("earned_on").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // «Сегодня» открыто в вебе и в Mini App разом, и оба экрана считают взятое
+  // при загрузке: без уникальности награда задвоится.
+  (table) => [uniqueIndex("user_awards_user_key").on(table.userId, table.awardKey)],
+);
+
+/**
+ * Приглашение, пришедшее раньше аккаунта.
+ *
+ * По ссылке человек попадает в чат с ботом, а запись в users заводится позже —
+ * при регистрации в Mini App. Между этими двумя событиями приглашение негде
+ * держать: users ещё нет, а initData о ссылке в чат уже не знает. Ключ —
+ * telegram_user_id, единственное, что известно по обе стороны разрыва.
+ */
+export const pendingInvites = pgTable("pending_invites", {
+  telegramUserId: text("telegram_user_id").primaryKey(),
+  inviterId: integer("inviter_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

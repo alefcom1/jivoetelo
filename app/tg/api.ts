@@ -30,6 +30,8 @@ export type TgMeal = {
 export type TgWeightPoint = { onDate: string; weightKg: number; trendKg: number };
 export type TgWeight = { entries: TgWeightPoint[]; weeklyChangeKg: number | null };
 
+import type { FreshAward } from "./award-card";
+
 export type TodayResponse = {
   showCalories: boolean;
   /** Упрощённый режим учёта: тарелка вместо чисел (lib/simple-log.ts). */
@@ -53,6 +55,11 @@ export type TodayResponse = {
    * которую подписывают, а не двумя наборами слов в разных местах.
    */
   streak: StreakResult;
+  /**
+   * Награда, взятая только что, или null — обычный и самый частый исход.
+   * Считается сервером при обычной загрузке экрана (lib/awards.ts).
+   */
+  freshAward: FreshAward | null;
   /** Состояние первых шагов — из чего собирается подсказка (lib/first-run.ts). */
   firstRun: {
     seen: string[];

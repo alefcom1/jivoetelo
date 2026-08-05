@@ -1125,3 +1125,98 @@
 @media (prefers-reduced-motion: reduce) {
   .tg-first, .tg-first-mascot { animation: none; }
 }
+
+/* ===== Награды и «поделиться» =====
+
+   Карточка награды стоит на месте карточки серии, поэтому и выглядит как она:
+   енот слева, текст справа. Отличие одно — лаймовая заливка: это событие, а
+   не ежедневная строка, и один раз в жизни оно вправе занять цвет. */
+.tg-award {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin: 0 0 12px;
+  background: var(--brand-lime);
+  border-radius: var(--radius);
+  animation: tg-say-in 320ms ease-out both;
+}
+.tg-award-mascot {
+  display: block;
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  animation: tg-mascot-in 320ms ease-out both, tg-mascot-breathe 4s ease-in-out 320ms infinite;
+}
+.tg-award-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* Тон текста задан явно, а не наследуется: заливка лаймовая в обеих темах, и
+   светлый текст тёмной темы на ней не читается. */
+.tg-award-body b { font-size: 15px; color: #1d2410; }
+.tg-award-body p { margin: 0; font-size: 13px; line-height: 1.45; color: #3c4626; }
+.tg-award-share {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #5a3a1e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-award, .tg-award-mascot { animation: none; }
+}
+
+/* Список наград в «Профиле». Дата справа мелко: она нужна, чтобы вспомнить
+   когда, но не должна соревноваться с названием. */
+.tg-awards { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.tg-awards li {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--tg-hint) 14%, transparent);
+}
+.tg-awards li:first-child { border-top: 0; padding-top: 0; }
+.tg-awards b { font-size: 14px; }
+.tg-awards p { margin: 2px 0 0; font-size: 13px; line-height: 1.45; color: var(--tg-hint); }
+.tg-awards time { margin-left: auto; flex: none; font-size: 12px; color: var(--tg-hint); white-space: nowrap; }
+
+/* «Позвать друга» внизу «Сегодня». Строкой, а не кнопкой: это предложение,
+   а не действие дня, и по весу оно должно уступать всему выше. */
+.tg-invite-row {
+  display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+  width: 100%; min-height: 44px; padding: 12px 14px; margin: 4px 0 0;
+  border: 1px solid color-mix(in srgb, var(--tg-hint) 24%, transparent);
+  border-radius: var(--radius); background: transparent; text-align: left;
+}
+.tg-invite-row span { font-size: 14px; font-weight: 600; color: var(--tg-text); }
+.tg-invite-row em { font-style: normal; font-size: 12px; line-height: 1.4; color: var(--tg-hint); }
+
+/* Лист «поделиться». Снизу, а не по центру: на телефоне низ экрана — это то,
+   до чего дотягивается палец, и модальные листы там ждут по привычке. */
+.tg-share-backdrop {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0, 0, 0, 0.42);
+  animation: tg-say-in 200ms ease-out both;
+}
+.tg-share {
+  width: 100%; max-width: 520px;
+  display: flex; flex-direction: column; gap: 12px; align-items: stretch;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  background: var(--tg-bg);
+  border-radius: 20px 20px 0 0;
+}
+.tg-share h2 { margin: 0; font: 500 22px var(--brand-serif); letter-spacing: -0.02em; }
+/* Текст показывается до отправки: его отправляют друзьям от своего имени, и
+   человек вправе прочитать, что именно уйдёт. */
+.tg-share-preview {
+  margin: 0; padding: 12px 14px;
+  background: var(--tg-surface); border-radius: 14px;
+  font-size: 13px; line-height: 1.5; white-space: pre-line; word-break: break-word;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-share-backdrop { animation: none; }
+}

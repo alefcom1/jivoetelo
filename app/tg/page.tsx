@@ -8,6 +8,7 @@ import { shouldRefresh } from "@/lib/refresh";
 import { ApiError, fetchToday, markHints, type InboxItemDto, type TodayResponse } from "./api";
 import { CameraTab } from "./camera-tab";
 import { FirstRunHint } from "./first-run-hint";
+import { ShareSheet } from "./share-sheet";
 import { DiaryTab } from "./diary-tab";
 import { IconAdd, IconInbox, IconPlan, IconProfile, IconToday } from "./icons";
 import { InboxTab } from "./inbox-tab";
@@ -84,6 +85,11 @@ export default function MiniApp() {
     try { return localStorage.getItem("jt-diary-opened") === "1"; } catch { return false; }
   });
   const [dismissed, setDismissed] = useState<string[]>([]);
+  /**
+   * Лист «поделиться». `null` — закрыт; строка — ключ награды, которой
+   * делятся; пустая строка — приглашение без повода.
+   */
+  const [sharing, setSharing] = useState<string | null>(null);
   /**
    * Как выйти из черновика разбора. Живёт здесь, а не в «Камере», хотя
    * состояние черновика там: нативной кнопкой «назад» должен владеть кто-то
@@ -187,7 +193,13 @@ export default function MiniApp() {
    * серии уступает: подсказка говорит про сейчас, серия — про вообще.
    */
   const milestoneToday = today ? !!mascotSpeech(today.streak).milestone : false;
-  const shownHint = milestoneToday ? null : hint;
+  /**
+   * Карточка награды старше и вехи, и подсказки: рубеж берётся один раз в
+   * жизни, а подсказка вернётся при следующей загрузке. Всё вместе — три
+   * сообщения от одного персонажа подряд, чего мы не делаем нигде.
+   */
+  const freshAward = today?.freshAward ?? null;
+  const shownHint = freshAward || milestoneToday ? null : hint;
 
   useEffect(() => {
     if (!today) return;
@@ -405,6 +417,9 @@ export default function MiniApp() {
               data={today}
               firstName={firstName}
               hideStreak={!!shownHint}
+              award={freshAward}
+              onShareAward={() => { haptic("tap"); if (freshAward) setSharing(freshAward.key); }}
+              onInvite={() => { haptic("tap"); setSharing(""); }}
               onOpenCamera={() => openCamera("today")}
               onOpenInbox={() => { haptic("tap"); setInboxOpen(true); }}
               onOpenMeal={(id) => { haptic("tap"); setTodayMealId(id); }}
@@ -426,7 +441,7 @@ export default function MiniApp() {
               onDraft={handleDraft}
             />}
             {tab === "plan" && <PlanTab showCalories={today.showCalories} />}
-            {tab === "profile" && <ProfileTab />}
+            {tab === "profile" && <ProfileTab onInvite={() => { haptic("tap"); setSharing(""); }} />}
           </>}
     </div>
 
@@ -445,5 +460,10 @@ export default function MiniApp() {
         </button>;
       })}
     </nav>
+
+    {/* Лист «поделиться» — последним в дереве и поверх всего: он перекрывает
+        и нижнюю панель, иначе из него можно было бы уйти на другую вкладку,
+        не закрыв. */}
+    {sharing !== null && <ShareSheet awardKey={sharing || undefined} onClose={() => setSharing(null)} />}
   </div>;
 }

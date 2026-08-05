@@ -5,6 +5,7 @@
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { profiles, users, weightEntries } from "@/db/schema";
+import { listAwards, type EarnedAward } from "./awards-store.ts";
 import { getBotPreferences } from "./bot/store.ts";
 import { computePace, PACE_OPTIONS, type PaceKey, type PaceResult } from "./pace.ts";
 import { DEFAULT_DIGEST_HOUR } from "./reminders.ts";
@@ -35,6 +36,14 @@ export type ProfileData = {
    */
   paceResult: PaceResult | null;
   reminders: { remindersEnabled: boolean; digestHour: number; snoozedUntil: string | null };
+  /**
+   * Взятые награды (lib/awards.ts) — список, куда можно вернуться.
+   *
+   * Карточка награды на «Сегодня» показывается один раз в день взятия, и
+   * этого достаточно как события, но не как памяти: вопрос «а что у меня
+   * есть» возникает не в тот день, а через месяц.
+   */
+  awards: EarnedAward[];
 };
 
 export function isPaceKey(value: string | null | undefined): value is PaceKey {
@@ -54,6 +63,7 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
       .limit(10),
     getBotPreferences(userId),
   ]);
+  const awards = await listAwards(userId);
 
   const user = userRows[0];
   const profile = profileRows[0];
@@ -106,5 +116,6 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
       digestHour: preferences?.digestHour ?? DEFAULT_DIGEST_HOUR,
       snoozedUntil: preferences?.snoozedUntil ? preferences.snoozedUntil.toISOString() : null,
     },
+    awards,
   };
 }

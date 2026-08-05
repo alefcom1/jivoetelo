@@ -132,6 +132,40 @@ function GoalsSection({ profile, onSaved }: { profile: ProfileResponse; onSaved:
   </section>;
 }
 
+/**
+ * Награды — список, куда можно вернуться.
+ *
+ * Карточка на «Сегодня» показывается один раз в день взятия: как событие
+ * этого достаточно, как памяти — нет. Вопрос «а что у меня есть» возникает не
+ * в тот день, а через месяц.
+ *
+ * Ни полоски «до следующей осталось», ни серых силуэтов невзятого. И то, и
+ * другое превращает наблюдение за собой в задание с оценкой — ровно то, от
+ * чего сервис отстроен (lib/first-run.ts, раздел «Чего здесь нет»).
+ */
+function AwardsSection({ profile, onInvite }: { profile: ProfileResponse; onInvite?: () => void }) {
+  const { awards } = profile;
+  return <section className="tg-section">
+    <h2>Награды</h2>
+    <div className="tg-card">
+      {awards.length === 0
+        ? <p className="tg-hint">Пока пусто. Первая появится на третий день с записями — и покажет, что открылось.</p>
+        : <ul className="tg-awards">
+            {awards.map((award) => <li key={award.key}>
+              <div>
+                <b>{award.title}</b>
+                <p>{award.note}</p>
+              </div>
+              <time dateTime={award.earnedOn}>
+                {new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(new Date(`${award.earnedOn}T12:00:00Z`))}
+              </time>
+            </li>)}
+          </ul>}
+      {onInvite && <button className="tg-link-button" onClick={onInvite}>Позвать друга</button>}
+    </div>
+  </section>;
+}
+
 function MeasurementsSection({ profile, onSaved }: { profile: ProfileResponse; onSaved: () => void }) {
   const [weight, setWeight] = useState("");
   const [busy, setBusy] = useState(false);
@@ -326,7 +360,7 @@ function RemindersSection({ profile, onSaved }: { profile: ProfileResponse; onSa
  * «выход» обнуляет саму привязку аккаунта. Оболочке (app/tg/page.tsx) после
  * этого нужно показать экран привязки заново, например `setStatus("needs_link")`.
  */
-export function ProfileTab({ onUnlinked }: { onUnlinked?: () => void }) {
+export function ProfileTab({ onUnlinked, onInvite }: { onUnlinked?: () => void; onInvite?: () => void }) {
   const [data, setData] = useState<ProfileResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [unlinking, setUnlinking] = useState(false);
@@ -405,6 +439,8 @@ export function ProfileTab({ onUnlinked }: { onUnlinked?: () => void }) {
       <p className="tg-hint">Все объяснения на одной странице: запись еды, кольцо, дневник, вес, неделя.</p>
       <a className="tg-link" href="/app/pomosch" target="_blank" rel="noreferrer">Как всё устроено →</a>
     </section>
+
+    <AwardsSection profile={data} onInvite={onInvite} />
 
     <GoalsSection profile={data} onSaved={load} />
     <MeasurementsSection profile={data} onSaved={load} />

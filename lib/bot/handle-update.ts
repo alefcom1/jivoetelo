@@ -13,6 +13,7 @@ import { localMoment } from "../dates.ts";
 import { snoozeUntil } from "../reminders.ts";
 import { foodCategory } from "../food-category.ts";
 import { isStartPayload } from "../bot-public.ts";
+import { referralFromStart } from "../referral.ts";
 import { MAX_AUDIO_BYTES, MAX_DURATION_SEC } from "../speech/limits.ts";
 import { SPEECH_ERRORS, SpeechError, type SpeechInput, type TranscriptResult } from "../speech/types.ts";
 import { inboxButton, openAppButton, planButton, type BotLinks } from "./links.ts";
@@ -105,6 +106,14 @@ export type BotStore = {
     takenTime: string;
   }): Promise<void>;
   setRemindersEnabled(userId: number, enabled: boolean): Promise<void>;
+  /**
+   * Запомнить приглашение до регистрации.
+   *
+   * Необязательный: сценарии бота проверяются на поддельном хранилище, и
+   * требовать этот метод от каждой заглушки в тестах значило бы, что
+   * приглашения ломают проверки, к которым отношения не имеют.
+   */
+  rememberInvite?(telegramUserId: string, code: string): Promise<void>;
   snoozeReminders(userId: number, until: Date): Promise<void>;
 };
 
@@ -265,8 +274,24 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
 
   // /start может прийти с кодом привязки в диплинке: /start A1B2C3D4.
   if (text === "/start" || text.startsWith("/start ")) {
-    const payload = text.slice("/start".length).trim().toUpperCase();
+    const raw = text.slice("/start".length).trim();
+    const payload = raw.toUpperCase();
     if (LINK_CODE_RE.test(payload)) return await tryLink(payload, tgId, chatId, deps);
+
+    /**
+     * Приглашение по ссылке друга. Разбираем из исходной строки, а не из
+     * приведённой к верхнему регистру: код приглашения строчный, и `payload`
+     * его уже испортил — верхний регистр нужен только кодам привязки.
+     *
+     * Запоминаем, а не привязываем: аккаунта у человека ещё нет, он появится
+     * при регистрации в Mini App (lib/referral-store.ts).
+     */
+    const invite = referralFromStart(raw);
+    if (invite && deps.store.rememberInvite) {
+      // Ошибка здесь не должна мешать поздороваться: приглашение — приятная
+      // мелочь, а приветствие — то, ради чего человек нажал кнопку.
+      await deps.store.rememberInvite(tgId, invite).catch(() => {});
+    }
 
     const linked = await deps.store.findUserByTelegram(tgId);
     // Метка из ссылки на сайте: человек пришёл с экрана результата расчёта
