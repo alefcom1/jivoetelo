@@ -31,7 +31,9 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
 
   const mode = String(formData.get("mode") ?? "text");
 
-  // Все функции бесплатны; лимит защищает от неумеренного расхода токенов.
+  // Лимит зависит от тарифа (PLAN_LIMITS): на бесплатном он проходит по
+  // обычному дню, на платном — заметно выше. Отказ не закрывает запись еды:
+  // ручной ввод ниже по этому же файлу квоту не спрашивает вовсе.
   const operation = mode === "text" ? "analyze_text" : "analyze_photo";
   const decision = await checkQuota(user.id, user.plan, operation);
   if (!decision.allowed) return { ok: false, error: quotaMessage(decision) };
