@@ -51,9 +51,28 @@ export type ProductMeta = {
   drivers: string[];
   /** Блюда, где продукт заметен, — перелинковка с `/skolko-kalorij`. */
   dishSlugs: string[];
+  /**
+   * Дата последней содержательной правки страницы, `ГГГГ-ММ-ДД`. Не задана у
+   * большинства — тогда берётся общая дата каталога (`PRODUCTS_UPDATED_AT`).
+   */
+  updatedAt?: string;
 };
 
 export type Product = ReferenceFood & ProductMeta;
+
+/**
+ * Общая дата каталога продуктов — для карточек без собственной.
+ *
+ * Та же история, что у блюд: карта сайта подставляла сюда `LEGAL_UPDATED_AT`,
+ * дату правки оферты. Юридический документ к составу гречки отношения не
+ * имеет, а поисковик, которому раз за разом показывают несуществующие
+ * изменения, перестаёт верить полю `lastmod`.
+ */
+export const PRODUCTS_UPDATED_AT = "2026-08-05";
+
+export function productUpdatedAt(product: { updatedAt?: string }): Date {
+  return new Date(product.updatedAt ?? PRODUCTS_UPDATED_AT);
+}
 
 /**
  * Ключ — точное название из `FOOD_REFERENCE`. Опечатка в ключе не создаст

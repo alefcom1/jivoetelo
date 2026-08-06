@@ -33,7 +33,25 @@ export type GlossaryTerm = {
   sections: Array<{ heading: string; paragraphs: string[] }>;
   /** Куда пойти дальше — внутренняя перелинковка кластера. */
   related: Array<{ href: string; label: string }>;
+  /**
+   * Дата последней содержательной правки, `ГГГГ-ММ-ДД`. Не задана у
+   * большинства — тогда берётся общая дата словаря.
+   */
+  updatedAt?: string;
 };
+
+/**
+ * Общая дата словаря — для терминов без собственной.
+ *
+ * Своя, а не `LEGAL_UPDATED_AT`: правка оферты не меняет объяснение того, что
+ * такое диапазон КБЖУ, и показывать её поисковику как изменение содержимого
+ * значит обесценивать поле `lastmod` на всех остальных страницах тоже.
+ */
+export const GLOSSARY_UPDATED_AT = "2026-08-03";
+
+export function glossaryUpdatedAt(term: { updatedAt?: string }): Date {
+  return new Date(term.updatedAt ?? GLOSSARY_UPDATED_AT);
+}
 
 export const GLOSSARY: GlossaryTerm[] = [
   {
