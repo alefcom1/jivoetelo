@@ -118,6 +118,56 @@ export function computeTargets(input: TargetInput, currentYear = new Date().getF
 }
 
 /**
+ * Поля строки `profiles`, из которых складывается расчёт.
+ *
+ * Тип структурный, а не импорт строки таблицы: модуль обязан оставаться
+ * чистым — его зовут и клиентские калькуляторы, которым базы не положено.
+ */
+export type ProfileTargetFields = {
+  goal: string;
+  sexForFormula: string;
+  birthYear: number;
+  heightCm: number;
+  activity: string;
+  pace?: string | null;
+  kcalAdjustment?: number | null;
+  kcalOverride?: number | null;
+};
+
+/**
+ * Собирает вход расчёта из профиля и веса.
+ *
+ * Появилось по факту. Восемь мест читали профиль и перечисляли поля руками,
+ * и три из них разошлись: «План» в Mini App терял и темп, и свою норму,
+ * отчёты и недельный обзор — свою норму. Со стороны это выглядело так, что
+ * человек задал норму в настройках, увидел её там же — и нигде больше.
+ * Найти такое чтением невозможно: каждый вызов по отдельности выглядит
+ * полным.
+ *
+ * Поэтому список полей теперь ровно один. Новое поле, добавленное в
+ * TargetInput, попадает во все экраны разом или не попадает никуда — но не в
+ * половину.
+ */
+export function targetInputFromProfile(profile: ProfileTargetFields, weightKg: number): TargetInput {
+  return {
+    goal: profile.goal as Goal,
+    sexForFormula: profile.sexForFormula as SexForFormula,
+    birthYear: profile.birthYear,
+    heightCm: profile.heightCm,
+    weightKg,
+    activity: profile.activity as Activity,
+    adjustmentKcal: profile.kcalAdjustment ?? 0,
+    pace: isPaceKey(profile.pace) ? profile.pace : null,
+    kcalOverride: profile.kcalOverride ?? null,
+  };
+}
+
+/** Темп из базы — недоверенная строка: профили заводились и до появления темпов. */
+function isPaceKey(value: string | null | undefined): value is PaceKey {
+  return value === "very_gentle" || value === "gentle" || value === "moderate" || value === "brisk";
+}
+
+/**
  * То же, что computeTargets, но с разбором по шагам: что из чего получилось.
  *
  * Отдельной функцией, а не полем в Targets: разбор нужен одному экрану

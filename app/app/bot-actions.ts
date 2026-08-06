@@ -18,6 +18,7 @@ export async function saveBotPreferences(formData: FormData): Promise<void> {
   await upsertPreferences(user.id, {
     remindersEnabled: formData.get("remindersEnabled") === "on",
     digestHour: normalizeDigestHour(formData.get("digestHour")),
+    weighRemindersEnabled: formData.get("weighRemindersEnabled") === "on",
     // Явная настройка отменяет паузу: человек только что сказал, чего хочет.
     snoozedUntil: null,
   });

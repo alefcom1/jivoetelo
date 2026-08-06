@@ -24,6 +24,11 @@ function makeDeps(overrides = {}) {
   const prefs = [];
   const downloads = [];
   const transcribed = [];
+  const weights = [];
+  const daySummaries = [];
+  const referrals = [];
+  const referralVisits = [];
+  const inlineAnswers = [];
 
   // Кэш file_id и счётчик отказов в lib/bot/media.ts живут в модуле, а не в
   // клиенте: без сброса тесты начинали бы зависеть от порядка запуска.
@@ -55,6 +60,34 @@ function makeDeps(overrides = {}) {
     async snoozeReminders(userId, until) {
       prefs.push({ userId, until });
     },
+    async setWeighRemindersEnabled(userId, enabled) {
+      prefs.push({ userId, weighEnabled: enabled });
+    },
+    async saveWeight(userId, day, weightKg) {
+      if (overrides.weightFails) throw new Error("база лежит");
+      weights.push({ userId, day, weightKg });
+      return overrides.trendLine ?? null;
+    },
+    async daySummary(userId, day) {
+      daySummaries.push({ userId, day });
+      return overrides.daySummary ?? {
+        totals: { kcal: 1420, protein: 78, fat: 55, carbs: 140, fiber: 18 },
+        targets: null,
+        mealsCount: 3,
+        pendingPhotos: 0,
+        showCalories: true,
+      };
+    },
+    async referral(userId) {
+      referrals.push({ userId });
+      return { link: "https://t.me/jivelo_bot?start=ref_K7M2QX", joined: overrides.joined ?? 0 };
+    },
+    async rememberReferral(telegramUserId, code) {
+      referralVisits.push({ telegramUserId, code });
+    },
+    async plan() {
+      return overrides.plan ?? "free";
+    },
   };
 
   const client = {
@@ -76,6 +109,9 @@ function makeDeps(overrides = {}) {
     async answerCallbackQuery(id, text) {
       answered.push({ id, text });
     },
+    async answerInlineQuery(id, results, options) {
+      inlineAnswers.push({ id, results, options });
+    },
     async downloadFile(fileId, maxBytes) {
       downloads.push({ fileId, maxBytes });
       if (overrides.downloadFails) throw new Error("network down");
@@ -93,7 +129,10 @@ function makeDeps(overrides = {}) {
         inboxUrl: "https://jivoetelo.ru/app/inbox",
         miniAppUrl: overrides.miniAppUrl ?? null,
         planUrl: "https://jivoetelo.ru/raschet/plan",
+        premiumUrl: "https://jivoetelo.ru/app/settings",
+        dishUrl: (slug) => `https://jivoetelo.ru/skolko-kalorij/${slug}`,
       },
+      paymentsEnabled: overrides.paymentsEnabled ?? false,
       // undefined — расшифровка выключена: ровно то состояние, в котором бот
       // работает до появления SPEECH_URL, и остальные проверки исходят из него.
       transcribe: overrides.transcribe
@@ -108,6 +147,11 @@ function makeDeps(overrides = {}) {
     prefs,
     downloads,
     transcribed,
+    weights,
+    daySummaries,
+    referrals,
+    referralVisits,
+    inlineAnswers,
   };
 }
 
@@ -628,4 +672,107 @@ test("посторонняя метка не считается своей", () 
     await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text } }, deps);
     assert.equal(sent[0].text, TEXTS.greetingUnlinked, text);
   }));
+});
+
+// ===== Сценарии новых команд =====
+
+/** Сообщение от привязанного пользователя (id 100 заведён в makeDeps). */
+function linkedText(text) {
+  return { message: { from: { id: 100 }, chat: { id: 100 }, text } };
+}
+
+test("вес одним сообщением записывается и подтверждается числом", async () => {
+  const { deps, sent, weights } = makeDeps({ trendLine: "Тренд за неделю: −0,3 кг." });
+  await handleUpdate(linkedText("72,4"), deps);
+
+  assert.deepEqual(weights, [{ userId: 7, day: "2026-07-28", weightKg: 72.4 }]);
+  // Подтверждение обязано называть записанное число: «72,4» без ответа — это
+  // запись вслепую, а увидев его, человек поправит промах клавиатурой сразу.
+  assert.match(sent[0].text, /72,4 кг/);
+  assert.match(sent[0].text, /Тренд за неделю/);
+});
+
+test("код привязки не путается с весом", async () => {
+  // Коды у нас восьмизначные шестнадцатеричные, то есть «12345678» — законный
+  // код. Приняв его за вес, бот потерял бы привязку аккаунта.
+  const { deps, weights } = makeDeps();
+  await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text: "A1B2C3D4" } }, deps);
+  assert.equal(weights.length, 0);
+});
+
+test("вес без аккаунта не теряется молча", async () => {
+  const { deps, sent, weights } = makeDeps();
+  await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text: "72,4" } }, deps);
+  assert.equal(weights.length, 0);
+  assert.match(sent[0].text, /аккаунт не привязан/i);
+});
+
+test("сбой записи веса виден человеку, а не только в логе", async () => {
+  const { deps, sent } = makeDeps({ weightFails: true });
+  await handleUpdate(linkedText("72,4"), deps);
+  assert.match(sent[0].text, /Не получилось записать вес/);
+});
+
+test("/day отвечает числами за сегодняшний день", async () => {
+  const { deps, sent, daySummaries } = makeDeps();
+  await handleUpdate(linkedText("/day"), deps);
+
+  assert.deepEqual(daySummaries, [{ userId: 7, day: "2026-07-28" }]);
+  assert.match(sent[0].text, /1420/);
+});
+
+test("/day без аккаунта ведёт в расчёт, а не в отказ", async () => {
+  const { deps, sent } = makeDeps();
+  await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text: "/day" } }, deps);
+  assert.match(sent[0].text, /аккаунт к боту не привязан/);
+  assert.equal(sent[0].options.replyMarkup.inline_keyboard[0][0].url, "https://jivoetelo.ru/raschet/plan");
+});
+
+test("/invite отдаёт личную ссылку и счётчик", async () => {
+  const { deps, sent, referrals } = makeDeps({ joined: 3 });
+  await handleUpdate(linkedText("/invite"), deps);
+  assert.deepEqual(referrals, [{ userId: 7 }]);
+  assert.match(sent[0].text, /ref_K7M2QX/);
+  assert.match(sent[0].text, /<b>3<\/b>/);
+});
+
+test("переход по чужой ссылке запоминается, но приветствие не меняется", async () => {
+  // «Вас пригласил такой-то» в первом же сообщении звучит как слежка: человек
+  // пришёл смотреть сервис, а не читать про себя.
+  const { deps, sent, referralVisits } = makeDeps();
+  await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text: "/start ref_K7M2QX" } }, deps);
+
+  assert.deepEqual(referralVisits, [{ telegramUserId: "999", code: "K7M2QX" }]);
+  assert.equal(sent[0].text, TEXTS.greetingUnlinked);
+});
+
+test("/premium при выключенном приёме оплаты не показывает кнопку", async () => {
+  const { deps, sent } = makeDeps();
+  await handleUpdate(linkedText("/premium"), deps);
+  assert.match(sent[0].text, /Платного тарифа сейчас нет/);
+  assert.equal(sent[0].options?.replyMarkup, undefined);
+});
+
+test("/premium при включённом приёме оплаты ведёт на оплату", async () => {
+  const { deps, sent } = makeDeps({ paymentsEnabled: true });
+  await handleUpdate(linkedText("/premium"), deps);
+  assert.equal(sent[0].options.replyMarkup.inline_keyboard[0][0].url, "https://jivoetelo.ru/app/settings");
+});
+
+test("/premium уже подключившему не предлагает купить снова", async () => {
+  const { deps, sent } = makeDeps({ paymentsEnabled: true, plan: "premium" });
+  await handleUpdate(linkedText("/premium"), deps);
+  assert.match(sent[0].text, /уже Про/);
+});
+
+test("инлайн-запрос отвечает без аккаунта и без обращения в базу", async () => {
+  // Аккаунт здесь не спрашивается намеренно: запрос приходит от кого угодно,
+  // включая людей, которые бота не открывали, и это единственный канал,
+  // который приводит новых людей сам.
+  const { deps, inlineAnswers, sent } = makeDeps();
+  await handleUpdate({ inline_query: { id: "q1", from: { id: 555 }, query: "борщ" } }, deps);
+
+  assert.equal(inlineAnswers.length, 1);
+  assert.ok(inlineAnswers[0].results.length > 0);
+  assert.equal(sent.length, 0);
 });

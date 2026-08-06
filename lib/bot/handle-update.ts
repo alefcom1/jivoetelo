@@ -13,17 +13,23 @@ import { localMoment } from "../dates.ts";
 import { snoozeUntil } from "../reminders.ts";
 import { foodCategory } from "../food-category.ts";
 import { isStartPayload } from "../bot-public.ts";
+import { parseReferralPayload } from "../referral.ts";
 import { MAX_AUDIO_BYTES, MAX_DURATION_SEC } from "../speech/limits.ts";
 import { SPEECH_ERRORS, SpeechError, type SpeechInput, type TranscriptResult } from "../speech/types.ts";
-import { inboxButton, openAppButton, planButton, type BotLinks } from "./links.ts";
+import { daySummaryText, weightSavedText, type DaySummaryInput } from "./day-summary.ts";
+import { inlineResults } from "./inline.ts";
+import { inboxButton, openAppButton, planButton, premiumButton, type BotLinks } from "./links.ts";
 import { sendWelcome } from "./media.ts";
+import { parseWeightMessage, MAX_WEIGHT_KG, MIN_WEIGHT_KG } from "./weight-message.ts";
 import {
   ANSWERS,
   answerForQuestion,
   GREETING,
+  inviteText,
   looksLikeFood,
   photoSavedText,
   PHOTO,
+  PREMIUM,
   TEXT_LOOKS_LIKE_FOOD,
   UNSUPPORTED,
   VOICE,
@@ -106,6 +112,22 @@ export type BotStore = {
   }): Promise<void>;
   setRemindersEnabled(userId: number, enabled: boolean): Promise<void>;
   snoozeReminders(userId: number, until: Date): Promise<void>;
+  /**
+   * Замер веса за день. Возвращает строку тренда («−0,4 кг за неделю») или
+   * null, если замеров ещё мало: домысливать тренд по двум точкам нельзя, а
+   * молчать про него — можно.
+   */
+  saveWeight(userId: number, day: string, weightKg: number): Promise<string | null>;
+  /** Итог дня — уже посчитанный теми же модулями, что и в приложении. */
+  daySummary(userId: number, day: string): Promise<DaySummaryInput>;
+  /** Личная ссылка приглашения и сколько людей по ней пришло. */
+  referral(userId: number): Promise<{ link: string; joined: number }>;
+  /** Запоминает переход по чужой ссылке до регистрации. */
+  rememberReferral(telegramUserId: string, code: string): Promise<void>;
+  /** Тариф пользователя — от него зависит ответ на /premium. */
+  plan(userId: number): Promise<"free" | "premium">;
+  /** Выключить утренние напоминания о весе — отдельно от вечерних. */
+  setWeighRemindersEnabled(userId: number, enabled: boolean): Promise<void>;
 };
 
 export type BotDeps = {
@@ -114,6 +136,13 @@ export type BotDeps = {
   now: Date;
   timeZone?: string;
   links: BotLinks;
+  /**
+   * Включён ли приём оплаты (docs/payments.md). Отдельным полем, а не чтением
+   * переменной окружения по месту: разбор апдейтов обязан оставаться
+   * проверяемым, а «включено» и «выключено» — это два разных ответа на
+   * /premium, и оба нужно уметь проверить тестом.
+   */
+  paymentsEnabled?: boolean;
   /**
    * Расшифровка голосовых. Как и всё остальное в BotDeps — зависимость, а не
    * прямой вызов: сценарии бота проверяются без сети и без модели.
@@ -172,11 +201,35 @@ export function digestKeyboard(links: BotLinks): { inline_keyboard: InlineKeyboa
  */
 export async function handleUpdate(update: TelegramUpdate, deps: BotDeps): Promise<void> {
   try {
+    if (update.inline_query) return await handleInlineQuery(update, deps);
     if (update.callback_query) return await handleCallback(update, deps);
     if (update.message) return await handleMessage(update, deps);
   } catch (error) {
     console.error("bot update failed", error);
   }
+}
+
+/**
+ * `@jivelo_bot борщ` из любого чата.
+ *
+ * Аккаунт не спрашиваем и в базу не ходим вовсе: справочник статический, а
+ * запрос приходит от кого угодно, включая людей, которые бота не открывали.
+ * Требовать здесь привязки значило бы выключить единственный канал, который
+ * приводит новых людей сам.
+ */
+async function handleInlineQuery(update: TelegramUpdate, deps: BotDeps): Promise<void> {
+  const query = update.inline_query;
+  if (!query?.id) return;
+
+  const results = inlineResults(query.query ?? "", {
+    dishUrl: deps.links.dishUrl,
+    planUrl: deps.links.planUrl,
+  });
+  // Пустой ответ — законный исход: Telegram просто ничего не покажет. Ошибку
+  // отправки глотаем по той же причине, что и везде, — повтор не поможет.
+  await deps.client.answerInlineQuery(query.id, results).catch((error) => {
+    console.error("bot inline answer failed", error);
+  });
 }
 
 async function handleCallback(update: TelegramUpdate, deps: BotDeps): Promise<void> {
@@ -268,6 +321,16 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     const payload = text.slice("/start".length).trim().toUpperCase();
     if (LINK_CODE_RE.test(payload)) return await tryLink(payload, tgId, chatId, deps);
 
+    // Реферальная ссылка. Запоминаем молча и продолжаем обычным приветствием:
+    // человек пришёл смотреть сервис, а не читать, что его пригласили, — и
+    // «вас позвал такой-то» в первом же сообщении звучит как слежка.
+    const referral = parseReferralPayload(payload);
+    if (referral) {
+      await deps.store.rememberReferral(tgId, referral).catch((error) => {
+        console.error("bot referral visit failed", error);
+      });
+    }
+
     const linked = await deps.store.findUserByTelegram(tgId);
     // Метка из ссылки на сайте: человек пришёл с экрана результата расчёта
     // или из пустого дневника. Предлагать ему посчитать норму заново — значит
@@ -288,6 +351,10 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     return;
   }
 
+  if (text === "/day") return await sendDaySummary(tgId, chatId, deps);
+  if (text === "/invite") return await sendInvite(tgId, chatId, deps);
+  if (text === "/premium") return await sendPremium(tgId, chatId, deps);
+
   if (text === "/stop") {
     const user = await deps.store.findUserByTelegram(tgId);
     // Без аккаунта выключать нечего — и говорить «выключено» было бы неправдой.
@@ -300,9 +367,28 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     return;
   }
 
-  // Код привязки, присланный отдельным сообщением.
+  // Отдельная команда, потому что переключатель отдельный: /stop выключает
+  // разговор про еду и утренних весов не касается.
+  if (text === "/stopweight") {
+    const user = await deps.store.findUserByTelegram(tgId);
+    if (!user) {
+      await say(deps.client, chatId, ANSWERS.remindersOffNoAccount);
+      return;
+    }
+    await deps.store.setWeighRemindersEnabled(user.id, false);
+    await say(deps.client, chatId, ANSWERS.weighRemindersOff);
+    return;
+  }
+
+  // Код привязки, присланный отдельным сообщением. Стоит выше веса: коды у
+  // нас восьмизначные и шестнадцатеричные, то есть «12345678» — законный код,
+  // и трактовать его как вес было бы потерей привязки.
   const candidate = text.toUpperCase();
   if (LINK_CODE_RE.test(candidate)) return await tryLink(candidate, tgId, chatId, deps);
+
+  // Вес одним сообщением — самый дешёвый способ дать данные адаптивной норме.
+  const weight = parseWeightMessage(text);
+  if (weight) return await saveWeight(weight, tgId, chatId, deps);
 
   // Вопрос словами — раньше всего этого не было и любой текст получал общую
   // справку. Порядок именно такой: сначала вопрос, потом еда. «Сколько
@@ -340,6 +426,121 @@ function greet(deps: BotDeps, chatId: number, text: string, linked: boolean): Pr
   return sendWelcome(deps.client, chatId, text, {
     parseMode: "HTML",
     replyMarkup: { inline_keyboard: [[button]] },
+  });
+}
+
+/**
+ * Итог дня: сколько съедено из коридора, белок, клетчатка.
+ *
+ * Числа берутся тем же кодом, что и в приложении, — «упрощённой сводки для
+ * бота» быть не должно: две цифры за один день, разошедшиеся между ботом и
+ * Mini App, обесценивают обе.
+ */
+async function sendDaySummary(tgId: string, chatId: number, deps: BotDeps): Promise<void> {
+  const user = await deps.store.findUserByTelegram(tgId);
+  if (!user) {
+    await say(deps.client, chatId, ANSWERS.dayNoAccount, {
+      replyMarkup: { inline_keyboard: [[planButton(deps.links)]] },
+    });
+    return;
+  }
+
+  const moment = localMoment(deps.now, deps.timeZone);
+  const summary = await deps.store.daySummary(user.id, moment.day);
+  await say(deps.client, chatId, daySummaryText(summary), {
+    replyMarkup: inboxKeyboard(deps.links),
+    disablePreview: true,
+  });
+}
+
+/**
+ * Вес одним сообщением.
+ *
+ * Подтверждение обязательно называет записанное число: «72,4» без ответа —
+ * это запись вслепую, а «записал 72,4 кг» человек проверит глазом сразу и
+ * поправит следующим сообщением, если ошибся клавиатурой. Замер за день
+ * перезаписывается — как и в приложении.
+ */
+async function saveWeight(
+  weight: NonNullable<ReturnType<typeof parseWeightMessage>>,
+  tgId: string,
+  chatId: number,
+  deps: BotDeps,
+): Promise<void> {
+  if (weight.kind === "out_of_range") {
+    await say(
+      deps.client,
+      chatId,
+      `⚖️ <b>Это не похоже на вес.</b>\n\nЗаписываю значения от ${MIN_WEIGHT_KG} до ${MAX_WEIGHT_KG} кг.`,
+    );
+    return;
+  }
+
+  const user = await deps.store.findUserByTelegram(tgId);
+  if (!user) {
+    await say(deps.client, chatId, ANSWERS.weightNoAccount);
+    return;
+  }
+
+  const moment = localMoment(deps.now, deps.timeZone);
+  let trendLine: string | null;
+  try {
+    trendLine = await deps.store.saveWeight(user.id, moment.day, weight.weightKg);
+  } catch (error) {
+    console.error("bot weight save failed", error);
+    await say(deps.client, chatId, ANSWERS.weightSaveFailed);
+    return;
+  }
+
+  await say(deps.client, chatId, weightSavedText(weight.weightKg, trendLine), {
+    replyMarkup: { inline_keyboard: [[openAppButton(deps.links)]] },
+    disablePreview: true,
+  });
+}
+
+/** Личная ссылка приглашения. Без аккаунта её неоткуда взять. */
+async function sendInvite(tgId: string, chatId: number, deps: BotDeps): Promise<void> {
+  const user = await deps.store.findUserByTelegram(tgId);
+  if (!user) {
+    await say(deps.client, chatId, ANSWERS.dayNoAccount, {
+      replyMarkup: { inline_keyboard: [[planButton(deps.links)]] },
+    });
+    return;
+  }
+
+  const { link, joined } = await deps.store.referral(user.id);
+  await say(deps.client, chatId, inviteText(link, joined), { disablePreview: true });
+}
+
+/**
+ * Платный доступ.
+ *
+ * Пока приём оплаты выключен, кнопки нет вовсе. Кнопка со словами «скоро» —
+ * худший вариант: человек нажимает и упирается в пустоту, а мы получаем
+ * репутацию сервиса, который берёт деньги за то, чего нет.
+ */
+async function sendPremium(tgId: string, chatId: number, deps: BotDeps): Promise<void> {
+  if (!deps.paymentsEnabled) {
+    await say(deps.client, chatId, PREMIUM.notYet);
+    return;
+  }
+
+  const user = await deps.store.findUserByTelegram(tgId);
+  if (!user) {
+    await say(deps.client, chatId, ANSWERS.dayNoAccount, {
+      replyMarkup: { inline_keyboard: [[planButton(deps.links)]] },
+    });
+    return;
+  }
+
+  if ((await deps.store.plan(user.id)) === "premium") {
+    await say(deps.client, chatId, PREMIUM.alreadyPremium);
+    return;
+  }
+
+  await say(deps.client, chatId, PREMIUM.available, {
+    replyMarkup: { inline_keyboard: [[premiumButton(deps.links)]] },
+    disablePreview: true,
   });
 }
 

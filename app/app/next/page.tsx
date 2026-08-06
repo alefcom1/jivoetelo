@@ -6,8 +6,7 @@ import { mealItems, meals, profiles } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { localToday } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
-import type { PaceKey } from "@/lib/pace";
-import { computeTargets, type Activity, type Goal, type SexForFormula } from "@/lib/targets";
+import { computeTargets, targetInputFromProfile } from "@/lib/targets";
 import { getLatestWeightKg } from "@/lib/weight";
 import { NextMealSuggestions } from "./next-meal-suggestions";
 
@@ -41,17 +40,7 @@ export default async function NextMealPage() {
     </main>;
   }
 
-  const targets = computeTargets({
-    goal: profile.goal as Goal,
-    sexForFormula: profile.sexForFormula as SexForFormula,
-    birthYear: profile.birthYear,
-    heightCm: profile.heightCm,
-    weightKg,
-    activity: profile.activity as Activity,
-    adjustmentKcal: profile.kcalAdjustment,
-    pace: profile.pace as PaceKey | null,
-    kcalOverride: profile.kcalOverride,
-  });
+  const targets = computeTargets(targetInputFromProfile(profile, weightKg));
 
   const day = localToday();
   const dayMeals = await db

@@ -6,11 +6,17 @@
 
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { botPreferences } from "@/db/schema";
-import { addToInbox, countInboxToday } from "../inbox.ts";
+import { botPreferences, users, weightEntries } from "@/db/schema";
+import { botLink } from "../bot-public.ts";
+import { addToInbox, countInboxToday, countPendingOnDay } from "../inbox.ts";
+import { getDaySummary } from "../meals.ts";
+import { countReferrals, ensureReferralCode, rememberReferralVisit } from "../referral-store.ts";
+import { referralPayload } from "../referral.ts";
 import { getSpeechProvider, isSpeechEnabled } from "../speech/index.ts";
 import { savePhoto } from "../storage.ts";
 import { consumeLinkCode, findUserByTelegram } from "../telegram.ts";
+import { formatKgChange, weeklyTrendChange, weightTrend } from "../trend.ts";
+import { listRecentWeights } from "../weight.ts";
 import type { BotDeps, BotStore } from "./handle-update.ts";
 
 /**
@@ -20,7 +26,12 @@ import type { BotDeps, BotStore } from "./handle-update.ts";
  */
 async function upsertPreferences(
   userId: number,
-  values: Partial<{ remindersEnabled: boolean; snoozedUntil: Date | null; digestHour: number }>,
+  values: Partial<{
+    remindersEnabled: boolean;
+    snoozedUntil: Date | null;
+    digestHour: number;
+    weighRemindersEnabled: boolean;
+  }>,
 ): Promise<void> {
   await getDb()
     .insert(botPreferences)
@@ -56,7 +67,68 @@ export const botStore: BotStore = {
   async snoozeReminders(userId, until) {
     await upsertPreferences(userId, { snoozedUntil: until });
   },
+
+  async setWeighRemindersEnabled(userId, enabled) {
+    await upsertPreferences(userId, { weighRemindersEnabled: enabled });
+  },
+
+  /**
+   * Замер за день — тот же upsert, что в приложении
+   * (app/api/tg/profile/weight): второе число за сутки заменяет первое, а не
+   * добавляется. Иначе «встал на весы, не понравилось, встал ещё раз» дало бы
+   * два замера, из которых тренд посчитал бы среднее по настроению.
+   */
+  async saveWeight(userId, day, weightKg) {
+    await getDb()
+      .insert(weightEntries)
+      .values({ userId, onDate: day, weightKg })
+      .onConflictDoUpdate({
+        target: [weightEntries.userId, weightEntries.onDate],
+        set: { weightKg },
+      });
+
+    const points = await listRecentWeights(userId, 60);
+    const change = weeklyTrendChange(weightTrend(points));
+    if (change === null) return null;
+    return `Тренд за неделю: ${formatKgChange(change)}.`;
+  },
+
+  async daySummary(userId, day) {
+    const [summary, pendingPhotos, showCalories] = await Promise.all([
+      getDaySummary(userId, day),
+      countPendingOnDay(userId, day),
+      readShowCalories(userId),
+    ]);
+
+    return {
+      totals: summary.totals,
+      targets: summary.targets,
+      mealsCount: summary.meals.length,
+      pendingPhotos,
+      showCalories,
+    };
+  },
+
+  async referral(userId) {
+    const [code, joined] = await Promise.all([ensureReferralCode(userId), countReferrals(userId)]);
+    return { link: botLink(referralPayload(code)), joined };
+  },
+
+  async rememberReferral(telegramUserId, code) {
+    await rememberReferralVisit(telegramUserId, code);
+  },
+
+  async plan(userId) {
+    const rows = await getDb().select({ plan: users.plan }).from(users).where(eq(users.id, userId)).limit(1);
+    return rows[0]?.plan === "premium" ? "premium" : "free";
+  },
 };
+
+/** Режим «скрыть калории»: итог дня обязан его уважать так же, как экраны. */
+async function readShowCalories(userId: number): Promise<boolean> {
+  const rows = await getDb().select({ showCalories: users.showCalories }).from(users).where(eq(users.id, userId)).limit(1);
+  return rows[0]?.showCalories ?? true;
+}
 
 /**
  * Расшифровка голосовых для бота — или `null`, когда её нет.

@@ -2,6 +2,7 @@ import { getDb } from "@/db";
 import { userConsents, users } from "@/db/schema";
 import { createSession } from "@/lib/auth";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { claimReferral } from "@/lib/referral-store";
 import {
   findUserByTelegram,
   TelegramAuthError,
@@ -89,6 +90,9 @@ export async function POST(request: Request) {
       { userId, kind: "terms", version: LEGAL_VERSION, source: "telegram" },
       { userId, kind: "ai_processing", version: LEGAL_VERSION, source: "telegram" },
     ]);
+    // Второй из двух входов, где заводится аккаунт по Telegram. Забыть его
+    // значило бы, что половина приглашений не считается.
+    await claimReferral(userId, telegramUserId);
     await createSession(userId);
     return Response.json({ ok: true, created: true });
   } catch (error) {

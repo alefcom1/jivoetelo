@@ -128,6 +128,25 @@ export type TelegramUpdate = {
     message?: { chat?: { id?: number } };
     data?: string;
   };
+  /**
+   * `@jivelo_bot борщ`, набранное в любом чате. Приходит от кого угодно, в
+   * том числе от людей, которые бота ни разу не открывали, — это и есть его
+   * ценность, поэтому привязки аккаунта здесь не требуется (lib/bot/inline.ts).
+   */
+  inline_query?: {
+    id?: string;
+    from?: { id?: number };
+    query?: string;
+  };
+};
+
+/**
+ * Ответ на инлайн-запрос. Форма результата описана Telegram и передаётся как
+ * есть — свой тип для неё живёт в lib/bot/inline.ts, рядом со сборкой.
+ */
+export type InlineAnswerOptions = {
+  /** Сколько Telegram может держать ответ в кэше, секунды. */
+  cacheTime?: number;
 };
 
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
@@ -152,6 +171,7 @@ export type TelegramClient = {
     options?: SendMessageOptions,
   ): Promise<string | null>;
   answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void>;
+  answerInlineQuery(inlineQueryId: string, results: unknown[], options?: InlineAnswerOptions): Promise<void>;
   downloadFile(fileId: string, maxBytes: number): Promise<{ data: Buffer; mime: string }>;
 };
 
@@ -236,6 +256,17 @@ export function createTelegramClient(token: string, fetchImpl: FetchLike = fetch
       await call("answerCallbackQuery", {
         callback_query_id: callbackQueryId,
         ...(text ? { text } : {}),
+      });
+    },
+
+    async answerInlineQuery(inlineQueryId, results, options = {}) {
+      await call("answerInlineQuery", {
+        inline_query_id: inlineQueryId,
+        results,
+        // Ответ одинаков для всех: справочник не зависит от того, кто
+        // спрашивает. `is_personal` не ставим — иначе Telegram кэширует
+        // отдельно на каждого и лишает нас единственной дешёвой оптимизации.
+        cache_time: options.cacheTime ?? 300,
       });
     },
 

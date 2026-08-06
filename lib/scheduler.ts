@@ -19,13 +19,20 @@
 
 import { sql } from "drizzle-orm";
 import { getDb } from "@/db";
-import { localMoment } from "./dates.ts";
+import { localMoment, shiftDay } from "./dates.ts";
 import { isLetterNumber, parseSeriesContext, renderLetter } from "./email-series.ts";
 import { unsubscribePostUrl, unsubscribeUrl } from "./email-subscribe.ts";
 import { countPendingOnDay } from "./inbox.ts";
 import { listLoggedDays } from "./meals.ts";
 import { getMailer } from "./mailer.ts";
-import { planReminder, QUIET_HOURS_END, QUIET_HOURS_START } from "./reminders.ts";
+import {
+  planReminder,
+  planWeighReminder,
+  QUIET_HOURS_END,
+  QUIET_HOURS_START,
+  WEIGH_REMINDER_EVERY_DAYS,
+  WEIGH_REMINDER_HOUR,
+} from "./reminders.ts";
 import { computeStreak } from "./streak.ts";
 import { dispatchDueReports, enqueueDueReports } from "./report-dispatch.ts";
 import { siteUrl } from "./site.ts";
@@ -235,6 +242,103 @@ export async function dispatchDueReminders(now: Date, limit = REMINDER_BATCH): P
   return { sent, failed };
 }
 
+/**
+ * Утреннее «пришлите вес». Отдельный проход, а не ветка внутри вечернего:
+ * у них разные часы, разные переключатели и разные даты последней отправки,
+ * и общего между ними — только слово «напоминание».
+ *
+ * Кандидаты отбираются запросом целиком, включая дату последнего замера:
+ * главное условие здесь — «человек давно не взвешивался», и вытаскивать ради
+ * него всех привязавших Telegram незачем.
+ */
+export async function dispatchDueWeighReminders(now: Date, limit = REMINDER_BATCH): Promise<DispatchResult> {
+  const token = botToken();
+  if (!token) return { sent: 0, failed: 0 };
+
+  const moment = localMoment(now);
+  if (moment.hour < WEIGH_REMINDER_HOUR || moment.hour >= WEIGH_REMINDER_HOUR + 3) return { sent: 0, failed: 0 };
+
+  const db = getDb();
+  const candidates = (await db.execute(sql`
+    SELECT u.id, u.telegram_user_id,
+           COALESCE(p.weigh_reminders_enabled, TRUE) AS weigh_enabled,
+           p.last_weigh_reminder_on,
+           (SELECT MAX(w.on_date) FROM weight_entries w WHERE w.user_id = u.id) AS last_weight_on,
+           (pr.user_id IS NOT NULL) AS has_profile
+      FROM users u
+      LEFT JOIN bot_preferences p ON p.user_id = u.id
+      LEFT JOIN profiles pr ON pr.user_id = u.id
+     WHERE u.telegram_user_id IS NOT NULL
+       AND COALESCE(p.weigh_reminders_enabled, TRUE)
+       AND pr.user_id IS NOT NULL
+       AND (p.last_weigh_reminder_on IS NULL OR p.last_weigh_reminder_on <= ${shiftDay(moment.day, -WEIGH_REMINDER_EVERY_DAYS)})
+     ORDER BY u.id
+     LIMIT ${limit}
+  `)) as unknown as Rows<{
+    id: number;
+    telegram_user_id: string;
+    weigh_enabled: boolean;
+    last_weigh_reminder_on: string | null;
+    last_weight_on: string | null;
+    has_profile: boolean;
+  }>;
+
+  const rows = candidates.rows ?? [];
+  if (rows.length === 0) return { sent: 0, failed: 0 };
+
+  const client = createTelegramClient(token);
+  let sent = 0;
+  let failed = 0;
+
+  for (const row of rows) {
+    try {
+      const plan = planWeighReminder({
+        localDay: moment.day,
+        localHour: moment.hour,
+        enabled: row.weigh_enabled,
+        lastWeighReminderOn: asDay(row.last_weigh_reminder_on),
+        lastWeightOn: asDay(row.last_weight_on),
+        hasProfile: row.has_profile,
+      });
+      if (!plan) continue;
+
+      // Захват права на отправку — тем же приёмом, что у вечернего дайджеста:
+      // дата пишется ДО отправки, и второй процесс уходит ни с чем.
+      const claimed = (await db.execute(sql`
+        INSERT INTO bot_preferences (user_id, last_weigh_reminder_on)
+        VALUES (${row.id}, ${moment.day})
+        ON CONFLICT (user_id) DO UPDATE
+           SET last_weigh_reminder_on = ${moment.day}, updated_at = ${now}
+         WHERE bot_preferences.last_weigh_reminder_on IS DISTINCT FROM ${moment.day}
+        RETURNING user_id
+      `)) as unknown as Rows<{ user_id: number }>;
+      if ((claimed.rows ?? []).length === 0) continue;
+
+      const ok = await trySend(client, row.telegram_user_id, plan.text, {
+        disablePreview: true,
+        parseMode: "HTML",
+      });
+      if (ok) sent += 1;
+      else failed += 1;
+    } catch (error) {
+      console.error("weigh reminder dispatch failed", error);
+      failed += 1;
+    }
+  }
+
+  return { sent, failed };
+}
+
+/**
+ * `date` из PostgreSQL приходит то строкой, то объектом Date — зависит от
+ * драйвера и от того, шёл ли запрос через `execute`. Правила напоминаний
+ * сравнивают строки `ГГГГ-ММ-ДД`, и приводить их надо в одном месте.
+ */
+function asDay(value: string | Date | null): string | null {
+  if (!value) return null;
+  return typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10);
+}
+
 async function countMealsOnDay(userId: number, day: string): Promise<number> {
   const result = (await getDb().execute(sql`
     SELECT COUNT(*)::int AS value FROM meals WHERE user_id = ${userId} AND eaten_on = ${day}
@@ -253,6 +357,7 @@ export async function tick(now: Date = new Date()): Promise<void> {
   try {
     await dispatchDueEmails(now);
     await dispatchDueReminders(now);
+    await dispatchDueWeighReminders(now);
     // Отчёты: сначала ставим в очередь то, у чего кончился период, потом
     // отправляем очередь. Порядок именно такой — поставленное в этот же заход
     // уходит сразу, а не ждёт следующей минуты.

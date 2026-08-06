@@ -12,9 +12,8 @@ import { localToday, shiftDay } from "./dates.ts";
 import { getDishImpact } from "./dish-impact.ts";
 import { computeMealStats, type PeriodStats } from "./meal-stats.ts";
 import { sumTotals } from "./nutrition.ts";
-import type { PaceKey } from "./pace.ts";
 import { buildWeekReview, type DayStat, type WeekReview } from "./review.ts";
-import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
+import { computeTargets, targetInputFromProfile, type Goal, type Targets } from "./targets.ts";
 import { weeklyTrendChange, weightTrend } from "./trend.ts";
 
 /** Границы накопленной адаптивной поправки (раздел 14.2 спецификации). */
@@ -77,16 +76,7 @@ export async function getReviewData(userId: number, showCalories: boolean): Prom
   let targets: Targets | null = null;
   let proposal: AdjustmentProposal | null = null;
   if (profile && latestWeightKg) {
-    targets = computeTargets({
-      goal: profile.goal as Goal,
-      sexForFormula: profile.sexForFormula as SexForFormula,
-      birthYear: profile.birthYear,
-      heightCm: profile.heightCm,
-      weightKg: latestWeightKg,
-      activity: profile.activity as Activity,
-      adjustmentKcal: profile.kcalAdjustment,
-      pace: profile.pace as PaceKey | null,
-    });
+    targets = computeTargets(targetInputFromProfile(profile, latestWeightKg));
     proposal = proposeAdjustment({
       goal: profile.goal as Goal,
       weeklyTrendChangeKg: trendChange,

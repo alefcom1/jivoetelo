@@ -5,8 +5,7 @@ import { profiles, weightEntries } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDayRu } from "@/lib/dates";
 import { buildFan } from "@/lib/fan";
-import type { PaceKey } from "@/lib/pace";
-import { computeTargets, type Activity, type Goal, type SexForFormula } from "@/lib/targets";
+import { computeTargets, targetInputFromProfile, type Activity, type SexForFormula } from "@/lib/targets";
 import { weeklyTrendChange, weightTrend } from "@/lib/trend";
 import FanChart from "../../raschet/plan/fan-chart";
 import { WeightForm } from "./weight-form";
@@ -31,17 +30,7 @@ export default async function WeightPage() {
   const profile = (await getDb().select().from(profiles).where(eq(profiles.userId, user.id)).limit(1))[0];
   const latestKg = trend.length > 0 ? trend[trend.length - 1].weightKg : null;
   const targets = profile && latestKg
-    ? computeTargets({
-        goal: profile.goal as Goal,
-        sexForFormula: profile.sexForFormula as SexForFormula,
-        birthYear: profile.birthYear,
-        heightCm: profile.heightCm,
-        weightKg: latestKg,
-        activity: profile.activity as Activity,
-        adjustmentKcal: profile.kcalAdjustment,
-        pace: profile.pace as PaceKey | null,
-        kcalOverride: profile.kcalOverride,
-      })
+    ? computeTargets(targetInputFromProfile(profile, latestKg))
     : null;
   const fan = profile && latestKg && targets
     ? buildFan({

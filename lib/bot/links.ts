@@ -18,6 +18,10 @@ export type BotLinks = {
   miniAppUrl: string | null;
   /** Публичный расчёт — единственное, что можно предложить незнакомому человеку. */
   planUrl: string;
+  /** Страница тарифа: туда ведёт кнопка оплаты, когда приём денег включён. */
+  premiumUrl: string;
+  /** Страница блюда в справочнике — адрес результата инлайн-поиска. */
+  dishUrl: (slug: string) => string;
 };
 
 export function botLinks(): BotLinks {
@@ -25,6 +29,8 @@ export function botLinks(): BotLinks {
     inboxUrl: absoluteUrl("/app/inbox"),
     miniAppUrl: process.env.TELEGRAM_MINIAPP_URL?.trim() || null,
     planUrl: absoluteUrl("/raschet/plan"),
+    premiumUrl: absoluteUrl("/app/settings"),
+    dishUrl: (slug: string) => absoluteUrl(`/skolko-kalorij/${slug}`),
   };
 }
 
@@ -54,4 +60,9 @@ export function openAppButton(links: BotLinks): InlineKeyboardButton {
  */
 export function planButton(links: BotLinks): InlineKeyboardButton {
   return { text: "Посчитать норму", url: links.planUrl };
+}
+
+/** Кнопка оплаты. Появляется только когда приём денег включён (docs/payments.md). */
+export function premiumButton(links: BotLinks): InlineKeyboardButton {
+  return { text: "Перейти к оплате", url: links.premiumUrl };
 }

@@ -10,7 +10,7 @@ import { computeAdherence, hasEnoughAdherenceData, type AdherenceResult } from "
 import { localToday, shiftDay } from "./dates.ts";
 import { getDishImpact } from "./dish-impact.ts";
 import { computeMealStats, hasEnoughMealStats, type MealStats } from "./meal-stats.ts";
-import { computeTdee, computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
+import { computeTdee, computeTargets, targetInputFromProfile, type Goal, type Targets } from "./targets.ts";
 import { weeklyTrendChange, weightTrend, type TrendPoint } from "./trend.ts";
 
 /** Окно наблюдения для приверженности — восемь недель: достаточно, чтобы
@@ -64,18 +64,14 @@ export async function getPlanData(userId: number): Promise<PlanData> {
 
   let targets: PlanTargets | null = null;
   if (profile && latestWeightKg) {
-    const shared = {
-      goal: profile.goal as Goal,
-      sexForFormula: profile.sexForFormula as SexForFormula,
-      birthYear: profile.birthYear,
-      heightCm: profile.heightCm,
-      weightKg: latestWeightKg,
-      activity: profile.activity as Activity,
-    };
+    // Через общий сборщик, а не перечислением полей: раньше здесь терялись и
+    // темп с онбординга, и своя норма из настроек — экран «План» показывал
+    // формулу человеку, который формулу отключил.
+    const input = targetInputFromProfile(profile, latestWeightKg);
     targets = {
-      ...computeTargets({ ...shared, adjustmentKcal: profile.kcalAdjustment }),
-      tdeeKcal: Math.round(computeTdee(shared)),
-      goal: shared.goal,
+      ...computeTargets(input),
+      tdeeKcal: Math.round(computeTdee(input)),
+      goal: input.goal,
       kcalAdjustment: profile.kcalAdjustment,
     };
   }

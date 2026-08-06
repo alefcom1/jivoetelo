@@ -83,7 +83,11 @@ export async function addMeasurement(weightKg: number): Promise<{ ok: true }> {
   }));
 }
 
-export async function saveReminders(payload: { remindersEnabled: boolean; digestHour: number }): Promise<{ ok: true }> {
+export async function saveReminders(payload: {
+  remindersEnabled: boolean;
+  digestHour: number;
+  weighRemindersEnabled: boolean;
+}): Promise<{ ok: true }> {
   return handle(await fetch("/api/tg/profile/reminders", {
     method: "POST",
     headers: { ...initDataHeader(), "Content-Type": "application/json" },

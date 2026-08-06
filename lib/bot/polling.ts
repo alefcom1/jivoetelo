@@ -25,6 +25,8 @@ import { networkDetail } from "../ai/failure.ts";
 import { handleUpdate } from "./handle-update.ts";
 import { botLinks } from "./links.ts";
 import { botStore, botTranscriber } from "./store.ts";
+import { paymentsEnabled } from "../payments/config.ts";
+import { ALLOWED_UPDATES } from "./ensure-webhook.ts";
 import { botToken, createTelegramClient, type TelegramUpdate } from "../telegram-api.ts";
 
 /**
@@ -76,7 +78,7 @@ export function startPolling(): void {
         const updates = await client.call<PollResult>("getUpdates", {
           offset,
           timeout: LONG_POLL_SECONDS,
-          allowed_updates: ["message", "callback_query"],
+          allowed_updates: ALLOWED_UPDATES,
         });
         backoff = MIN_BACKOFF_MS;
 
@@ -91,6 +93,7 @@ export function startPolling(): void {
             transcribe: botTranscriber(),
             now: new Date(),
             links: botLinks(),
+            paymentsEnabled: paymentsEnabled(),
           });
         }
       } catch (error) {

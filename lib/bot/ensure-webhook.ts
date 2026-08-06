@@ -26,10 +26,23 @@ import { botToken, createTelegramClient } from "../telegram-api.ts";
 
 const COMMANDS = [
   { command: "start", description: "Как всё устроено" },
+  { command: "day", description: "Сколько съедено сегодня" },
   { command: "app", description: "Открыть дневник" },
+  { command: "invite", description: "Позвать знакомых" },
+  { command: "premium", description: "Про платный доступ" },
   { command: "help", description: "Что я умею" },
   { command: "stop", description: "Выключить напоминания" },
 ];
+
+/**
+ * Виды апдейтов, которые мы разбираем.
+ *
+ * `inline_query` — это `@jivelo_bot борщ` из чужого чата. Одного этого
+ * списка мало: инлайн-режим включается отдельно в @BotFather (`/setinline`),
+ * и без него Telegram запросы просто не присылает. Молчание при этом
+ * выглядит как поломка кода, поэтому про шаг написано в docs/bot.md.
+ */
+export const ALLOWED_UPDATES = ["message", "callback_query", "inline_query"];
 
 type WebhookInfo = { url?: string; last_error_message?: string; pending_update_count?: number };
 
@@ -96,7 +109,7 @@ export async function ensureWebhook(): Promise<void> {
     await client.call("setWebhook", {
       url: webhookUrl,
       secret_token: secret,
-      allowed_updates: ["message", "callback_query"],
+      allowed_updates: ALLOWED_UPDATES,
       // Накопившееся за время простоя не разбираем: это чаще всего дубли
       // того, что человек уже прислал заново.
       drop_pending_updates: true,

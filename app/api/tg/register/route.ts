@@ -1,6 +1,7 @@
 import { getDb } from "@/db";
 import { userConsents, users } from "@/db/schema";
 import { LEGAL_VERSION } from "@/lib/legal";
+import { claimReferral } from "@/lib/referral-store";
 import { findUserByTelegram, TelegramAuthError, verifyInitData } from "@/lib/telegram";
 
 /**
@@ -73,6 +74,10 @@ export async function POST(request: Request) {
       { userId, kind: "terms", version: LEGAL_VERSION, source: "telegram" },
       { userId, kind: "ai_processing", version: LEGAL_VERSION, source: "telegram" },
     ]);
+
+    // Приглашение, если человек пришёл по чужой ссылке. Не бросает: несчитанный
+    // реферал — не повод не создать аккаунт.
+    await claimReferral(userId, telegramUserId);
 
     return Response.json({ ok: true, created: true });
   } catch (error) {

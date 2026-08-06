@@ -11,10 +11,12 @@ export function BotReminders({
   remindersEnabled,
   digestHour,
   snoozedUntil,
+  weighRemindersEnabled,
 }: {
   remindersEnabled: boolean;
   digestHour: number;
   snoozedUntil: Date | null;
+  weighRemindersEnabled: boolean;
 }) {
   const snoozeActive = snoozedUntil !== null && snoozedUntil > new Date();
 
@@ -34,6 +36,17 @@ export function BotReminders({
     <p className="field-note">
       Не больше одного сообщения в день, и только если есть о чём: неразобранные снимки в инбоксе или
       совсем пустой день. Ночью бот молчит.
+    </p>
+
+    {/* Отдельно от вечерних: выключив разговор про еду, человек не соглашался
+        получать вместо него «встаньте на весы». */}
+    <label className="consent">
+      <input type="checkbox" name="weighRemindersEnabled" defaultChecked={weighRemindersEnabled} />
+      <span>Напоминать взвеситься по утрам</span>
+    </label>
+    <p className="field-note">
+      Не чаще раза в неделю и только если замеров давно не было. Вес можно прислать боту одним
+      сообщением — «72,4»: по этим замерам и уточняется норма.
     </p>
     {snoozeActive &&
       <p className="field-note">

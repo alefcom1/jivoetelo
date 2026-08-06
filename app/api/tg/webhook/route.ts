@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { handleUpdate } from "@/lib/bot/handle-update";
 import { botLinks } from "@/lib/bot/links";
 import { botStore, botTranscriber } from "@/lib/bot/store";
+import { paymentsEnabled } from "@/lib/payments/config";
 import { botToken, createTelegramClient, type TelegramUpdate } from "@/lib/telegram-api";
 
 /**
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
     transcribe: botTranscriber(),
     now: new Date(),
     links: botLinks(),
+    paymentsEnabled: paymentsEnabled(),
   });
 
   return new Response("ok");

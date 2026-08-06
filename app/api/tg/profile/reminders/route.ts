@@ -29,6 +29,12 @@ export async function POST(request: Request) {
     remindersEnabled: Boolean(body.remindersEnabled),
     digestHour: normalizeDigestHour(body.digestHour),
     snoozedUntil: null,
+    // Отсутствие поля — не «выключить»: старый клиент, не знающий про весы,
+    // не должен молча гасить чужую настройку. Поэтому трогаем её, только
+    // когда она пришла явно.
+    ...(typeof body.weighRemindersEnabled === "boolean"
+      ? { weighRemindersEnabled: body.weighRemindersEnabled }
+      : {}),
   });
   return Response.json({ ok: true });
 }

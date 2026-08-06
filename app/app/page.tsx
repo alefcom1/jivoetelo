@@ -6,8 +6,7 @@ import { mealItems, meals, profiles } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDayRu, isValidDay, localToday, MEAL_TYPE_LABELS, shiftDay } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
-import type { PaceKey } from "@/lib/pace";
-import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "@/lib/targets";
+import { computeTargets, targetInputFromProfile, type Targets } from "@/lib/targets";
 import { listLoggedDays } from "@/lib/meals";
 import { computeStreak } from "@/lib/streak";
 import { getLatestWeightKg } from "@/lib/weight";
@@ -50,17 +49,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const weightKg = profile ? await getLatestWeightKg(user.id) : null;
   let targets: Targets | null = null;
   if (profile && weightKg) {
-    targets = computeTargets({
-      goal: profile.goal as Goal,
-      sexForFormula: profile.sexForFormula as SexForFormula,
-      birthYear: profile.birthYear,
-      heightCm: profile.heightCm,
-      weightKg,
-      activity: profile.activity as Activity,
-      adjustmentKcal: profile.kcalAdjustment,
-      pace: profile.pace as PaceKey | null,
-      kcalOverride: profile.kcalOverride,
-    });
+    targets = computeTargets(targetInputFromProfile(profile, weightKg));
   }
 
   return <main className="day">

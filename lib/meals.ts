@@ -8,9 +8,8 @@ import type { DiaryItemRow, DiaryMealRow } from "./diary.ts";
 import { dishKey } from "./dish-key.ts";
 import type { PastMeal } from "./frequent-meals.ts";
 import { clampPer100, sumTotals, type NutritionTotals } from "./nutrition.ts";
-import type { PaceKey } from "./pace.ts";
 import { deletePhoto } from "./storage.ts";
-import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
+import { computeTargets, targetInputFromProfile, type Targets } from "./targets.ts";
 import { getLatestWeightKg } from "./weight.ts";
 
 export type DayMeal = {
@@ -88,16 +87,7 @@ export async function getTargetsForUser(userId: number): Promise<Targets | null>
   const weightKg = await getLatestWeightKg(userId);
   if (!weightKg) return null;
 
-  return computeTargets({
-    goal: profile.goal as Goal,
-    sexForFormula: profile.sexForFormula as SexForFormula,
-    birthYear: profile.birthYear,
-    heightCm: profile.heightCm,
-    weightKg,
-    activity: profile.activity as Activity,
-    adjustmentKcal: profile.kcalAdjustment,
-    pace: profile.pace as PaceKey | null,
-  });
+  return computeTargets(targetInputFromProfile(profile, weightKg));
 }
 
 export type SaveMealItem = {

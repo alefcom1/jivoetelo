@@ -104,6 +104,7 @@ export default async function SettingsPage() {
           remindersEnabled={preferences?.remindersEnabled ?? true}
           digestHour={preferences?.digestHour ?? DEFAULT_DIGEST_HOUR}
           snoozedUntil={preferences?.snoozedUntil ?? null}
+          weighRemindersEnabled={preferences?.weighRemindersEnabled ?? true}
         />
       </section>}
     <section className="settings-block">

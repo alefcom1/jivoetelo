@@ -1,4 +1,4 @@
-import { boolean, date, doublePrecision, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, date, doublePrecision, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, type AnyPgColumn } from "drizzle-orm/pg-core";
 
 export const waitlistSubscribers = pgTable("waitlist_subscribers", {
   id: serial("id").primaryKey(),
@@ -65,6 +65,31 @@ export const users = pgTable("users", {
    * одно без другого — видеть калории, но не набирать состав руками.
    */
   simpleMode: boolean("simple_mode").notNull().default(false),
+  /**
+   * Личный код в реферальной ссылке `?start=ref_XXXXXX`.
+   *
+   * Выдаётся лениво, при первом запросе `/invite`: большинство аккаунтов
+   * никого не приглашает, и выписывать им код при регистрации — значит
+   * занимать пространство кодов ради строк, которые никто не откроет.
+   */
+  referralCode: text("referral_code").unique(),
+  /** Кто пригласил. Проставляется один раз при создании аккаунта. */
+  referredBy: integer("referred_by").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Переход по чужой ссылке до того, как аккаунт появился.
+ *
+ * В момент `/start ref_XXXXXX` человека в `users` ещё нет, а до регистрации
+ * может пройти неделя. Ключ — telegram_user_id: это единственное, что мы о
+ * нём в тот момент знаем.
+ */
+export const referralVisits = pgTable("referral_visits", {
+  telegramUserId: text("telegram_user_id").primaryKey(),
+  referrerUserId: integer("referrer_user_id")
+    .notNull()
+    .references((): AnyPgColumn => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -252,6 +277,16 @@ export const botPreferences = pgTable("bot_preferences", {
   remindersEnabled: boolean("reminders_enabled").notNull().default(true),
   // Час по местному времени продукта, в который приходит вечерний дайджест.
   digestHour: integer("digest_hour").notNull().default(20),
+  /**
+   * Утреннее напоминание взвеситься — отдельный переключатель.
+   *
+   * Не часть `remindersEnabled` сознательно: /stop выключает разговор про
+   * еду, и человек, нажавший его, не соглашался вместо этого получать «пора
+   * на весы». Обратное тоже верно — вести дневник, не взвешиваясь, законно.
+   */
+  weighRemindersEnabled: boolean("weigh_reminders_enabled").notNull().default(true),
+  /** Дата последнего напоминания о весе — не чаще раза в неделю. */
+  lastWeighReminderOn: date("last_weigh_reminder_on"),
   // «Напомнить позже»: до этого момента бот молчит.
   snoozedUntil: timestamp("snoozed_until", { withTimezone: true }),
   // Дата последнего отправленного напоминания — не больше одного в день.

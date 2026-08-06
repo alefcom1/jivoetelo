@@ -15,13 +15,12 @@ import { getDishImpact } from "./dish-impact.ts";
 import { computeMealStats, type PeriodStats } from "./meal-stats.ts";
 import { listLoggedDays } from "./meals.ts";
 import { sumTotals } from "./nutrition.ts";
-import type { PaceKey } from "./pace.ts";
 import { buildReport, type Report } from "./report.ts";
 import type { ReportPeriod } from "./report-period.ts";
 import { DEFAULT_REPORT_PREFERENCES, type ReportPreferences } from "./report-prefs.ts";
 import type { DayStat } from "./review.ts";
 import { computeStreak } from "./streak.ts";
-import { computeTargets, type Activity, type Goal, type SexForFormula, type Targets } from "./targets.ts";
+import { computeTargets, targetInputFromProfile, type Targets } from "./targets.ts";
 import { weeklyTrendChange, weightTrend } from "./trend.ts";
 
 export type PeriodData = {
@@ -90,16 +89,7 @@ export async function collectPeriodData(
   const profileRows = await db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1);
   const profile = profileRows[0];
   const targets = profile && latestWeightKg
-    ? computeTargets({
-        goal: profile.goal as Goal,
-        sexForFormula: profile.sexForFormula as SexForFormula,
-        birthYear: profile.birthYear,
-        heightCm: profile.heightCm,
-        weightKg: latestWeightKg,
-        activity: profile.activity as Activity,
-        adjustmentKcal: profile.kcalAdjustment,
-        pace: profile.pace as PaceKey | null,
-      })
+    ? computeTargets(targetInputFromProfile(profile, latestWeightKg))
     : null;
 
   return { dayStats, mealStats, targets, weeklyTrendChangeKg: weeklyTrendChange(trend), latestWeightKg };

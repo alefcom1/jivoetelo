@@ -306,6 +306,7 @@ function RemindersSection({ profile, onSaved }: { profile: ProfileResponse; onSa
   const { reminders } = profile;
   const [enabled, setEnabled] = useState(reminders.remindersEnabled);
   const [hour, setHour] = useState(reminders.digestHour);
+  const [weighEnabled, setWeighEnabled] = useState(reminders.weighRemindersEnabled);
   const [busy, setBusy] = useState<"save" | "snooze" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const snoozedUntilDate = reminders.snoozedUntil ? new Date(reminders.snoozedUntil) : null;
@@ -315,7 +316,7 @@ function RemindersSection({ profile, onSaved }: { profile: ProfileResponse; onSa
     setBusy("save");
     setError(null);
     try {
-      await saveReminders({ remindersEnabled: enabled, digestHour: hour });
+      await saveReminders({ remindersEnabled: enabled, digestHour: hour, weighRemindersEnabled: weighEnabled });
       haptic("success");
       onSaved();
     } catch {
@@ -357,6 +358,19 @@ function RemindersSection({ profile, onSaved }: { profile: ProfileResponse; onSa
       </label>
 
       <p className="tg-hint">Не больше одного сообщения в день, и только если есть о чём: неразобранные снимки или совсем пустой день. Ночью бот молчит.</p>
+
+      {/* Отдельный переключатель, а не строка внутри вечерних: выключив
+          разговор про еду, человек не соглашался вместо него получать «встаньте
+          на весы». И наоборот — вести дневник, не взвешиваясь, законно. */}
+      <label className="tg-check">
+        <input type="checkbox" checked={weighEnabled} onChange={(e) => setWeighEnabled(e.target.checked)} />
+        <span>Напоминать взвеситься по утрам</span>
+      </label>
+      <p className="tg-hint">
+        Не чаще раза в неделю и только если замеров давно не было. Вес можно прислать боту одним
+        сообщением — «72,4», больше ничего делать не нужно.
+      </p>
+
       {snoozeActive && snoozedUntilDate && <p className="tg-hint">
         Сейчас пауза до {new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(snoozedUntilDate)}. Сохранение снимет её.
       </p>}

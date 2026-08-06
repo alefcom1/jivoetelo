@@ -11,6 +11,7 @@ import { DEFAULT_DIGEST_HOUR } from "./reminders.ts";
 import {
   computeTdee,
   explainTargets,
+  targetInputFromProfile,
   GOAL_LABELS,
   type Activity,
   type Goal,
@@ -54,7 +55,13 @@ export type ProfileData = {
    * место в продукте, где мы просили верить на слово.
    */
   targets: { values: Targets; steps: TargetStep[] } | null;
-  reminders: { remindersEnabled: boolean; digestHour: number; snoozedUntil: string | null };
+  reminders: {
+    remindersEnabled: boolean;
+    digestHour: number;
+    snoozedUntil: string | null;
+    /** Утреннее «пришлите вес» — свой переключатель, см. lib/reminders.ts. */
+    weighRemindersEnabled: boolean;
+  };
 };
 
 export function isPaceKey(value: string | null | undefined): value is PaceKey {
@@ -117,17 +124,7 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
   // не должен знать о них ничего, кроме готового результата.
   const targets = profile && latestWeightKg
     ? (() => {
-        const { targets: values, steps } = explainTargets({
-          goal: profile.goal as Goal,
-          sexForFormula: profile.sexForFormula as SexForFormula,
-          birthYear: profile.birthYear,
-          heightCm: profile.heightCm,
-          weightKg: latestWeightKg,
-          activity: profile.activity as Activity,
-          adjustmentKcal: profile.kcalAdjustment,
-          pace: isPaceKey(profile.pace) ? profile.pace : null,
-          kcalOverride: profile.kcalOverride,
-        });
+        const { targets: values, steps } = explainTargets(targetInputFromProfile(profile, latestWeightKg));
         return { values, steps };
       })()
     : null;
@@ -147,6 +144,7 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
       remindersEnabled: preferences?.remindersEnabled ?? true,
       digestHour: preferences?.digestHour ?? DEFAULT_DIGEST_HOUR,
       snoozedUntil: preferences?.snoozedUntil ? preferences.snoozedUntil.toISOString() : null,
+      weighRemindersEnabled: preferences?.weighRemindersEnabled ?? true,
     },
   };
 }
