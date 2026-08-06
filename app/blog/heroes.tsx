@@ -139,6 +139,19 @@ export function HeroMismatch() {
   </Frame>;
 }
 
+/** Маленький плотный кружок разбухает в большой бледный — крупа и каша. */
+export function HeroSwell() {
+  return <Frame>
+    <circle cx="230" cy="225" r="70" fill={PALETTE.ink} />
+    <path d="M340 225 h150" stroke={PALETTE.ink} strokeWidth="6" strokeLinecap="round" />
+    <path d="M462 200 l28 25 l-28 25" fill="none" stroke={PALETTE.ink} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="610" cy="225" r="130" fill={PALETTE.white} stroke={PALETTE.ink} strokeWidth="5" />
+    <circle cx="610" cy="225" r="130" fill={PALETTE.coral} opacity="0.16" />
+    <circle cx="230" cy="225" r="70" fill="none" stroke={PALETTE.coral} strokeWidth="5" />
+    <circle cx="610" cy="225" r="130" fill="none" stroke={PALETTE.coral} strokeWidth="5" />
+  </Frame>;
+}
+
 export const HEROES: Record<string, () => React.ReactElement> = {
   "kak-ustroen-dnevnik-po-foto": HeroPhoto,
   "sravnenie-prilozhenij-dlya-podscheta-kalorij": HeroCompare,
@@ -146,6 +159,7 @@ export const HEROES: Record<string, () => React.ReactElement> = {
   "pochemu-diapazon-chestnee-tochnogo-chisla": HeroRange,
   "norma-kalorij-kotoraya-uchitsya": HeroAdaptive,
   "pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor": HeroMismatch,
+  "grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods": HeroSwell,
 };
 
 /**
