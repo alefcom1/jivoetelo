@@ -372,3 +372,40 @@
   .adm-funnel b { min-width: 0; flex: 1 1 100%; }
   .adm-funnel i { margin-left: 0; }
 }
+
+/* Кнопка снятия платного доступа. Единственное действие в админке, которое
+   отнимает у человека то, за что он мог заплатить, — поэтому она не белая
+   кнопка рядом с тремя такими же, а отдельная по виду, с отступом слева. */
+.adm-revoke {
+  margin-left: 8px;
+  padding: 9px 14px;
+  border: 1px solid var(--coral-text, #b4472e);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--coral-text, #b4472e);
+  font: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+.adm-revoke:hover:not(:disabled) { background: var(--coral-text, #b4472e); color: #fff; }
+.adm-revoke:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Переключатель окна на странице расхода: ссылки, а не кнопки, — выбранный
+   период попадает в адрес и открывается в соседней вкладке. */
+.adm-chip {
+  padding: 7px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.adm-chip-on { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+/* Таблицы расхода и ленты действий шире экрана телефона по сути своей:
+   в первой колонка на каждую операцию, во второй длинные описания. Обе живут
+   в .adm-table-wrap, который и прокручивается, — но их содержимое не должно
+   переноситься по слогам, иначе строка перестаёт читаться как одна запись. */
+.adm-spend-days td, .adm-spend-people td, .adm-timeline td:not(:last-child) { white-space: nowrap; }
+.adm-timeline td:last-child { min-width: 260px; }

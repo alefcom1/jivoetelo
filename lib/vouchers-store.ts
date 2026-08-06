@@ -5,7 +5,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { users, vouchers } from "@/db/schema";
-import { extendAccess } from "./paid.ts";
+import { extendAccess, hasPaidAccess } from "./paid.ts";
 import { checkVoucher, makeVoucherCode, normalizeCode, UNKNOWN_CODE_MESSAGE } from "./vouchers.ts";
 
 export type IssueInput = {
@@ -176,4 +176,29 @@ export async function myVouchers(userId: number): Promise<Array<{ code: string; 
     .from(vouchers)
     .where(and(eq(vouchers.issuedTo, userId), isNull(vouchers.usedAt)))
     .orderBy(desc(vouchers.createdAt));
+}
+
+/**
+ * Закрыть платный доступ.
+ *
+ * Отдельным действием, а не «продлить на минус столько-то дней»: срок
+ * снимается целиком, и промежуточных состояний тут не бывает. Обнуляем в
+ * `null`, а не ставим вчерашнюю дату, — по `null` из карточки видно, что
+ * доступа никогда не открывали или его сняли, а прошедшая дата читается как
+ * «истёк сам», и через месяц эти два случая уже не различить.
+ *
+ * Возвращает `true`, если доступ был открыт и его сняли: вызывающему коду
+ * нужно понимать, было ли действие холостым, — иначе в журнал попадёт запись
+ * о снятии того, чего не было.
+ */
+export async function revokeAccess(userId: number, now = new Date()): Promise<boolean> {
+  const db = getDb();
+  const current = await db
+    .select({ accessUntil: users.accessUntil })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  const had = hasPaidAccess(current[0]?.accessUntil ?? null, now);
+  await db.update(users).set({ accessUntil: null }).where(eq(users.id, userId));
+  return had;
 }

@@ -174,3 +174,32 @@ export async function issueVouchersAction(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/vouchers");
 }
+
+/**
+ * Закрыть платный доступ — обратное действие к выдаче.
+ *
+ * Нужно ровно там же, где выдача: доступ открывают по ошибке, выдают на
+ * время теста, компенсируют сбой не тому человеку. Без обратной кнопки
+ * единственным способом снять его была правка базы руками — то есть способ,
+ * которым в спешке ошибаются и который не оставляет следа.
+ *
+ * След тут особенно нужен: снятие доступа человек заметит, и на вопрос
+ * «кто и когда» надо отвечать записью. Пишем в журнал независимо от того,
+ * был ли доступ открыт: попытка снять — тоже обращение к чужим данным.
+ */
+export async function revokeAccessAction(
+  personId: number,
+): Promise<{ ok: true; had: boolean } | { ok: false; message: string }> {
+  const admin = await requireAdmin();
+  if (!admin) notFound();
+
+  if (!Number.isInteger(personId) || personId <= 0) return { ok: false, message: "Неизвестный человек." };
+
+  const { revokeAccess } = await import("@/lib/vouchers-store");
+  const { logAdminAccess } = await import("@/lib/admin-people");
+  const had = await revokeAccess(personId);
+  await logAdminAccess(admin.id, personId, "revoke");
+
+  revalidatePath("/admin/users");
+  return { ok: true, had };
+}

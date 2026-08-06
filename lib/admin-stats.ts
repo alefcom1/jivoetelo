@@ -227,3 +227,102 @@ export async function paidSummary(): Promise<PaidSummary> {
     paidEver: Number(row.paid_ever ?? 0),
   };
 }
+
+/** Стоимость одной операции за период: сколько раз и на сколько долларов. */
+export type SpendCell = { operation: AiOperation; calls: number; costUsd: number };
+
+export type DailySpend = { day: string; calls: number; costUsd: number; byOperation: SpendCell[] };
+
+/**
+ * Расход по дням.
+ *
+ * Итог за тридцать дней отвечает на вопрос «сколько стоит сервис вообще», но
+ * не отвечает ни на один вопрос, который задают в работе: когда именно
+ * подскочило, разовый это выброс или новая норма, окупается ли вчерашний
+ * приток людей. Для этого нужен ряд, а не число.
+ *
+ * Дни без обращений тоже в ряду — `generate_series`. Пропущенный день в
+ * таблице читается как «данных нет», хотя означает ровно обратное: сервисом
+ * в этот день не пользовались, и это факт, а не пробел.
+ */
+export async function aiSpendByDay(days = 30): Promise<DailySpend[]> {
+  const rows = await rowsOf<Record<string, string | number>>(sql`
+    SELECT to_char(d.day, 'YYYY-MM-DD') AS day, u.kind,
+           count(u.id)::int AS calls,
+           coalesce(sum(u.input_tokens), 0)::bigint AS input_tokens,
+           coalesce(sum(u.output_tokens), 0)::bigint AS output_tokens
+    FROM generate_series(current_date - ${days - 1}::int, current_date, interval '1 day') AS d(day)
+    LEFT JOIN ai_usage u ON u.on_date = d.day
+    GROUP BY d.day, u.kind
+    ORDER BY d.day
+  `);
+
+  const byDay = new Map<string, DailySpend>();
+  for (const row of rows) {
+    const day = String(row.day);
+    const entry = byDay.get(day) ?? { day, calls: 0, costUsd: 0, byOperation: [] };
+    byDay.set(day, entry);
+    // LEFT JOIN даёт строку и на день без обращений — с пустым kind. Такой
+    // день обязан остаться в ряду нулём, а не превратиться в операцию «null».
+    if (row.kind === null || row.kind === undefined) continue;
+    const operation = String(row.kind) as AiOperation;
+    const costUsd = estimateCostUsd(
+      { inputTokens: Number(row.input_tokens), outputTokens: Number(row.output_tokens) },
+      operation,
+    );
+    entry.calls += Number(row.calls);
+    entry.costUsd += costUsd;
+    entry.byOperation.push({ operation, calls: Number(row.calls), costUsd });
+  }
+  return [...byDay.values()];
+}
+
+export type PersonSpend = {
+  userId: number;
+  email: string | null;
+  calls: number;
+  costUsd: number;
+  byOperation: SpendCell[];
+};
+
+/**
+ * Расход по людям.
+ *
+ * Ради этого разреза раздел и нужен: средняя себестоимость на человека
+ * скрывает то, что решает судьбу тарифа, — распределение. Двадцать центов в
+ * среднем при одном человеке на четыре доллара и сорока по три цента это
+ * совсем другой сервис, чем сорок одинаковых по двадцать центов, и цена у
+ * них должна быть разная.
+ *
+ * Сортировка по расходу, а не по дате: разговор всегда начинается с верхней
+ * строки.
+ */
+export async function aiSpendByUser(days = 30, limit = 100): Promise<PersonSpend[]> {
+  const rows = await rowsOf<Record<string, string | number | null>>(sql`
+    SELECT a.user_id, u.email, a.kind,
+           count(*)::int AS calls,
+           coalesce(sum(a.input_tokens), 0)::bigint AS input_tokens,
+           coalesce(sum(a.output_tokens), 0)::bigint AS output_tokens
+    FROM ai_usage a
+    LEFT JOIN users u ON u.id = a.user_id
+    WHERE a.on_date >= current_date - ${days - 1}::int
+    GROUP BY a.user_id, u.email, a.kind
+  `);
+
+  const byUser = new Map<number, PersonSpend>();
+  for (const row of rows) {
+    const userId = Number(row.user_id);
+    const entry = byUser.get(userId)
+      ?? { userId, email: (row.email as string | null) ?? null, calls: 0, costUsd: 0, byOperation: [] };
+    byUser.set(userId, entry);
+    const operation = String(row.kind) as AiOperation;
+    const costUsd = estimateCostUsd(
+      { inputTokens: Number(row.input_tokens), outputTokens: Number(row.output_tokens) },
+      operation,
+    );
+    entry.calls += Number(row.calls);
+    entry.costUsd += costUsd;
+    entry.byOperation.push({ operation, calls: Number(row.calls), costUsd });
+  }
+  return [...byUser.values()].sort((a, b) => b.costUsd - a.costUsd).slice(0, limit);
+}

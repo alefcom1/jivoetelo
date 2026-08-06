@@ -21,6 +21,7 @@ import { getDb } from "@/db";
 import { adminAccessLog, meals, users, weightEntries } from "@/db/schema";
 import { listAwards } from "./awards-store.ts";
 import { effectivePlan } from "./paid.ts";
+import { estimateCostUsd, type AiOperation } from "./quota-policy.ts";
 import { computeStreak } from "./streak.ts";
 import { localToday } from "./dates.ts";
 import { listLoggedDays } from "./meals.ts";
@@ -196,4 +197,124 @@ export async function listAdminAccessLog(limit = 100, subjectId?: number): Promi
     .where(subjectId ? and(eq(adminAccessLog.subjectId, subjectId)) : undefined)
     .orderBy(desc(adminAccessLog.createdAt))
     .limit(limit);
+}
+
+export type TimelineEvent = {
+  at: Date;
+  /** Раздел: по нему в интерфейсе красится метка и фильтруется лента. */
+  kind: string;
+  /** Что именно произошло, готовой строкой. */
+  detail: string;
+};
+
+/**
+ * Всё, что сервис записал про человека, одной лентой.
+ *
+ * ## Почему UNION, а не десять запросов
+ *
+ * События живут в десяти таблицах, и до сих пор карточка показывала из них
+ * две — приёмы пищи и награды. На вопрос «что этот человек делал» это не
+ * отвечало: заходы, обращения к распознаванию, согласия, вес, снимки, письма
+ * оставались невидимы, хотя записаны все. Собирать их в приложении значило бы
+ * вытянуть по сотне строк из каждой таблицы и отсортировать в памяти, чтобы
+ * показать двадцать; база сливает и сортирует это одним проходом.
+ *
+ * ## Чего в ленте нет и почему
+ *
+ * Нет просмотров страниц: мы их не пишем. Это не упущение — дневник питания
+ * не то место, где стоит заводить полную слежку за перемещениями по экранам,
+ * а на вопросы «пользуется ли человек сервисом» и «что у него не получилось»
+ * отвечают записи о действиях, которые здесь и собраны.
+ *
+ * Нет содержимого писем и снимков — только факт отправки и заголовок. Сами
+ * данные лежат по своим адресам, и дублировать их в ленте незачем.
+ *
+ * Обращение к ленте пишется в журнал как `diary`: это чтение персональных
+ * данных, и след ему нужен такой же, как открытию карточки.
+ */
+export async function personTimeline(personId: number, limit = 200): Promise<TimelineEvent[]> {
+  const rows = await getDb().execute(sql`
+    SELECT at, kind, detail FROM (
+      SELECT created_at AS at, 'meal' AS kind,
+             coalesce(source_text, 'без описания') || ' · ' || eaten_on || ' ' || eaten_time AS detail
+        FROM meals WHERE user_id = ${personId}
+      UNION ALL
+      SELECT created_at, 'weight', on_date || ' · ' || weight_kg || ' кг'
+        FROM weight_entries WHERE user_id = ${personId}
+      UNION ALL
+      SELECT created_at, 'ai',
+             kind || ' · ' || input_tokens || '→' || output_tokens || ' токенов'
+        FROM ai_usage WHERE user_id = ${personId}
+      UNION ALL
+      SELECT created_at, 'award', award_key || ' · ' || earned_on
+        FROM user_awards WHERE user_id = ${personId}
+      UNION ALL
+      SELECT accepted_at, 'consent',
+             kind || ' ' || version || ' (' || source || ')'
+             || CASE WHEN withdrawn_at IS NULL THEN '' ELSE ' — отозвано' END
+        FROM user_consents WHERE user_id = ${personId}
+      UNION ALL
+      SELECT created_at, 'session', 'вход в аккаунт'
+        FROM sessions WHERE user_id = ${personId}
+      UNION ALL
+      SELECT created_at, 'photo', coalesce(note, 'снимок без подписи')
+        FROM photo_inbox WHERE user_id = ${personId}
+      UNION ALL
+      SELECT created_at, 'catalog', product_slug || ' · ' || status
+        FROM catalog_photos WHERE user_id = ${personId}
+      UNION ALL
+      SELECT created_at, 'payment', status || ' · ' || sum
+        FROM payments WHERE user_id = ${personId}
+      UNION ALL
+      SELECT used_at, 'voucher', code || ' · ' || days || ' дн.'
+        FROM vouchers WHERE used_by = ${personId} AND used_at IS NOT NULL
+      UNION ALL
+      SELECT sent_at, 'report', kind || ' · ' || channel
+        FROM report_deliveries WHERE user_id = ${personId} AND sent_at IS NOT NULL
+    ) events
+    ORDER BY at DESC
+    LIMIT ${limit}
+  `);
+  const list = (rows as unknown as { rows?: unknown[] }).rows ?? (rows as unknown as unknown[]);
+  return (list as Array<{ at: string | Date; kind: string; detail: string }>).map((row) => ({
+    at: row.at instanceof Date ? row.at : new Date(row.at),
+    kind: String(row.kind),
+    detail: String(row.detail),
+  }));
+}
+
+export type PersonDailySpend = { day: string; calls: number; costUsd: number };
+
+/**
+ * Расход на распознавание по дням — для одного человека.
+ *
+ * Тот же разрез, что и на странице расхода, но в карточке он отвечает на
+ * другой вопрос: не «сколько стоит сервис», а «сколько стоит этот человек» —
+ * тот самый, с которым сейчас разбираешься. Без него разговор о переводе на
+ * платный тариф ведётся вслепую.
+ */
+export async function personSpendByDay(personId: number, days = 30): Promise<PersonDailySpend[]> {
+  const result = await getDb().execute(sql`
+    SELECT on_date::text AS day, kind,
+           count(*)::int AS calls,
+           coalesce(sum(input_tokens), 0)::bigint AS input_tokens,
+           coalesce(sum(output_tokens), 0)::bigint AS output_tokens
+    FROM ai_usage
+    WHERE user_id = ${personId} AND on_date >= current_date - ${days - 1}::int
+    GROUP BY on_date, kind
+    ORDER BY on_date DESC
+  `);
+  const list = (result as unknown as { rows?: unknown[] }).rows ?? (result as unknown as unknown[]);
+  const byDay = new Map<string, PersonDailySpend>();
+  for (const row of list as Array<Record<string, string | number>>) {
+    const day = String(row.day);
+    const entry = byDay.get(day) ?? { day, calls: 0, costUsd: 0 };
+    byDay.set(day, entry);
+    entry.calls += Number(row.calls);
+    entry.costUsd += estimateCostUsd(
+      { inputTokens: Number(row.input_tokens), outputTokens: Number(row.output_tokens) },
+      String(row.kind) as AiOperation,
+    );
+  }
+  return [...byDay.values()];
 }
