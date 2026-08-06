@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { isAdminEmail } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/auth";
 import { Logo } from "../logo";
 import { SiteFooter } from "../site-footer";
@@ -8,6 +9,7 @@ import { logout } from "../auth-actions";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const admin = user.email ? isAdminEmail(user.email, process.env.ADMIN_EMAILS) : false;
 
   return <div className="shell">
     <header className="shell-header">
@@ -23,6 +25,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Link href="/app/review">Обзор</Link>
         <Link href="/app/settings">Настройки</Link>
         <Link href="/app/specialists">Доступ</Link>
+        {/* Ссылка только для администратора.
+            404 для посторонних (app/admin/layout.tsx) остаётся как был: тот,
+            кого нет в ADMIN_EMAILS, этой ссылки не видит вовсе, и по адресу
+            для него по-прежнему ничего нет. Прятать ссылку и от админа —
+            это прятать инструмент от того, для кого он сделан. */}
+        {admin && <Link href="/admin">Админка</Link>}
       </nav>
       <form action={logout}><button className="link-button" type="submit">Выйти</button></form>
     </header>
