@@ -178,6 +178,19 @@ export function featuredArticles(): Article[] {
   return FEATURED_SLUGS.map((slug) => findArticle(slug)).filter((a): a is Article => Boolean(a));
 }
 
+/**
+ * Самые свежие статьи — для короткой полосы в конце главной.
+ *
+ * Сортируем по дате, а не берём начало массива: порядок в `ARTICLES`
+ * редакционный (им же задаётся пара крупных карточек на хабе), и однажды
+ * кто-нибудь переставит статьи местами, не подозревая, что этим меняет и
+ * «последние» на главной. Сортировка в JS устойчивая, поэтому при равных
+ * датах порядок остаётся редакционным — то есть ровно тем, что и ожидается.
+ */
+export function latestArticles(count: number): Article[] {
+  return [...ARTICLES].sort((a, b) => b.published.localeCompare(a.published)).slice(0, count);
+}
+
 /** «4 августа 2026» — дата в подписи карточки и статьи. */
 export function formatArticleDate(published: string): string {
   return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" })

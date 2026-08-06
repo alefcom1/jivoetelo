@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { featuredArticles } from "@/lib/articles";
+import { latestArticles } from "@/lib/articles";
 import { AppInvite } from "./app-invite";
 import { ArticleHero } from "./blog/heroes";
+import { HeroCalc } from "./hero-calc";
 import { Logo } from "./logo";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
@@ -58,6 +59,10 @@ const TOOLS = [
   { href: "/raschet/temp", title: "С какой скоростью снижать вес", note: "Расчёт" },
   { href: "/raschet/plan", title: "Ваш стартовый коридор целиком", note: "Расчёт" },
   { href: "/raschet/kviz", title: "Что мне сейчас подходит", note: "Вопросы" },
+  // Меню на день стояло на главной отдельной секцией с большой картинкой.
+  // Место ему здесь: это такой же расчёт, и человек, посчитавший норму,
+  // следующим вопросом задаёт «и что мне теперь есть».
+  { href: "/raschet/menyu", title: "Что съесть на вашу норму", note: "Меню на день" },
   { href: "/skolko-kalorij", title: "Калорийность готовых блюд", note: "Справочник" },
 ];
 
@@ -95,6 +100,14 @@ const FAQ = [
     a: "Да. Цель «поддерживать» — полноценная, а не заглушка. Половина смысла дневника не в снижении веса, а в том, чтобы понять, что вы вообще едите.",
   },
   {
+    q: "Сколько это стоит?",
+    a: "Дневник, разбор фотографий, план и подсказки — бесплатно и целиком. Ограничение одно и техническое: 20 разборов по фото в день, 40 по тексту и 15 подсказок. Столько не набирает никто, кто ведёт дневник для себя, — лимит стоит против чужого скрипта, а не против вас. Записывать еду руками можно без ограничений всегда, в том числе когда дневной лимит исчерпан. Когда появится платный тариф, бесплатный останется рабочим, а не превратится в демонстрацию, и мы предупредим заранее.",
+  },
+  {
+    q: "Я нутрициолог или тренер. Можно вести клиентов?",
+    a: "Да, это Живое Тело Pro. Клиент сам выбирает, что открыть: итоги недели, дневник, вес — или ничего, и закрыть доступ может в любой момент. Подробно — на странице «Для специалистов».",
+  },
+  {
     q: "Мне 15 лет, можно?",
     a: "С 14 лет — да, и до 18 нужно согласие родителей. Несовершеннолетним сервис не предлагает дефицит по умолчанию и смягчает формулировки.",
   },
@@ -105,13 +118,54 @@ export default function Home() {
   return <main>
     <SiteHeader />
 
-    <section className="intro" id="top"><div className="intro-grid"><div className="intro-copy"><p className="kicker">Дневник питания по фотографиям <i /></p><h1>Сфотографируйте<br />еду.<br /><em>Остальное посчитаем.</em></h1><p className="intro-lead">Сфотографируйте тарелку — увидите состав. Через неделю записей сервис поймёт вашу норму точнее любой формулы: по тому, как отзывается ваше тело, а не по среднему человеку вашего роста.</p><div className="intro-actions"><Link className="black-button" href="/raschet/plan">Создать свой план <b>↗</b></Link><a href="#experience">Смотреть продукт <span>↓</span></a></div><div className="intro-meta"><span>01 / 04</span><i /><span>Питание в ритме вашего тела</span></div></div><div className="intro-statement"><p>Сначала — увидеть,<br />что происходит.</p><b>Решения<br />потом.</b><span>Живое Тело<br />2026</span></div></div></section>
+    <section className="intro" id="top">
+      <div className="intro-grid">
+        <div className="intro-copy">
+          <p className="kicker">Дневник питания по фотографиям <i /></p>
+          <h1>Сфотографируйте<br />еду.<br /><em>Остальное посчитаем.</em></h1>
+          {/* Две строки вместо четырёх. Длинный лид в первом экране читают
+              редко, а места он занимает столько же, сколько сам продукт. */}
+          <p className="intro-lead">
+            Состав — по снимку тарелки. Норма — по вашим записям, а не по среднему
+            человеку вашего роста.
+          </p>
 
-    {/* Первое, о чём спрашивает человек, — «что я буду делать руками».
-        Раньше страница отвечала на это словами «фото, голос или текст» и ни
-        одним шагом. Кадры — из docs/illustrations, пересобрать:
-        node scripts/site-art.mjs */}
-    <section className="oneday"><div className="section-top"><p className="kicker">За один день <i /></p><div><h2>Как проходит<br /><em>обычный день.</em></h2><p>Три коротких движения. Ни одного экрана, который нужно изучать.</p></div></div>
+          {/* Три числа вместо счётчика слайдов «01 / 04» и слогана, которые
+              стояли здесь раньше. Все проверяемы: справочник и расчёты можно
+              пересчитать, диапазон виден в любом ответе сервиса. */}
+          <dl className="intro-proof">
+            <div><dt>301</dt><dd>продукт в справочнике</dd></div>
+            <div><dt>24</dt><dd>расчёта без регистрации</dd></div>
+            <div><dt>Коридор</dt><dd>вместо одной цифры</dd></div>
+          </dl>
+        </div>
+
+        {/* Расчёт — на месте художественного заявления «Сначала увидеть, что
+            происходит». Заявление было верным и не делало ничего; расчёт
+            говорит то же самое, но показом. */}
+        <HeroCalc />
+      </div>
+
+      {/* Продукт в первом экране, а не через два экрана прокрутки: до этой
+          правки человек два экрана читал о сервисе, ни разу его не увидев. */}
+      <figure className="intro-shot">
+        <Image
+          src="/site/cabinet.webp"
+          alt="Экран «Сегодня» в личном кабинете: итоги дня, приёмы пищи с составом и подсказка «что съесть дальше»"
+          width={1920}
+          height={1200}
+          sizes="(max-width: 850px) 100vw, 1100px"
+          priority
+        />
+      </figure>
+    </section>
+
+    {/* Три шага и продукт — одним блоком. Раньше это были две секции подряд:
+        «как проходит обычный день» и «как выглядит ваш день», и человек
+        дважды читал про одно и то же, прежде чем дойти до отличий сервиса.
+        Кадры — из docs/illustrations, пересобрать: node scripts/site-art.mjs */}
+    <section className="oneday" id="experience">
+      <div className="section-top"><p className="kicker">За один день <i /></p><div><h2>Как проходит<br /><em>обычный день.</em></h2><p>Три коротких движения. Ни одного экрана, который нужно изучать.</p></div></div>
       <div className="oneday-steps">
         {DAY.map((step) => (
           <figure key={step.src}>
@@ -127,25 +181,9 @@ export default function Home() {
       </p>
     </section>
 
-    <section className="experience" id="experience"><div className="section-top"><p className="kicker">Личный кабинет <i /></p><div><h2>Как выглядит<br /><em>ваш день.</em></h2><p>Пять чисел за день, четыре записи и одна подсказка. Ничего, что нужно настраивать, и ничего, что горит красным.</p></div></div>
-      {/* Снимок настоящего кабинета, а не нарисованный макет. Прежний макет
-          обещал разделы «Дневник / План / Динамика» и оценку «ваш ритм
-          сегодня» — ничего этого в продукте нет и не планировалось.
-          Пересобрать: node scripts/site-shots.mjs */}
-      <figure className="product-frame">
-        <Image
-          src="/site/cabinet.webp"
-          alt="Экран «Сегодня» в личном кабинете: итоги дня, приёмы пищи с составом и подсказка «что съесть дальше»"
-          width={1920}
-          height={1200}
-          sizes="(max-width: 850px) 100vw, 1280px"
-        />
-      </figure>
-    </section>
-
     {/* Единственное место, где названо наше отличие от всей категории.
         Без этой секции страница ничем не отличалась от счётчика калорий. */}
-    <section className="range">
+    <section className="range" id="principles">
       <div>
         <p className="kicker">Честность <i /></p>
         <h2>Почему мы показываем диапазон,<br /><em>а не одну цифру.</em></h2>
@@ -169,6 +207,11 @@ export default function Home() {
           Через две-три недели записей появляется то, чего не даст ни одна формула, — ваша
           собственная динамика. С этого момента норма считается по ней.
         </p>
+        <div className="range-principles">
+          <article><span>01</span><div><h3>Записать проще, чем не записать</h3><p>Фотография в Telegram, строка текста, позиция из справочника — что быстрее в эту минуту, то и подойдёт. Разбирать можно потом.</p></div></article>
+          <article><span>02</span><div><h3>Где мы не уверены — там так и написано</h3><p>У каждой позиции стоит уверенность оценки. Уточнить сервис просит только то, что заметно меняет результат.</p></div></article>
+          <article><span>03</span><div><h3>Норма пересчитывается по вашим данным</h3><p>Не по тому, что должно происходить с человеком вашего веса, а по тому, что происходит с вами.</p></div></article>
+        </div>
         <Link className="black-button" href="/raschet/plan">Посмотреть свой коридор <b>↗</b></Link>
       </div>
       <Image
@@ -179,8 +222,6 @@ export default function Home() {
         sizes="(max-width: 850px) 100vw, 600px"
       />
     </section>
-
-    <section className="principles" id="principles"><div className="principles-title"><p className="kicker">В основе <i /></p><h2>На чём это<br /><em>построено.</em></h2></div><div className="principles-list"><article><span>01</span><div><h3>Записать проще, чем не записать</h3><p>Фотография в Telegram, строка текста, позиция из справочника — что быстрее в эту минуту, то и подойдёт. Разбирать можно потом.</p></div><b>↗</b></article><article><span>02</span><div><h3>Где мы не уверены — там так и написано</h3><p>У каждой позиции стоит уверенность оценки. Уточнить сервис просит только то, что заметно меняет результат.</p></div><b>↗</b></article><article><span>03</span><div><h3>Норма пересчитывается по вашим данным</h3><p>Не по тому, что должно происходить с человеком вашего веса, а по тому, что происходит с вами: сколько вы едите на самом деле и как меняется вес.</p></div><b>↗</b></article></div></section>
 
     {/* Человек, пришедший к дневнику питания, чаще всего уже пробовал считать
         калории и бросил. Он боится не сложности — он боится снова оказаться
@@ -258,71 +299,6 @@ export default function Home() {
       <p className="tools-all"><Link href="/raschet">Все расчёты →</Link></p>
     </section>
 
-    {/* Меню на день. Стоит сразу после расчётов не случайно: человек,
-        посчитавший свою норму, следующим вопросом задаёт «и что мне теперь
-        есть». Здесь на него есть ответ, и это самая наглядная витрина
-        справочника — из тех же трёхсот позиций собран и сам дневник. */}
-    <section className="menu-promo">
-      <Link href="/raschet/menyu" className="menu-promo-card">
-        <Image
-          src="/site/menu-day.webp"
-          alt="Обед на деревянном столе: тарелка с запечённой курицей, гречкой и салатом из огурцов, рядом миска с зеленью"
-          width={1600}
-          height={642}
-          sizes="(max-width: 850px) 100vw, 1280px"
-        />
-        <div className="menu-promo-copy">
-          <p className="kicker">Меню на день <i /></p>
-          <h2>Что съесть<br /><em>на вашу норму.</em></h2>
-          <p>
-            Задайте калорийность — соберём день из обычных продуктов: гречка, творог, борщ,
-            куриная грудка. С граммовками, БЖУ и списком покупок. И честно скажем, насколько
-            собранный день разошёлся с целью.
-          </p>
-          <span className="menu-promo-cta">Собрать меню <b>→</b></span>
-        </div>
-      </Link>
-    </section>
-
-    <section className="specialists" id="specialists"><div><p className="kicker">Живое Тело Pro <i /></p><h2>Для нутрициологов<br /><em>и тренеров.</em></h2><p>Клиент сам выбирает, что открыть: итоги недели, дневник, вес — или ничего. Специалист видит ровно это и ничего сверх, а закрыть доступ можно в любой момент.</p><Link className="white-button" href="/pro">Узнать о Pro <b>↗</b></Link></div>
-      {/* Тоже снимок. В прежнем макете у клиентов стояли бейджи «Стабильный
-          ритм» и «Нужна поддержка» — оценки человека, которых продукт не
-          выдаёт принципиально. На настоящем экране вместо них видно то, что
-          есть: какие разделы клиент открыл сам. */}
-      <figure className="pro-screen">
-        <Image
-          src="/site/pro.webp"
-          alt="Список клиентов в кабинете специалиста: у каждого видно, какие разделы он открыл — итоги недели, дневник, вес"
-          width={1320}
-          height={647}
-          sizes="(max-width: 850px) 100vw, 600px"
-        />
-      </figure>
-    </section>
-
-    {/* Цифры лимитов — настоящие, из PLAN_LIMITS (см. docs/free-tier.md).
-        Меняя их здесь, сверьтесь с кодом: страница, обещающая не тот лимит,
-        хуже страницы, не обещающей ничего. */}
-    <section className="price">
-      <div><p className="kicker">Цена <i /></p><h2>Сколько это<br /><em>стоит.</em></h2></div>
-      <div>
-        <p>
-          Дневник, разбор фотографий, план и подсказки доступны бесплатно и целиком.
-          Ограничение одно и техническое: <strong>20 разборов по фото в день, 40 по тексту
-          и 15 подсказок</strong>. Столько не набирает никто из тех, кто ведёт дневник для
-          себя, — лимит стоит против чужого скрипта, а не против вас.
-        </p>
-        <p>
-          Записывать еду руками можно без ограничений всегда, в том числе когда дневной
-          лимит исчерпан.
-        </p>
-        <p>
-          Когда появится платный тариф, бесплатный останется рабочим, а не превратится
-          в демонстрацию. И мы предупредим заранее.
-        </p>
-      </div>
-    </section>
-
     <section className="faq">
       <div className="section-top"><p className="kicker">Вопросы <i /></p><div><h2>Что обычно<br /><em>спрашивают.</em></h2><p>Коротко и без «свяжитесь с нами для уточнения деталей».</p></div></div>
       <div className="faq-list">
@@ -335,9 +311,33 @@ export default function Home() {
       </div>
     </section>
 
-    {/* Витрина журнала: три первые статьи из lib/articles.ts. Карточки и
-        ссылки настоящие — раздел /blog существует, битых якорей больше нет. */}
-    <section className="journal" id="journal"><div className="section-top"><p className="kicker">Журнал <i /></p><div><h2>О теле —<br /><em>с уважением.</em></h2><p>Как устроен сервис и почему он считает именно так — без давления и обещаний «минус десять к лету».</p></div></div><div className="articles">{featuredArticles().map((article) => <article key={article.slug}><span className="articles-hero" aria-hidden><ArticleHero slug={article.slug} image={article.heroImage} alt="" card /></span><span>{article.kicker.toUpperCase()} · {article.minutes} МИН</span><h3>{article.titleShort}</h3><p>{article.description}</p><Link href={`/blog/${article.slug}`}>Читать статью →</Link></article>)}</div><p className="journal-all"><Link href="/blog">Все статьи журнала →</Link></p></section>
+    {/* Две свежие статьи — узкой полосой перед подвалом.
+        Витрина журнала занимала на главной целый экран и вела туда же, куда
+        одна ссылка; здесь ровно столько, чтобы человек узнал, что журнал
+        есть, и не столько, чтобы это встало между ним и кнопкой. Карточки
+        горизонтальные и низкие намеренно: это не раздел, а сноска.
+        Берём `latestArticles`, а не `featuredArticles` — вторая витрина
+        подобрана руками и «последними» быть не обязана. */}
+    <section className="home-journal">
+      <div className="home-journal-top">
+        <p className="kicker">Журнал <i /></p>
+        <Link href="/blog">Все статьи журнала →</Link>
+      </div>
+      <div className="home-journal-cards">
+        {latestArticles(2).map((article) => (
+          <Link key={article.slug} href={`/blog/${article.slug}`}>
+            <span className="home-journal-hero" aria-hidden>
+              <ArticleHero slug={article.slug} image={article.heroImage} alt="" card />
+            </span>
+            <span className="home-journal-copy">
+              <span className="home-journal-meta">{article.kicker} · {article.minutes} мин</span>
+              <b>{article.titleShort}</b>
+              <span className="home-journal-note">{article.description}</span>
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
 
     {/* Крупный призыв — только здесь: в конце соглашения он был бы неуместен,
         поэтому живёт снаружи подвала, а не внутри него. */}

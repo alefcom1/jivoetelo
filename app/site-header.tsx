@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { hasLinks, NAV_SECTIONS, type NavSection } from "@/lib/site-nav";
+import { hasLinks, isDirectLink, NAV_SECTIONS, type NavSection } from "@/lib/site-nav";
 import { Logo } from "./logo";
 
 /**
@@ -94,6 +94,14 @@ export function SiteHeader({ cta = DEFAULT_CTA }: { cta?: HeaderCta }) {
             onFocus={() => setOpen(section.label)}
             onClick={() => setOpen(open === section.label ? null : section.label)}
           >{section.label}<small>⌄</small></button>
+        : isDirectLink(section)
+        ? <Link
+            key={section.label}
+            href={section.href}
+            onMouseEnter={() => setOpen(null)}
+            onFocus={() => setOpen(null)}
+            onClick={closeAll}
+          >{section.label}</Link>
         : <button
             key={section.label}
             // Фокус здесь закрывает панель так же, как и наведение: иначе
@@ -141,6 +149,10 @@ export function SiteHeader({ cta = DEFAULT_CTA }: { cta?: HeaderCta }) {
               {link.label} <b>→</b>
             </Link>)}
           </section>
+        : isDirectLink(section)
+        ? <Link key={section.label} href={section.href} onClick={closeAll}>
+            {section.label} <b>→</b>
+          </Link>
         : <button key={section.label} onClick={() => { closeAll(); goToSection(section.anchor); }}>
             {section.label} <b>→</b>
           </button>)}

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { botLink } from "@/lib/bot-public";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
@@ -39,11 +40,39 @@ import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
 export function SiteFooter({ children, authed = false }: { children?: React.ReactNode; authed?: boolean }) {
   return <footer id="about">
     {children}
+
+    {/* Приложение в Telegram — полосой, а не строчкой.
+        Раньше бот стоял в колонке «Связаться» между почтой для жалоб и
+        списком документов и выглядел как контакт для обращений. Между тем
+        это основной способ пользоваться сервисом: дневник, камера и план
+        живут внутри мессенджера, а на сайте у них лишь вторая копия.
+
+        QR прячется медиазапросом ниже 850px: свой экран не сканируют.
+        Разметка одна на оба случая — так правильный вход виден сразу, без
+        скрипта и без ожидания гидратации (тот же приём, что в AppInvite). */}
+    <a className="footer-app" href={botLink("site")} target="_blank" rel="noreferrer">
+      {/* alt пустой намеренно: адрес назначения уже написан текстом рядом,
+          и второе его прочтение — шум для читающих с экрана. */}
+      <Image className="footer-app-qr" src="/qr/bot-site.svg" alt="" width={96} height={96} unoptimized />
+      <span className="footer-app-copy">
+        <b>Приложение в Telegram</b>
+        <i>
+          Дневник, камера и план — прямо в мессенджере. Устанавливать нечего:
+          открывается из чата за секунду, фото еды можно просто прислать боту.
+        </i>
+      </span>
+      <span className="footer-app-go">Открыть <em>↗</em></span>
+    </a>
+
     <div className="footer-links">
       <div>
         <p>Сервис</p>
         <Link href="/">Главная</Link>
         <Link href="/pro">Для специалистов</Link>
+        {/* Журнал уехал с главной: витрина из трёх статей занимала целый
+            экран, а вела туда же, куда одна ссылка. Без неё в подвале
+            раздел остался бы без единого входа с сайта. */}
+        <Link href="/blog">Журнал</Link>
         {authed
           ? <>
               <Link href="/app">Мой дневник</Link>
@@ -75,7 +104,9 @@ export function SiteFooter({ children, authed = false }: { children?: React.Reac
       <div>
         <p>Связаться</p>
         <a href="mailto:privacy@jivoetelo.ru">privacy@jivoetelo.ru</a>
-        <a href={botLink()} target="_blank" rel="noreferrer">Бот в Telegram</a>
+        {/* Ссылки на бота здесь больше нет: она переехала в полосу выше.
+            Оставлять обе — значит вести в одно место дважды с одного экрана,
+            и тихая строчка обесценивала бы громкую. */}
         <Link href="/legal">Все документы</Link>
       </div>
     </div>

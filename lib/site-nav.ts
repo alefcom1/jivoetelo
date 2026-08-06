@@ -31,10 +31,18 @@ export type NavLink = { href: string; label: string };
  */
 export type NavArt = { src: string; alt: string; caption: string; accent: string };
 
-/** Раздел меню: либо со своей выпадающей панелью, либо просто якорь. */
+/**
+ * Раздел меню: панель с ссылками, якорь на главной или прямая ссылка.
+ *
+ * Третий вид добавлен, когда журнал переехал с главной на свою страницу.
+ * До этого выбор был только между «панель» и «якорь», и пункт, ведущий на
+ * отдельную страницу, приходилось притворять якорем — что и случилось:
+ * «Журнал» указывал на блок, которого на главной больше нет.
+ */
 export type NavSection =
   | { label: string; links: NavLink[]; art: NavArt }
-  | { label: string; anchor: string };
+  | { label: string; anchor: string }
+  | { label: string; href: string };
 
 export const NAV_SECTIONS: NavSection[] = [
   {
@@ -77,12 +85,20 @@ export const NAV_SECTIONS: NavSection[] = [
       accent: "Диапазон, а не одна цифра.",
     },
   },
-  { label: "Журнал", anchor: "journal" },
+  // Журнал — отдельная страница, а не якорь. Якорем он был, пока витрина
+  // из трёх статей стояла на главной; после переезда пункт меню вёл на
+  // несуществующий блок, то есть не делал ничего.
+  { href: "/blog", label: "Журнал" },
   { label: "О нас", anchor: "principles" },
 ];
 
 export function hasLinks(section: NavSection): section is { label: string; links: NavLink[]; art: NavArt } {
   return "links" in section;
+}
+
+/** Пункт-ссылка: ведёт на отдельную страницу, панели у него нет. */
+export function isDirectLink(section: NavSection): section is { label: string; href: string } {
+  return "href" in section;
 }
 
 /**

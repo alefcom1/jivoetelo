@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ProApplyForm } from "./apply-form";
+import Image from "next/image";
 import { ArtAccessFlow, ArtAccessLog, ArtClientList, ArtConsent, ProGlyph } from "./illustrations";
 
 export const metadata: Metadata = {
@@ -27,6 +28,22 @@ export default function ProPage() {
 
       <section className="pro-access">
         <h2>Как устроен доступ</h2>
+        {/* Настоящий снимок кабинета специалиста. Переехал с главной, где
+            стоял в секции «Для нутрициологов»: там он говорил не своей
+            аудитории, а здесь — единственное место, где видно, как это
+            выглядит на самом деле. Остальные картинки на странице
+            нарисованные, и снимок среди них ценен именно тем, что он не
+            рисунок. */}
+        <figure className="pro-screen">
+          <Image
+            src="/site/pro.webp"
+            alt="Список клиентов в кабинете специалиста: у каждого видно, какие разделы он открыл — итоги недели, дневник, вес"
+            width={1320}
+            height={647}
+            sizes="(max-width: 850px) 100vw, 900px"
+          />
+          <figcaption>Клиент сам выбирает, что открыть: итоги недели, дневник, вес — или ничего. Закрыть доступ можно в любой момент.</figcaption>
+        </figure>
         <div className="pro-access-flow-wrap">
           <ArtAccessFlow />
         </div>

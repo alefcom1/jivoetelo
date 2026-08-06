@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { readdir } from "node:fs/promises";
-import { hasLinks, NAV_EXEMPT, NAV_SECTIONS } from "../lib/site-nav.ts";
+import { hasLinks, isDirectLink, NAV_EXEMPT, NAV_SECTIONS } from "../lib/site-nav.ts";
 
 /**
  * Главное меню (lib/site-nav.ts, app/site-header.tsx).
@@ -57,10 +57,24 @@ test("якорь каждого раздела есть на главной — 
   // Ровно эта проверка ловит «О нас»: он вёл на `about`, которого на
   // главной нет вовсе, и нажатие просто ничего не делало.
   for (const section of NAV_SECTIONS) {
-    if (hasLinks(section)) continue;
+    if (hasLinks(section) || isDirectLink(section)) continue;
     assert.ok(
       landing.includes(`id="${section.anchor}"`),
       `«${section.label}» ведёт на якорь «${section.anchor}», а его на главной нет`,
+    );
+  }
+});
+
+test("пункт-ссылка ведёт на существующую страницу", () => {
+  // Третий вид пункта появился, когда журнал переехал с главной. Пока его не
+  // было, такую ссылку приходилось притворять якорем — и «Журнал» год вёл на
+  // блок, которого на главной уже нет. Проверка закрывает и эту дорогу.
+  for (const section of NAV_SECTIONS.filter(isDirectLink)) {
+    assert.ok(section.href.startsWith("/"), `${section.href} — ждём путь от корня`);
+    const page = section.href.replace(/^\//, "");
+    assert.ok(
+      existsSync(new URL(`../app/${page}/page.tsx`, import.meta.url)),
+      `«${section.label}» ведёт на ${section.href}, а страницы нет`,
     );
   }
 });

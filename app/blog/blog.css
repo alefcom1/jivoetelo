@@ -104,11 +104,14 @@
   line-height: 1.75;
 }
 
-/* Остальные статьи: две колонки с настоящим воздухом между ними. */
+/* Остальные статьи — по четыре в ряд.
+   Двух колонок хватало на десяток статей; на сотне это лента из полусотни
+   экранов, по которой ничего не найти. Четыре в ряд превращают её в витрину,
+   где видно сразу двенадцать заголовков. */
 .blog-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 80px 64px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 52px 30px;
 }
 
 .blog-card {
@@ -123,13 +126,13 @@
   overflow: hidden;
   background: var(--paper);
   border: 1px solid var(--line);
-  margin-bottom: 22px;
+  margin-bottom: 14px;
 }
 
 .blog-card-hero svg, .blog-card-hero img {
   display: block;
   width: 100%;
-  height: clamp(200px, 20vw, 260px);
+  height: clamp(150px, 12vw, 190px);
   object-fit: cover;
   transition: transform 0.5s ease;
 }
@@ -138,8 +141,8 @@
 .blog-card:hover .blog-card-hero img { transform: scale(1.03); }
 
 .blog-card-title {
-  margin: 12px 0 10px;
-  font: 500 26px/1.1 var(--serif);
+  margin: 10px 0 8px;
+  font: 500 19px/1.2 var(--serif);
   letter-spacing: -0.035em;
   transition: color 0.2s ease;
 }
@@ -472,3 +475,66 @@
 .blog-sources { margin: 0 0 16px; padding-left: 20px; }
 .blog-sources li { margin-bottom: 8px; font-size: 13px; line-height: 1.6; }
 .blog-sources a { color: inherit; }
+
+
+/* ===== Две ведущие статьи: крупно и в два столбца =====
+   Раньше сверху стояла одна карточка во всю ширину. Она отдавала первой
+   статье весь первый экран и не оставляла выбора — а выбор и есть то, ради
+   чего на хаб журнала приходят. */
+.blog-lead {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 48px;
+  margin-bottom: 96px;
+}
+
+.blog-lead-card { display: flex; flex-direction: column; text-decoration: none; color: inherit; }
+
+.blog-lead-hero {
+  display: block;
+  overflow: hidden;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  margin-bottom: 24px;
+}
+
+.blog-lead-hero svg, .blog-lead-hero img {
+  display: block;
+  width: 100%;
+  height: clamp(240px, 24vw, 320px);
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.blog-lead-card:hover .blog-lead-hero svg,
+.blog-lead-card:hover .blog-lead-hero img { transform: scale(1.02); }
+
+.blog-lead-title {
+  margin: 12px 0 12px;
+  font: 500 clamp(26px, 2.6vw, 34px)/1.08 var(--serif);
+  letter-spacing: -0.04em;
+  transition: color 0.2s ease;
+}
+
+.blog-lead-card:hover .blog-lead-title { color: var(--coral-text); }
+.blog-lead-card p { margin: 0 0 20px; color: #55574f; font-size: 15px; line-height: 1.7; }
+.blog-lead-foot { margin-top: auto; display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+
+/* Счётчик статей — как у образца: сразу видно объём раздела. */
+.blog-hub-count {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1100px) {
+  .blog-grid { grid-template-columns: repeat(2, 1fr); gap: 52px 34px; }
+}
+
+@media (max-width: 700px) {
+  .blog-lead { grid-template-columns: 1fr; gap: 44px; margin-bottom: 60px; }
+  .blog-grid { grid-template-columns: 1fr; gap: 44px; }
+}
