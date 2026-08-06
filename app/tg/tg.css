@@ -413,6 +413,18 @@
 .tg-explain-body p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--tg-text); }
 .tg-explain-body b { font-variant-numeric: tabular-nums; }
 
+/* Разбор нормы по шагам: что из чего получилось. Список нумерованный, но
+   номера скрыты — считает не человек, порядок и так виден сверху вниз. */
+.tg-explain-steps { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tg-explain-steps li {
+  display: grid; grid-template-columns: 64px 1fr; align-items: baseline; gap: 2px 10px;
+}
+.tg-explain-steps b { font-variant-numeric: tabular-nums; font-size: 15px; }
+.tg-explain-steps span { font-size: 13px; line-height: 1.4; }
+.tg-explain-steps i {
+  grid-column: 2; font-style: normal; font-size: 12px; line-height: 1.45; color: var(--tg-hint);
+}
+
 /* График тренда веса — SVG вручную, без библиотек (технические рамки спеки) */
 .tg-chart { width: 100%; height: 120px; display: block; }
 .tg-chart-line { fill: none; stroke: var(--brand-coral); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }

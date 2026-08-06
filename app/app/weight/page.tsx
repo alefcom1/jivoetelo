@@ -40,6 +40,7 @@ export default async function WeightPage() {
         activity: profile.activity as Activity,
         adjustmentKcal: profile.kcalAdjustment,
         pace: profile.pace as PaceKey | null,
+        kcalOverride: profile.kcalOverride,
       })
     : null;
   const fan = profile && latestKg && targets

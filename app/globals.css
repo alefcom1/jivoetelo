@@ -262,6 +262,20 @@ a.header-cta{display:inline-flex;align-items:center}
 .onboarding-form fieldset{border:0;padding:0;margin:0}
 .onboarding-form legend{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 .field-note{font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.5}
+/* Норма калорий в настройках: число, разбор «откуда» и своя норма. Разбор
+   свёрнут — большинству достаточно самого числа, а тем, кто спросит «почему
+   столько», ответ должен быть под рукой, а не в поддержке. */
+.own-target-value{margin:0 0 10px;font-size:14px}
+.own-target-value strong{font:500 26px var(--serif);letter-spacing:-.02em}
+.own-target-explain summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--coral-text)}
+.own-target-explain ol{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.own-target-explain li{display:grid;grid-template-columns:70px 1fr;align-items:baseline;gap:2px 12px}
+.own-target-explain b{font-variant-numeric:tabular-nums;font-size:15px}
+.own-target-explain span{font-size:13px;line-height:1.4}
+.own-target-explain i{grid-column:2;font-style:normal;font-size:12px;line-height:1.45;color:var(--muted)}
+.own-target-form{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:14px 0 8px}
+.own-target-form label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;color:var(--muted)}
+.own-target-form input{width:150px;padding:10px 12px;border:1px solid var(--line);border-radius:3px;font-size:14px}
 .radio-row{display:flex;gap:8px;flex-wrap:wrap}
 /* Вариант ответа — кнопка, а не радиокнопка: выбор сразу ведёт к следующему
    вопросу, а навигация стрелками внутри радиогруппы этому мешала бы

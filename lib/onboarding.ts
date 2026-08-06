@@ -459,3 +459,71 @@ export function parseProfileForm(
     pace,
   };
 }
+
+// ===== Частичная правка плана из настроек =====
+
+/** Верхняя граница ручной нормы. Ниже 5000 ккал в день не живёт никто, кому
+ *  нужен счётчик еды; всё выше — почти наверняка опечатка на разряд. */
+export const MAX_KCAL_OVERRIDE = 5000;
+/** Нижняя — та же, что у автоматических целей для женщин (lib/targets.ts).
+ *  Число ниже неё принимаем, но показываем поднятым: решение о том, что
+ *  делать с чужим назначением, принимает lib/targets.ts, а не форма. */
+export const MIN_KCAL_OVERRIDE = 500;
+
+export type GoalsPatch = {
+  goal: Goal;
+  activity: Activity;
+  heightCm: number;
+  targetWeightKg: number | null;
+  pace: PaceKey | null;
+  kcalOverride: number | null;
+};
+
+/**
+ * Разбор правки плана из настроек: цель, активность, рост, целевой вес, темп
+ * и своя норма.
+ *
+ * Отдельно от parseProfileForm, потому что это другой случай. Там — первичная
+ * настройка, где обязательно всё; здесь — правка существующего профиля, где
+ * пол и год рождения не меняются (менять их задним числом незачем: это не
+ * настройки, а факты), а вес приходит отдельной записью в дневник измерений.
+ *
+ * Возвращает null на первой же непонятной величине, а не «чинит» её молча:
+ * молча исправленный рост 17 см — это молча испорченная норма на следующие
+ * полгода.
+ */
+export function parseGoalsPatch(input: {
+  goal?: unknown;
+  activity?: unknown;
+  heightCm?: unknown;
+  targetWeightKg?: unknown;
+  pace?: unknown;
+  kcalOverride?: unknown;
+}): GoalsPatch | null {
+  if (!(GOALS as string[]).includes(String(input.goal))) return null;
+  if (!(ACTIVITIES as string[]).includes(String(input.activity))) return null;
+
+  const heightCm = Number(input.heightCm);
+  if (!Number.isFinite(heightCm) || heightCm < MIN_HEIGHT_CM || heightCm > MAX_HEIGHT_CM) return null;
+
+  // Целевой вес и своя норма необязательны: null — это «не задано», обычное
+  // состояние, а не ошибка ввода.
+  let targetWeightKg: number | null = null;
+  if (input.targetWeightKg != null && String(input.targetWeightKg) !== "") {
+    const n = Number(input.targetWeightKg);
+    if (!Number.isFinite(n) || n < MIN_WEIGHT_KG || n > MAX_WEIGHT_KG) return null;
+    targetWeightKg = n;
+  }
+
+  let kcalOverride: number | null = null;
+  if (input.kcalOverride != null && String(input.kcalOverride) !== "") {
+    const n = Number(input.kcalOverride);
+    if (!Number.isFinite(n) || n < MIN_KCAL_OVERRIDE || n > MAX_KCAL_OVERRIDE) return null;
+    kcalOverride = Math.round(n);
+  }
+
+  // Темп — как и в parseProfileForm: мусор означает «не выбран», а не отказ.
+  const pace = PACE_KEYS.includes(input.pace as PaceKey) ? (input.pace as PaceKey) : null;
+
+  return { goal: input.goal as Goal, activity: input.activity as Activity, heightCm, targetWeightKg, pace, kcalOverride };
+}

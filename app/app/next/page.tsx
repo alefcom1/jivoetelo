@@ -50,6 +50,7 @@ export default async function NextMealPage() {
     activity: profile.activity as Activity,
     adjustmentKcal: profile.kcalAdjustment,
     pace: profile.pace as PaceKey | null,
+    kcalOverride: profile.kcalOverride,
   });
 
   const day = localToday();

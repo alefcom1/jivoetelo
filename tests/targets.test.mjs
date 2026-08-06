@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { computeTargets, computeTdee } from "../lib/targets.ts";
+import { computeTargets, computeTdee, explainTargets } from "../lib/targets.ts";
 import { computePace } from "../lib/pace.ts";
 
 const base = {
@@ -123,4 +123,106 @@ test("нижняя граница калорий действует и при з
   );
   assert.ok(t.kcalMin >= 1200 * 0.93, `нижняя граница слишком низкая: ${t.kcalMin}`);
   assert.equal(t.adjusted, true);
+});
+
+// ===== Своя норма и разбор расчёта =====
+
+test("своя норма отменяет формулу целиком", () => {
+  // Не «уточняет», а именно отменяет: врач, назначивший 1800, не имел в виду
+  // 1800 с поправкой на нашу активность и наш темп снижения.
+  const base = {
+    goal: "lose", sexForFormula: "female", birthYear: 1990,
+    heightCm: 165, weightKg: 70, activity: "moderate",
+    adjustmentKcal: -300, pace: "fast",
+  };
+  const byFormula = computeTargets(base, 2026);
+  const byHand = computeTargets({ ...base, kcalOverride: 1800 }, 2026);
+
+  assert.notEqual(byFormula.kcalTarget, 1800);
+  assert.equal(byHand.kcalTarget, 1800);
+  assert.equal(byHand.source, "manual");
+  assert.equal(byFormula.source, "formula");
+});
+
+test("у своей нормы диапазон схлопнут в точку", () => {
+  // Диапазон — честная оценка неточности формулы. К числу, названному
+  // человеком, эта неточность отношения не имеет: растянув 1800 в 1670–1930,
+  // мы приписали бы врачу то, чего он не говорил.
+  const t = computeTargets({
+    goal: "maintain", sexForFormula: "male", birthYear: 1985,
+    heightCm: 180, weightKg: 80, activity: "light", kcalOverride: 2200,
+  }, 2026);
+  assert.equal(t.kcalMin, 2200);
+  assert.equal(t.kcalMax, 2200);
+});
+
+test("нижняя граница безопасности действует и на свою норму", () => {
+  // Единственное, что переживает переопределение. Мы не знаем, кто ввёл это
+  // число и зачем, и 600 ккал в день — уже не настройка.
+  const female = computeTargets({
+    goal: "lose", sexForFormula: "female", birthYear: 1990,
+    heightCm: 165, weightKg: 60, activity: "light", kcalOverride: 600,
+  }, 2026);
+  assert.equal(female.kcalTarget, 1200);
+  assert.equal(female.adjusted, true, "поднятие до границы должно быть помечено");
+
+  const male = computeTargets({
+    goal: "lose", sexForFormula: "male", birthYear: 1990,
+    heightCm: 180, weightKg: 80, activity: "light", kcalOverride: 900,
+  }, 2026);
+  assert.equal(male.kcalTarget, 1500);
+});
+
+test("пустая своя норма — это расчёт по формуле, а не ноль", () => {
+  const base = {
+    goal: "maintain", sexForFormula: "female", birthYear: 1990,
+    heightCm: 165, weightKg: 65, activity: "light",
+  };
+  const expected = computeTargets(base, 2026).kcalTarget;
+  for (const empty of [null, undefined]) {
+    assert.equal(computeTargets({ ...base, kcalOverride: empty }, 2026).kcalTarget, expected);
+  }
+});
+
+test("разбор объясняет каждый шаг и сходится с итогом", () => {
+  // Смысл разбора в том, что последнее число в нём — то самое, что человек
+  // видит на экране. Разойдутся — объяснение станет хуже его отсутствия.
+  const { targets, steps } = explainTargets({
+    goal: "lose", sexForFormula: "female", birthYear: 1990,
+    heightCm: 165, weightKg: 70, activity: "moderate",
+    adjustmentKcal: -150, pace: "moderate",
+  }, 2026);
+
+  assert.ok(steps.length >= 3, `шагов всего ${steps.length}`);
+  assert.match(steps[0].label, /Миффлин/, "первым шагом должна быть формула");
+  assert.equal(steps.at(-1).kcal, targets.kcalTarget, "последний шаг разбора не сходится с нормой");
+  for (const step of steps) {
+    assert.ok(Number.isFinite(step.kcal), `шаг «${step.label}» без числа`);
+    assert.ok(step.label.length > 0);
+  }
+});
+
+test("адаптивная поправка попадает в разбор, только если она есть", () => {
+  const base = {
+    goal: "maintain", sexForFormula: "male", birthYear: 1985,
+    heightCm: 180, weightKg: 80, activity: "light",
+  };
+  const without = explainTargets(base, 2026).steps.map((s) => s.label);
+  const with150 = explainTargets({ ...base, adjustmentKcal: 150 }, 2026).steps.map((s) => s.label);
+
+  assert.ok(!without.some((l) => /Адаптивная/.test(l)), "поправки нет, а строка про неё есть");
+  assert.ok(with150.some((l) => /Адаптивная/.test(l)), "поправка есть, а строки про неё нет");
+});
+
+test("у своей нормы разбор короткий и без формулы", () => {
+  // Показывать шаги расчёта, который не применялся, — врать о происхождении
+  // числа ровно там, где мы это происхождение и объясняем.
+  const { steps } = explainTargets({
+    goal: "lose", sexForFormula: "female", birthYear: 1990,
+    heightCm: 165, weightKg: 70, activity: "moderate", kcalOverride: 1900,
+  }, 2026);
+
+  assert.equal(steps.length, 1);
+  assert.ok(!steps.some((s) => /Миффлин/.test(s.label)));
+  assert.equal(steps[0].kcal, 1900);
 });

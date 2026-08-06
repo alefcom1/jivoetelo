@@ -60,7 +60,14 @@ export async function fetchProfile(): Promise<ProfileResponse> {
   return handle<ProfileResponse>(await fetch("/api/tg/profile", { headers: initDataHeader(), cache: "no-store" }));
 }
 
-export async function saveGoals(payload: { targetWeightKg: number | null; pace: string | null }): Promise<{ ok: true }> {
+export async function saveGoals(payload: {
+  goal: string;
+  activity: string;
+  heightCm: number;
+  targetWeightKg: number | null;
+  pace: string | null;
+  kcalOverride: number | null;
+}): Promise<{ ok: true }> {
   return handle(await fetch("/api/tg/profile/goals", {
     method: "POST",
     headers: { ...initDataHeader(), "Content-Type": "application/json" },

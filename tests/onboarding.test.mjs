@@ -9,6 +9,7 @@ import {
   maxBirthYear,
   minBirthYear,
   nextStep,
+  parseGoalsPatch,
   parseProfileForm,
   planSafetyReasons,
   previousStep,
@@ -243,4 +244,66 @@ test("форма с недопустимым ростом или весом от
 test("форма с неизвестной целью или полом отклоняется целиком", () => {
   assert.equal(parseProfileForm({ ...VALID_FORM, goal: "cure_everything" }, YEAR), null);
   assert.equal(parseProfileForm({ ...VALID_FORM, sexForFormula: "other" }, YEAR), null);
+});
+
+// ===== Правка плана из настроек =====
+
+const VALID_PATCH = { goal: "lose", activity: "moderate", heightCm: 165 };
+
+test("правка плана принимает нормальные значения", () => {
+  const patch = parseGoalsPatch({ ...VALID_PATCH, targetWeightKg: 62, pace: "moderate", kcalOverride: 1800 });
+  assert.deepEqual(patch, {
+    goal: "lose", activity: "moderate", heightCm: 165,
+    targetWeightKg: 62, pace: "moderate", kcalOverride: 1800,
+  });
+});
+
+test("целевой вес и своя норма необязательны", () => {
+  // Пусто — это «не задано», обычное состояние, а не ошибка ввода.
+  for (const empty of [null, undefined, ""]) {
+    const patch = parseGoalsPatch({ ...VALID_PATCH, targetWeightKg: empty, kcalOverride: empty });
+    assert.ok(patch, `${JSON.stringify(empty)} отклонено, а должно означать «не задано»`);
+    assert.equal(patch.targetWeightKg, null);
+    assert.equal(patch.kcalOverride, null);
+  }
+});
+
+test("непонятные величины отклоняются целиком, а не чинятся молча", () => {
+  // Молча исправленный рост 17 см — это молча испорченная норма на полгода.
+  const bad = [
+    { ...VALID_PATCH, goal: "фывфыв" },
+    { ...VALID_PATCH, activity: "" },
+    { ...VALID_PATCH, heightCm: 17 },
+    { ...VALID_PATCH, heightCm: 300 },
+    { ...VALID_PATCH, heightCm: "высокий" },
+    { ...VALID_PATCH, targetWeightKg: 5 },
+    { ...VALID_PATCH, targetWeightKg: 900 },
+    { ...VALID_PATCH, kcalOverride: 50 },
+    { ...VALID_PATCH, kcalOverride: 99999 },
+  ];
+  for (const input of bad) {
+    assert.equal(parseGoalsPatch(input), null, `принято: ${JSON.stringify(input)}`);
+  }
+});
+
+test("мусорный темп — это «не выбран», а не отказ", () => {
+  // Тот же приём, что в parseProfileForm: темп необязателен, и ронять из-за
+  // него всю форму нельзя.
+  const patch = parseGoalsPatch({ ...VALID_PATCH, pace: "мгновенно" });
+  assert.ok(patch);
+  assert.equal(patch.pace, null);
+});
+
+test("своя норма округляется до целого", () => {
+  // В базе колонка integer: дробь дошла бы туда молча усечённой.
+  assert.equal(parseGoalsPatch({ ...VALID_PATCH, kcalOverride: 1837.6 }).kcalOverride, 1838);
+});
+
+test("пол и год рождения через правку плана не проходят", () => {
+  // Это не настройки, а факты. Возможность поменять их задним числом —
+  // способ незаметно испортить всю историю расчётов.
+  const patch = parseGoalsPatch({ ...VALID_PATCH, sexForFormula: "male", birthYear: 1900 });
+  assert.ok(patch);
+  assert.ok(!("sexForFormula" in patch), "пол просочился в правку плана");
+  assert.ok(!("birthYear" in patch), "год рождения просочился в правку плана");
 });

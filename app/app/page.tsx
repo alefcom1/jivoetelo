@@ -59,6 +59,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       activity: profile.activity as Activity,
       adjustmentKcal: profile.kcalAdjustment,
       pace: profile.pace as PaceKey | null,
+      kcalOverride: profile.kcalOverride,
     });
   }
 

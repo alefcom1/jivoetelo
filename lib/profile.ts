@@ -8,7 +8,16 @@ import { profiles, users, weightEntries } from "@/db/schema";
 import { getBotPreferences } from "./bot/store.ts";
 import { computePace, PACE_OPTIONS, type PaceKey, type PaceResult } from "./pace.ts";
 import { DEFAULT_DIGEST_HOUR } from "./reminders.ts";
-import { computeTdee, GOAL_LABELS, type Activity, type Goal, type SexForFormula } from "./targets.ts";
+import {
+  computeTdee,
+  explainTargets,
+  GOAL_LABELS,
+  type Activity,
+  type Goal,
+  type SexForFormula,
+  type TargetStep,
+  type Targets,
+} from "./targets.ts";
 
 export type ProfileGoals = {
   goal: Goal;
@@ -19,6 +28,8 @@ export type ProfileGoals = {
   heightCm: number;
   targetWeightKg: number | null;
   pace: PaceKey;
+  /** Своя норма вместо расчётной, если задана. NULL — считаем по формуле. */
+  kcalOverride: number | null;
 };
 
 export type ProfileData = {
@@ -34,6 +45,15 @@ export type ProfileData = {
    * смысла (см. комментарий в lib/pace.ts).
    */
   paceResult: PaceResult | null;
+  /**
+   * Норма и разбор, откуда она взялась. null, пока нет профиля или веса —
+   * считать не из чего.
+   *
+   * Разбор едет вместе с числом намеренно: до него норма появлялась на
+   * экране без единого слова о происхождении, и это было единственное
+   * место в продукте, где мы просили верить на слово.
+   */
+  targets: { values: Targets; steps: TargetStep[] } | null;
   reminders: { remindersEnabled: boolean; digestHour: number; snoozedUntil: string | null };
 };
 
@@ -70,6 +90,7 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
         heightCm: profile.heightCm,
         targetWeightKg: profile.targetWeightKg,
         pace,
+        kcalOverride: profile.kcalOverride,
       }
     : null;
 
@@ -91,6 +112,26 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
     paceResult = computePace({ weightKg: latestWeightKg, tdeeKcal, pace, targetLossKg });
   }
 
+  // Норма считается здесь же, а не на клиенте: формула, нижние границы и
+  // правило про несовершеннолетних — одно место на весь продукт, и Mini App
+  // не должен знать о них ничего, кроме готового результата.
+  const targets = profile && latestWeightKg
+    ? (() => {
+        const { targets: values, steps } = explainTargets({
+          goal: profile.goal as Goal,
+          sexForFormula: profile.sexForFormula as SexForFormula,
+          birthYear: profile.birthYear,
+          heightCm: profile.heightCm,
+          weightKg: latestWeightKg,
+          activity: profile.activity as Activity,
+          adjustmentKcal: profile.kcalAdjustment,
+          pace: isPaceKey(profile.pace) ? profile.pace : null,
+          kcalOverride: profile.kcalOverride,
+        });
+        return { values, steps };
+      })()
+    : null;
+
   return {
     // Не подменяем отсутствие адреса пустой строкой: интерфейс должен уметь
     // сказать «вход через Telegram», а не показывать пустое место там, где
@@ -101,6 +142,7 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
     latestWeightKg,
     recentWeights: weightRows,
     paceResult,
+    targets,
     reminders: {
       remindersEnabled: preferences?.remindersEnabled ?? true,
       digestHour: preferences?.digestHour ?? DEFAULT_DIGEST_HOUR,

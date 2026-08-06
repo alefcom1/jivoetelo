@@ -7,7 +7,14 @@
 
 import { useEffect, useState } from "react";
 import { LEGAL_PAGES, NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
+import {
+  MAX_HEIGHT_CM,
+  MAX_KCAL_OVERRIDE,
+  MIN_HEIGHT_CM,
+  MIN_KCAL_OVERRIDE,
+} from "@/lib/onboarding";
 import { PACE_OPTIONS, type PaceKey } from "@/lib/pace";
+import { ACTIVITY_LABELS, GOAL_LABELS, type Activity, type Goal } from "@/lib/targets";
 import { MAX_DIGEST_HOUR, MIN_DIGEST_HOUR } from "@/lib/reminders";
 import {
   addMeasurement,
@@ -42,10 +49,50 @@ function Monogram({ email }: { email: string | null }) {
   </span>;
 }
 
+/**
+ * Откуда взялась норма — по шагам.
+ *
+ * До этого блока число появлялось на экране без единого слова о
+ * происхождении, и это было единственное место в продукте, где мы просили
+ * верить на слово. Для сервиса, который отказался от ложной точности ради
+ * диапазона, странно вдвойне: мы говорим «мы не уверены», но не говорим,
+ * в чём именно.
+ *
+ * Показываем свёрнутым: большинству достаточно самого числа, а тем, кто
+ * спросит «почему столько», ответ должен быть под рукой, а не в поддержке.
+ */
+function TargetsBreakdown({ targets }: { targets: ProfileResponse["targets"] }) {
+  if (!targets) return null;
+  const { values, steps } = targets;
+
+  return <details className="tg-explain">
+    <summary>
+      {values.source === "manual"
+        ? `Норма ${values.kcalTarget} ккал — ваша`
+        : `Норма ${values.kcalMin}–${values.kcalMax} ккал — откуда`}
+    </summary>
+    <ol className="tg-explain-steps">
+      {steps.map((step, index) => <li key={index}>
+        <b>{step.kcal}</b>
+        <span>{step.label}</span>
+        {step.note && <i>{step.note}</i>}
+      </li>)}
+    </ol>
+    {values.source === "formula" && <p className="tg-hint">
+      Диапазон, а не точка: формула Миффлина–Сан Жеора даёт оценку, а не
+      измерение. Разброс между людьми одного роста и веса доходит до 15%.
+    </p>}
+  </details>;
+}
+
 function GoalsSection({ profile, onSaved }: { profile: ProfileResponse; onSaved: () => void }) {
-  const { goals, paceResult, latestWeightKg } = profile;
+  const { goals, paceResult, latestWeightKg, targets } = profile;
+  const [goal, setGoal] = useState<Goal>(goals?.goal ?? "maintain");
+  const [activity, setActivity] = useState<Activity>(goals?.activity ?? "light");
+  const [height, setHeight] = useState(goals?.heightCm != null ? String(goals.heightCm) : "");
   const [targetWeight, setTargetWeight] = useState(goals?.targetWeightKg != null ? String(goals.targetWeightKg) : "");
   const [pace, setPace] = useState<PaceKey>(goals?.pace ?? "moderate");
+  const [ownKcal, setOwnKcal] = useState(goals?.kcalOverride != null ? String(goals.kcalOverride) : "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,22 +106,46 @@ function GoalsSection({ profile, onSaved }: { profile: ProfileResponse; onSaved:
     </section>;
   }
 
-  // Отдельной константой, а не goals.goal внутри замыкания: TypeScript не
-  // протаскивает сужение null-проверки выше в объявленную ниже функцию.
-  const goal = goals.goal;
+  /** Число из поля: пусто — null, запятая понимается как точка. */
+  function parseField(raw: string): number | null {
+    const trimmed = raw.trim();
+    return trimmed === "" ? null : Number(trimmed.replace(",", "."));
+  }
 
   async function handleSave() {
     setBusy(true);
     setError(null);
-    const trimmed = targetWeight.trim();
-    const value = trimmed === "" ? null : Number(trimmed.replace(",", "."));
-    if (value !== null && (!Number.isFinite(value) || value < 30 || value > 300)) {
+
+    const weightValue = parseField(targetWeight);
+    if (weightValue !== null && (!Number.isFinite(weightValue) || weightValue < 30 || weightValue > 300)) {
       setError("Целевой вес должен быть от 30 до 300 кг.");
       setBusy(false);
       return;
     }
+    const heightValue = parseField(height);
+    if (heightValue === null || !Number.isFinite(heightValue) || heightValue < MIN_HEIGHT_CM || heightValue > MAX_HEIGHT_CM) {
+      setError(`Рост должен быть от ${MIN_HEIGHT_CM} до ${MAX_HEIGHT_CM} см.`);
+      setBusy(false);
+      return;
+    }
+    const overrideValue = parseField(ownKcal);
+    if (overrideValue !== null && (!Number.isFinite(overrideValue) || overrideValue < MIN_KCAL_OVERRIDE || overrideValue > MAX_KCAL_OVERRIDE)) {
+      setError(`Своя норма — от ${MIN_KCAL_OVERRIDE} до ${MAX_KCAL_OVERRIDE} ккал.`);
+      setBusy(false);
+      return;
+    }
+
     try {
-      await saveGoals({ targetWeightKg: value, pace: goal === "lose" ? pace : null });
+      await saveGoals({
+        goal,
+        activity,
+        heightCm: heightValue,
+        targetWeightKg: weightValue,
+        // Темп осмыслен только при снижении — для остальных целей отправляем
+        // null, иначе он остался бы висеть от прошлой цели.
+        pace: goal === "lose" ? pace : null,
+        kcalOverride: overrideValue,
+      });
       haptic("success");
       onSaved();
     } catch {
@@ -88,7 +159,33 @@ function GoalsSection({ profile, onSaved }: { profile: ProfileResponse; onSaved:
   return <section className="tg-section">
     <h2>Мои цели</h2>
     <div className="tg-card tg-profile-goals">
-      <p className="tg-hint">Текущая цель: {goals.goalLabel.toLowerCase()}. Изменить саму цель, рост или активность можно в <a className="tg-link" href="/app/onboarding" target="_blank" rel="noreferrer">веб-версии</a>.</p>
+      <p className="tg-field-label">Цель</p>
+      <div className="tg-segment tg-segment-wrap">
+        {(Object.keys(GOAL_LABELS) as Goal[]).map((key) => <button
+          key={key}
+          className={goal === key ? "active" : ""}
+          onClick={() => { haptic("tap"); setGoal(key); }}
+        >{GOAL_LABELS[key]}</button>)}
+      </div>
+
+      <p className="tg-field-label">Активность</p>
+      <div className="tg-segment tg-segment-wrap">
+        {(Object.keys(ACTIVITY_LABELS) as Activity[]).map((key) => <button
+          key={key}
+          className={activity === key ? "active" : ""}
+          onClick={() => { haptic("tap"); setActivity(key); }}
+        >{ACTIVITY_LABELS[key]}</button>)}
+      </div>
+
+      <label className="tg-field">
+        Рост, см
+        <input
+          className="tg-input"
+          type="number" inputMode="numeric" min={MIN_HEIGHT_CM} max={MAX_HEIGHT_CM} step="1"
+          value={height}
+          onChange={(e) => setHeight(e.target.value)}
+        />
+      </label>
 
       <label className="tg-field">
         Целевой вес, кг
@@ -101,7 +198,7 @@ function GoalsSection({ profile, onSaved }: { profile: ProfileResponse; onSaved:
         />
       </label>
 
-      {goals.goal === "lose" && <>
+      {goal === "lose" && <>
         <p className="tg-field-label">Темп снижения</p>
         <div className="tg-segment tg-segment-wrap">
           {PACE_OPTIONS.map((option) => <button
@@ -118,6 +215,27 @@ function GoalsSection({ profile, onSaved }: { profile: ProfileResponse; onSaved:
           {paceResult.weeksToGoal !== null && <div><strong>{paceResult.weeksToGoal}</strong><span>недель до цели</span></div>}
         </div>}
       </>}
+
+      {/* Своя норма — последней и с объяснением: это выход из расчёта, а не
+          ещё одна его настройка. Человеку, которому норму назначил врач,
+          важнее, чтобы сервис не спорил, чем чтобы он был прав. */}
+      <label className="tg-field">
+        Своя норма, ккал
+        <input
+          className="tg-input"
+          type="number" inputMode="numeric" min={MIN_KCAL_OVERRIDE} max={MAX_KCAL_OVERRIDE} step="10"
+          placeholder="считаем по формуле"
+          value={ownKcal}
+          onChange={(e) => setOwnKcal(e.target.value)}
+        />
+      </label>
+      <p className="tg-hint">
+        {ownKcal.trim() === ""
+          ? "Пусто — норму считает формула. Заполните, если её назначил врач или тренер: тогда расчёт отключится."
+          : "Формула и адаптивная поправка отключены. Очистите поле, чтобы вернуть расчёт."}
+      </p>
+
+      <TargetsBreakdown targets={targets} />
 
       {error && <p className="tg-error">{error}</p>}
       <button className="tg-button tg-button-block" onClick={() => void handleSave()} disabled={busy}>

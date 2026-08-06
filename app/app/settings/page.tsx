@@ -7,12 +7,14 @@ import { getCurrentUser } from "@/lib/auth";
 import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
 import { PhotoConsent } from "./photo-consent";
 import { getBotPreferences } from "@/lib/bot/store";
+import { getProfileData } from "@/lib/profile";
 import { DEFAULT_DIGEST_HOUR } from "@/lib/reminders";
 import { DEFAULT_REPORT_PREFERENCES, isChannelSetting } from "@/lib/report-prefs";
 import { setShowCalories, setSimpleMode } from "../meal-actions";
 import { CameraSettings } from "../../camera-settings";
 import { BotReminders } from "./bot-reminders";
 import { DangerZone } from "./danger-zone";
+import { OwnTarget } from "./own-target";
 import { ReportSettings } from "./report-settings";
 import { TelegramLink } from "./telegram-link";
 import { UsagePanel } from "./usage-panel";
@@ -24,6 +26,9 @@ export default async function SettingsPage() {
   if (!user) redirect("/login");
 
   const db = getDb();
+  // Норма и разбор — из того же места, что кормит Mini App: правило одно,
+  // и расходиться двум экранам не с чего.
+  const profileData = await getProfileData(user.id);
   // Настройки отчётов читаются здесь, а не серверным действием: действие в
   // «use server»-модуле вызывается кем угодно с любым аргументом, и функция
   // вида getReportPreferences(userId) стала бы способом прочитать чужие
@@ -84,6 +89,10 @@ export default async function SettingsPage() {
       <p>Цель, рост, вес и активность можно поменять в любой момент — план пересчитается сразу.</p>
       <a className="black-button" href="/app/onboarding">Изменить план</a>
     </section>
+    {profileData.targets && <section className="settings-block">
+      <p className="settings-label">Норма калорий</p>
+      <OwnTarget targets={profileData.targets.values} steps={profileData.targets.steps} />
+    </section>}
     <section className="settings-block">
       <p className="settings-label">Telegram</p>
       <TelegramLink linked={linked} />

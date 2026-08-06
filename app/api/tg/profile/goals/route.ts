@@ -1,13 +1,20 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { profiles } from "@/db/schema";
-import { isPaceKey } from "@/lib/profile";
+import { parseGoalsPatch } from "@/lib/onboarding";
 import { authorize } from "../../_auth";
 
 /**
- * Сохраняет целевой вес и темп снижения. Только UPDATE: остальные поля
- * профиля (цель, рост, активность) обязательны в схеме, и без них строку
- * profiles создать нельзя — план сперва настраивается в /app/onboarding.
+ * Сохраняет план: цель, активность, рост, целевой вес, темп и свою норму.
+ *
+ * Только UPDATE. Пол и год рождения сюда не входят — это не настройки, а
+ * факты, и менять их задним числом незачем; вес приходит отдельной записью в
+ * дневник измерений. Строку profiles здесь тоже не создаём: первичная
+ * настройка живёт в /app/onboarding, где спрашивают всё сразу.
+ *
+ * Раньше эндпоинт принимал только целевой вес и темп, а за целью, ростом и
+ * активностью человека отправляли в веб-версию — то есть проходить онбординг
+ * заново ради одного переключателя.
  */
 export async function POST(request: Request) {
   const auth = await authorize(request);
@@ -20,27 +27,14 @@ export async function POST(request: Request) {
     return Response.json({ error: "Некорректный запрос." }, { status: 400 });
   }
 
-  const rawTarget = body.targetWeightKg;
-  let targetWeightKg: number | null;
-  if (rawTarget === null || rawTarget === undefined) {
-    targetWeightKg = null;
-  } else {
-    const n = Number(rawTarget);
-    if (!Number.isFinite(n) || n < 30 || n > 300) {
-      return Response.json({ error: "Целевой вес должен быть от 30 до 300 кг." }, { status: 400 });
-    }
-    targetWeightKg = n;
+  const patch = parseGoalsPatch(body);
+  if (!patch) {
+    return Response.json({ error: "Проверьте цель, активность, рост и числа." }, { status: 400 });
   }
-
-  const rawPace = body.pace;
-  if (rawPace !== null && rawPace !== undefined && !isPaceKey(String(rawPace))) {
-    return Response.json({ error: "Неизвестный темп." }, { status: 400 });
-  }
-  const pace = rawPace == null ? null : String(rawPace);
 
   const rows = await getDb()
     .update(profiles)
-    .set({ targetWeightKg, pace, updatedAt: new Date() })
+    .set({ ...patch, updatedAt: new Date() })
     .where(eq(profiles.userId, auth.user.id))
     .returning({ userId: profiles.userId });
 

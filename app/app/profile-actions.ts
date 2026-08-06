@@ -1,5 +1,6 @@
 "use server";
 
+import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db";
@@ -8,7 +9,7 @@ import { MealAnalysisError, SUGGEST_ERRORS } from "@/lib/ai";
 import { getSuggestionProvider, type MealSuggestion, type SuggestionContext } from "@/lib/ai/suggest";
 import { getCurrentUser } from "@/lib/auth";
 import { isValidDay, localToday } from "@/lib/dates";
-import { parseProfileForm } from "@/lib/onboarding";
+import { MAX_KCAL_OVERRIDE, MIN_KCAL_OVERRIDE, parseProfileForm } from "@/lib/onboarding";
 import { getDiaryContext } from "@/lib/suggest-context";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 
@@ -158,4 +159,49 @@ export async function suggestNextMeal(context: SuggestionHints): Promise<Suggest
     console.error("suggestNextMeal failed", error);
     return { ok: false, error: SUGGEST_ERRORS.failed };
   }
+}
+
+export type OwnTargetState = { status: "idle" | "invalid" | "error" | "saved" };
+
+/**
+ * Своя норма калорий вместо расчётной.
+ *
+ * Отдельным действием, а не полем в saveProfile: это не часть плана, а выход
+ * из него. Человеку, которому норму назначил врач, формула не нужна вовсе, и
+ * заставлять его ради одного числа проходить онбординг целиком — то же
+ * самое, что не дать возможности вообще.
+ *
+ * Пустое поле — законный ввод: значит «верни расчёт по формуле».
+ */
+export async function saveOwnTarget(_prev: OwnTargetState, formData: FormData): Promise<OwnTargetState> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const raw = String(formData.get("kcalOverride") ?? "").trim();
+  let kcalOverride: number | null = null;
+  if (raw !== "") {
+    const value = Number(raw.replace(",", "."));
+    if (!Number.isFinite(value) || value < MIN_KCAL_OVERRIDE || value > MAX_KCAL_OVERRIDE) {
+      return { status: "invalid" };
+    }
+    kcalOverride = Math.round(value);
+  }
+
+  try {
+    const rows = await getDb()
+      .update(profiles)
+      .set({ kcalOverride, updatedAt: new Date() })
+      .where(eq(profiles.userId, user.id))
+      .returning({ userId: profiles.userId });
+    // Профиля ещё нет — значит человек не проходил онбординг, и переопределять
+    // нечего. Отдельного сообщения не нужно: блок показывается только вместе
+    // с уже посчитанной нормой.
+    if (rows.length === 0) return { status: "invalid" };
+  } catch (error) {
+    console.error("saveOwnTarget failed", error);
+    return { status: "error" };
+  }
+  revalidatePath("/app/settings");
+  revalidatePath("/app");
+  return { status: "saved" };
 }
