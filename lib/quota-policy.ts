@@ -139,7 +139,7 @@ export function normalizePlan(plan: string | null | undefined): Plan {
 }
 
 export type QuotaDenial =
-  | { allowed: false; reason: "daily_limit"; used: number; limit: number; operation: AiOperation }
+  | { allowed: false; reason: "daily_limit"; used: number; limit: number; operation: AiOperation; plan: Plan }
   | { allowed: false; reason: "too_fast" }
   | { allowed: false; reason: "service_budget" };
 
@@ -154,8 +154,23 @@ export function quotaMessage(denial: QuotaDenial): string {
   switch (denial.reason) {
     case "too_fast":
       return "Секунду — предыдущий запрос ещё обрабатывается. Попробуйте ещё раз через пару секунд.";
-    case "daily_limit":
-      return `На сегодня доступные ${OPERATION_LABELS[denial.operation]} закончились (${denial.limit} в день). Лимит обновится завтра, а записать еду вручную можно без ограничений.`;
+    case "daily_limit": {
+      const base = `На сегодня доступные ${OPERATION_LABELS[denial.operation]} закончились (${denial.limit} в день). Лимит обновится завтра, а записать еду вручную можно без ограничений.`;
+      /**
+       * Про платный доступ говорим только тому, кто может им воспользоваться,
+       * и только когда оплата действительно работает. Предложить заплатить
+       * там, где платить некуда, — худший вид рекламы: человек нажимает и
+       * упирается в пустоту.
+       *
+       * Переменная окружения читается прямо здесь, как и в
+       * `globalDailyBudgetUsd()` выше. На клиенте её нет, и там условие даст
+       * `false` — то есть по умолчанию мы молчим, а не зовём в никуда.
+       */
+      const canUpgrade = denial.plan === "free" && process.env.PAYMENTS_ENABLED === "true";
+      return canUpgrade
+        ? `${base} На платном тарифе лимиты выше — открыть можно в настройках.`
+        : base;
+    }
     case "service_budget":
       return "Сервис распознавания сегодня работает с повышенной нагрузкой. Попробуйте позже или добавьте еду вручную — это доступно всегда.";
   }

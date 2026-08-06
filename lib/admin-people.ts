@@ -318,3 +318,29 @@ export async function personSpendByDay(personId: number, days = 30): Promise<Per
   }
   return [...byDay.values()];
 }
+
+/**
+ * Найти человека по точному совпадению почты или номера.
+ *
+ * Отдельно от `listPeople`, который ищет подстрокой: там результат
+ * показывается списком и выбирает человек, здесь — сразу приводит к действию
+ * с деньгами. «Нашлось двое, взяли первого» стоило бы кому-то оплаченного
+ * месяца, поэтому неоднозначность считается ненайденным.
+ */
+export async function findPersonExactly(query: string): Promise<number | null> {
+  const trimmed = query.trim();
+  if (!trimmed) return null;
+
+  const asId = Number(trimmed);
+  if (Number.isInteger(asId) && asId > 0) {
+    const rows = await getDb().select({ id: users.id }).from(users).where(eq(users.id, asId)).limit(1);
+    return rows[0]?.id ?? null;
+  }
+
+  const rows = await getDb()
+    .select({ id: users.id })
+    .from(users)
+    .where(sql`lower(${users.email}) = ${trimmed.toLowerCase()}`)
+    .limit(2);
+  return rows.length === 1 ? rows[0].id : null;
+}

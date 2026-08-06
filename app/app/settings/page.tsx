@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { reportPreferences, userConsents, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { daysLeft } from "@/lib/paid";
+import { daysLeft, TARIFFS } from "@/lib/paid";
+import { getTributeConfig, paymentLink } from "@/lib/payments/tribute";
 import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
 import { PhotoConsent } from "./photo-consent";
 import { getBotPreferences } from "@/lib/bot/store";
@@ -25,6 +26,18 @@ const accessDate = consentDate;
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  // Ссылки собираются на сервере: в них подписанная метка человека, и
+  // подпись ставится там, где живёт секрет (lib/payments/tribute.ts).
+  const tribute = getTributeConfig();
+  const payLinks = tribute?.enabled
+    ? TARIFFS.map((tariff) => ({
+        key: tariff.key,
+        label: tariff.label,
+        priceRub: tariff.priceRub,
+        url: paymentLink(tribute, tariff.key, user.id),
+      }))
+    : null;
 
   const db = getDb();
   // Настройки отчётов читаются здесь, а не серверным действием: действие в
@@ -82,6 +95,7 @@ export default async function SettingsPage() {
       <AccessPanel
         daysLeft={daysLeft(user.accessUntil, new Date())}
         until={user.accessUntil ? accessDate.format(user.accessUntil) : null}
+        payLinks={payLinks}
       />
     </section>
     {/* Шпаргалка стоит вторым блоком, а не в подвале настроек: подсказки на

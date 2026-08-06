@@ -20,7 +20,7 @@ import {
   type ProfileResponse,
 } from "./plan-profile-api";
 import { ApiError } from "./api";
-import { haptic } from "./telegram";
+import { haptic, openExternal } from "./telegram";
 import { CameraSettings } from "../camera-settings";
 
 /** Число по-русски: десятые через запятую. В поля ввода не идёт — только в текст. */
@@ -162,6 +162,47 @@ function AwardsSection({ profile, onInvite }: { profile: ProfileResponse; onInvi
             </li>)}
           </ul>}
       {onInvite && <button className="tg-link-button" onClick={onInvite}>Позвать друга</button>}
+    </div>
+  </section>;
+}
+
+/**
+ * Тариф и оплата.
+ *
+ * Кнопка уводит на страницу Tribute через `openExternal`, а не открывает
+ * оплату внутри нашего экрана. Так деньги принимает Tribute, а не наш бот, —
+ * и правило Telegram о продаже цифровых товаров за Stars остаётся его
+ * заботой, а не нашей.
+ *
+ * Ссылки приходят с сервера готовыми: в каждой подписанная метка человека,
+ * иначе оплату не к кому отнести (lib/payments/tribute.ts). Если оплата не
+ * настроена или выключена, `links` приходит пустым — блок тогда честно
+ * говорит про бесплатный тариф и не показывает кнопок, ведущих в никуда.
+ */
+function AccessSection({ profile }: { profile: ProfileResponse }) {
+  const { access } = profile;
+  const paid = access.plan === "premium";
+  return <section className="tg-section">
+    <h2>Тариф</h2>
+    <div className="tg-card tg-access">
+      <p className="tg-hint">
+        {paid
+          ? `Платный доступ открыт ещё ${access.daysLeft} дн. Дневные лимиты распознавания выше обычных.`
+          : "Бесплатный тариф. Дневник, план, вес и обзоры без ограничений; лимиты касаются только распознавания."}
+      </p>
+      {access.links?.map((link) => (
+        <button
+          key={link.key}
+          className="tg-button tg-button-block"
+          onClick={() => { haptic("tap"); openExternal(link.url); }}
+        >
+          {paid ? "Продлить" : "Оплатить"} — {link.label.toLowerCase()}, {link.priceRub} ₽
+        </button>
+      ))}
+      {access.links && <p className="tg-hint">
+        Оплата проходит на стороне Tribute. Доступ откроется сам в течение минуты — вернитесь сюда
+        и потяните экран вниз, чтобы обновить.
+      </p>}
     </div>
   </section>;
 }
@@ -439,6 +480,8 @@ export function ProfileTab({ onUnlinked, onInvite }: { onUnlinked?: () => void; 
       <p className="tg-hint">Все объяснения на одной странице: запись еды, кольцо, дневник, вес, неделя.</p>
       <a className="tg-link" href="/app/pomosch" target="_blank" rel="noreferrer">Как всё устроено →</a>
     </section>
+
+    <AccessSection profile={data} />
 
     <AwardsSection profile={data} onInvite={onInvite} />
 

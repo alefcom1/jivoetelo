@@ -203,3 +203,47 @@ export async function revokeAccessAction(
   revalidatePath("/admin/users");
   return { ok: true, had };
 }
+
+/**
+ * Засчитать зависший платёж человеку и выдать доступ.
+ *
+ * Человек ищется тем же способом, что и в разделе «Люди», — по почте или
+ * номеру. Точное совпадение, а не поиск подстрокой: здесь результат не
+ * показывается на выбор, а сразу приводит к выдаче доступа, и «нашлось двое,
+ * взяли первого» стоило бы кому-то оплаченного месяца.
+ */
+export async function attachPaymentAction(
+  paymentId: number,
+  person: string,
+  tariffKey: string,
+): Promise<{ ok: true; until: string } | { ok: false; message: string }> {
+  const admin = await requireAdmin();
+  if (!admin) notFound();
+
+  if (!Number.isInteger(paymentId) || paymentId <= 0) return { ok: false, message: "Неизвестный платёж." };
+
+  const { tariffByKey } = await import("@/lib/paid");
+  const tariff = tariffByKey(tariffKey);
+  if (!tariff) return { ok: false, message: "Неизвестный тариф." };
+
+  const { findPersonExactly } = await import("@/lib/admin-people");
+  const userId = await findPersonExactly(person);
+  if (userId === null) return { ok: false, message: "Такого человека не нашлось — проверьте почту или номер." };
+
+  const { attachPayment } = await import("@/lib/payments/store");
+  const done = await attachPayment(paymentId, userId, tariff.days);
+  if (!done) return { ok: false, message: "Этот платёж уже засчитан." };
+
+  const { logAdminAccess } = await import("@/lib/admin-people");
+  await logAdminAccess(admin.id, userId, "grant");
+
+  const { getDb } = await import("@/db");
+  const { users } = await import("@/db/schema");
+  const { eq } = await import("drizzle-orm");
+  const rows = await getDb().select({ accessUntil: users.accessUntil }).from(users).where(eq(users.id, userId)).limit(1);
+  const until = rows[0]?.accessUntil;
+
+  revalidatePath("/admin/oplaty");
+  revalidatePath("/admin/users");
+  return { ok: true, until: until ? until.toLocaleDateString("ru-RU") : "—" };
+}

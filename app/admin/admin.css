@@ -409,3 +409,21 @@
    переноситься по слогам, иначе строка перестаёт читаться как одна запись. */
 .adm-spend-days td, .adm-spend-people td, .adm-timeline td:not(:last-child) { white-space: nowrap; }
 .adm-timeline td:last-child { min-width: 260px; }
+
+/* Привязка платежа: поле, тариф и кнопка в одну строку, пока помещаются. */
+.adm-attach { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.adm-attach input { width: 170px; }
+.adm-attach select { padding: 8px; border: 1px solid rgba(0,0,0,0.16); border-radius: 8px; font: inherit; font-size: 13px; }
+/* Белая кнопка на белой строке таблицы сливается с фоном и читается как
+   подпись, а не как действие. Здесь ей нужна рамка. */
+.adm-attach button { border: 1px solid rgba(0,0,0,0.24); border-radius: 8px; }
+
+/* Сырые уведомления. Свёрнуты по умолчанию: их читают, когда что-то пошло не
+   так, а не каждый раз, — развёрнутые они вытеснили бы со страницы то, ради
+   чего на неё чаще заходят. */
+.adm-events details { border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
+.adm-events summary { cursor: pointer; font-size: 13px; }
+.adm-events pre {
+  margin: 10px 0 0; padding: 10px; border-radius: 6px; background: #f6f4f0;
+  font-size: 12px; line-height: 1.45; overflow-x: auto; white-space: pre;
+}

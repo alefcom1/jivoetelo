@@ -182,3 +182,26 @@ export function useMainButton(label: string | null, onClick: () => void): void {
     };
   }, [label]);
 }
+
+/**
+ * Открыть внешнюю ссылку из Mini App.
+ *
+ * Через `openLink` Telegram, а не `window.open`: внутри мессенджера обычное
+ * открытие окна либо блокируется, либо уводит человека из приложения так, что
+ * вернуться он может только заново. `openLink` показывает страницу поверх и
+ * оставляет Mini App живым — после оплаты человек возвращается туда же, где
+ * был, а не начинает сначала.
+ *
+ * Это же и ответ на вопрос, почему оплата не встроена в наш экран: платёж
+ * целиком уходит на сторону Tribute. Правило Telegram о том, что цифровые
+ * товары в мини-аппах продаются за Stars, касается того, кто принимает
+ * деньги, — а принимает их не наш бот.
+ *
+ * Запасной путь — обычная ссылка: тот же экран открывают и в браузере, где
+ * никакого Telegram нет.
+ */
+export function openExternal(url: string): void {
+  const app = getWebApp() as (TelegramWebApp & { openLink?: (url: string) => void }) | null;
+  if (typeof app?.openLink === "function") app.openLink(url);
+  else if (typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer");
+}

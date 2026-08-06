@@ -295,13 +295,52 @@ export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
   provider: text("provider").notNull().default("unitpay"),
   externalId: text("external_id").notNull().unique(),
+  /**
+   * Кому зачли. Нулевой намеренно: Tribute — посредник, и покупатель у него
+   * не обязан совпасть с нашим аккаунтом. Платёж без человека не теряется, а
+   * ждёт в админке привязки руками.
+   */
   userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
   sum: text("sum").notNull(),
-  status: text("status").notNull(), // checked | paid | failed
+  status: text("status").notNull(), // checked | paid | failed | refunded
+  /** Ключ тарифа: цены меняются, а выданные дни остаются. */
+  tariff: text("tariff"),
+  /** Как нашли человека: ref | telegram | email | manual. */
+  matchedBy: text("matched_by"),
+  /** Когда доступ действительно продлили. Пусто — деньги есть, доступа нет. */
+  appliedAt: timestamp("applied_at", { withTimezone: true }),
   payload: jsonb("payload"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Сырые уведомления платёжного сервиса — до того, как из них что-то поняли.
+ *
+ * Заведена под Tribute, документация которого из нашей среды недоступна:
+ * имена полей в обработчике восстановлены по вторичным источникам, и первое
+ * настоящее уведомление здесь и есть та спецификация, которой у нас нет.
+ * Хранится всё, включая не прошедшее проверку подписи, — иначе непонятно,
+ * почему деньги у провайдера есть, а доступа у человека нет.
+ */
+export const paymentEvents = pgTable(
+  "payment_events",
+  {
+    id: serial("id").primaryKey(),
+    provider: text("provider").notNull().default("tribute"),
+    /** Доступ выдаётся только по проверенным подписью. */
+    verified: boolean("verified").notNull().default(false),
+    eventType: text("event_type"),
+    externalId: text("external_id"),
+    raw: jsonb("raw"),
+    headers: jsonb("headers"),
+    /** applied | unmatched | ignored | bad_signature | disabled */
+    outcome: text("outcome").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("payment_events_created").on(table.createdAt)],
+);
 
 /**
  * Фото-инбокс: снимок, присланный боту в любой момент дня, попадает сюда, а

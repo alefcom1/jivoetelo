@@ -7,7 +7,10 @@ import { getDb } from "@/db";
 import { profiles, users, weightEntries } from "@/db/schema";
 import { listAwards, type EarnedAward } from "./awards-store.ts";
 import { getBotPreferences } from "./bot/store.ts";
+import { daysLeft, effectivePlan, TARIFFS, type TariffKey } from "./paid.ts";
 import { computePace, PACE_OPTIONS, type PaceKey, type PaceResult } from "./pace.ts";
+import { getTributeConfig, paymentLink } from "./payments/tribute.ts";
+import type { Plan } from "./quota-policy.ts";
 import { DEFAULT_DIGEST_HOUR } from "./reminders.ts";
 import { computeTdee, GOAL_LABELS, type Activity, type Goal, type SexForFormula } from "./targets.ts";
 
@@ -44,7 +47,48 @@ export type ProfileData = {
    * есть» возникает не в тот день, а через месяц.
    */
   awards: EarnedAward[];
+  /**
+   * Тариф и ссылки оплаты.
+   *
+   * Ссылки приходят с сервера готовыми, а не собираются в Mini App: в них
+   * подписанная метка человека (`lib/payments/tribute.ts`), и подпись
+   * ставится там, где живёт секрет. `links: null` означает «оплата не
+   * настроена или выключена» — экран тогда просто не показывает кнопок.
+   */
+  access: {
+    plan: Plan;
+    daysLeft: number;
+    /** ISO-дата окончания или null. */
+    until: string | null;
+    links: Array<{ key: TariffKey; label: string; priceRub: number; url: string }> | null;
+  };
 };
+
+/**
+ * Тариф и, если оплата настроена, ссылки на неё.
+ *
+ * Собирается здесь, а не в компоненте: ссылка несёт подписанную метку
+ * человека, и подпись ставится только там, где есть секрет. Возвращать из
+ * этой функции сырые ссылки без метки было бы хуже, чем не возвращать ничего:
+ * оплата прошла бы, а к кому её отнести — неизвестно.
+ */
+function accessFor(userId: number, accessUntil: Date | null): ProfileData["access"] {
+  const now = new Date();
+  const config = getTributeConfig();
+  return {
+    plan: effectivePlan(accessUntil, now),
+    daysLeft: daysLeft(accessUntil, now),
+    until: accessUntil ? accessUntil.toISOString() : null,
+    links: config?.enabled
+      ? TARIFFS.map((tariff) => ({
+          key: tariff.key,
+          label: tariff.label,
+          priceRub: tariff.priceRub,
+          url: paymentLink(config, tariff.key, userId),
+        }))
+      : null,
+  };
+}
 
 export function isPaceKey(value: string | null | undefined): value is PaceKey {
   return PACE_OPTIONS.some((option) => option.key === value);
@@ -53,7 +97,11 @@ export function isPaceKey(value: string | null | undefined): value is PaceKey {
 export async function getProfileData(userId: number): Promise<ProfileData> {
   const db = getDb();
   const [userRows, profileRows, weightRows, preferences] = await Promise.all([
-    db.select({ email: users.email, telegramUserId: users.telegramUserId }).from(users).where(eq(users.id, userId)).limit(1),
+    db
+      .select({ email: users.email, telegramUserId: users.telegramUserId, accessUntil: users.accessUntil })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1),
     db.select().from(profiles).where(eq(profiles.userId, userId)).limit(1),
     db
       .select({ onDate: weightEntries.onDate, weightKg: weightEntries.weightKg })
@@ -107,6 +155,7 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
     // человек ждёт увидеть почту.
     email: user?.email ?? null,
     telegramLinked: !!user?.telegramUserId,
+    access: accessFor(userId, user?.accessUntil ?? null),
     goals,
     latestWeightKg,
     recentWeights: weightRows,

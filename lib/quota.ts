@@ -82,7 +82,7 @@ export async function checkQuota(userId: number, plan: Plan, operation: AiOperat
   if (recent.length > 0) return { allowed: false, reason: "too_fast" };
 
   const used = (await getUsageToday(userId))[operation];
-  if (used >= limit) return { allowed: false, reason: "daily_limit", used, limit, operation };
+  if (used >= limit) return { allowed: false, reason: "daily_limit", used, limit, operation, plan };
 
   if ((await spentTodayUsd()) >= globalDailyBudgetUsd()) {
     return { allowed: false, reason: "service_budget" };

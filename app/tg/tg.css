@@ -1241,3 +1241,7 @@
   content: ""; position: absolute; left: 0; top: 8px;
   width: 5px; height: 5px; border-radius: 50%; background: var(--brand-coral);
 }
+
+/* Тариф в профиле: кнопки столбиком — на телефоне это единственный способ
+   не сжать «Оплатить — год, 1900 ₽» до нечитаемого. */
+.tg-access{display:flex;flex-direction:column;gap:10px}
