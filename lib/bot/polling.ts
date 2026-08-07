@@ -25,7 +25,7 @@ import { networkDetail } from "../ai/failure.ts";
 import { handleUpdate } from "./handle-update.ts";
 import { botLinks } from "./links.ts";
 import { botStore, botTranscriber } from "./store.ts";
-import { noteBotError, noteBotNotStarted, noteBotStart, notePollOk } from "./health.ts";
+import { noteBotError, noteBotNotStarted, noteBotStart, notePollOk, setBotProblemSink } from "./health.ts";
 import { recordBotError, recordBotNotStarted, recordBotStart, recordPoll } from "./health-store.ts";
 import { paymentsEnabled } from "../payments/config.ts";
 import { ALLOWED_UPDATES } from "./ensure-webhook.ts";
@@ -71,6 +71,8 @@ export function startPolling(): void {
   }
   started = true;
   noteBotStart("polling");
+  // Всё, что глушилось на пути ответа, теперь доезжает до базы и до админки.
+  setBotProblemSink((message) => void recordBotError(message));
   // И в память, и в базу: память отвечает быстро, но её не видит страница
   // админки — она рендерится из другого бандла (см. lib/bot/health-store.ts).
   void recordBotStart("polling");

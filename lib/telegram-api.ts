@@ -10,6 +10,8 @@
  * не должно ронять цикл планировщика для остальных пользователей.
  */
 
+import { reportBotProblem } from "./bot/health.ts";
+
 /**
  * Адрес Bot API. Обычно это api.telegram.org, но с российского VPS он может
  * быть недоступен — ровно та же история, что с api.anthropic.com
@@ -335,8 +337,14 @@ export async function trySend(
     await client.sendMessage(chatId, text, options);
     return true;
   } catch (error) {
+    // Заблокировавший бота — не поломка, а ответ: записывать его как неполадку
+    // значит завалить диагностику шумом от тех, кто просто ушёл.
     if (error instanceof TelegramApiError && error.isBlockedByUser) return false;
+    const message = error instanceof Error ? error.message : String(error);
     console.error("telegram sendMessage failed", error);
+    // Раньше здесь всё и заканчивалось. Именно этот отказ — «сообщение дошло,
+    // ответ не ушёл» — оказался невидимым, когда опрос наконец заработал.
+    reportBotProblem(`ответ не отправлен: ${message}`);
     return false;
   }
 }

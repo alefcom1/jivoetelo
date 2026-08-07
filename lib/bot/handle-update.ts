@@ -14,6 +14,7 @@ import { snoozeUntil } from "../reminders.ts";
 import { foodCategory } from "../food-category.ts";
 import { isStartPayload } from "../bot-public.ts";
 import { referralFromStart } from "../referral.ts";
+import { reportBotProblem } from "./health.ts";
 import { MAX_AUDIO_BYTES, MAX_DURATION_SEC } from "../speech/limits.ts";
 import { SPEECH_ERRORS, SpeechError, type SpeechInput, type TranscriptResult } from "../speech/types.ts";
 import { daySummaryText, weightSavedText, type DaySummaryInput } from "./day-summary.ts";
@@ -222,7 +223,11 @@ export async function handleUpdate(update: TelegramUpdate, deps: BotDeps): Promi
     if (update.callback_query) return await handleCallback(update, deps);
     if (update.message) return await handleMessage(update, deps);
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error("bot update failed", error);
+    // Сообщение дошло, обработчик упал, человек не получил ничего. Худший из
+    // отказов бота, и до этой строчки он не оставлял следа за пределами логов.
+    reportBotProblem(`разбор сообщения упал: ${message}`);
   }
 }
 

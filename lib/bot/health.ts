@@ -88,6 +88,39 @@ export function noteBotError(message: string): void {
   state.lastError = { at: new Date(), message };
 }
 
+/**
+ * Куда сообщать о неполадке, кроме памяти процесса. Ставит polling.ts —
+ * записью в базу, единственное место, которое видит страница админки.
+ *
+ * Через приёмник, а не прямым импортом хранилища, потому что зовут отсюда и
+ * `lib/telegram-api.ts`, и `lib/bot/handle-update.ts`, а те обязаны
+ * оставаться проверяемыми без Postgres.
+ */
+type ProblemSink = (message: string) => void;
+let sink: ProblemSink | null = null;
+
+export function setBotProblemSink(fn: ProblemSink | null): void {
+  sink = fn;
+}
+
+/**
+ * Неполадка, которую раньше проглатывали молча.
+ *
+ * Два места на пути ответа ловили исключение, писали в консоль и шли дальше:
+ * `catch` в handleUpdate и `trySend`. Пока молчал весь бот, это было незаметно.
+ * А когда опрос заработал и сообщения начали доходить, оказалось, что ответы
+ * не уходят, — и ровно об этом отказе не оставалось ни следа нигде, кроме
+ * логов контейнера, до которых мы так и не добрались.
+ */
+export function reportBotProblem(message: string): void {
+  noteBotError(message);
+  try {
+    sink?.(message);
+  } catch {
+    // Диагностика не имеет права ронять то, что диагностирует.
+  }
+}
+
 export function botState(): BotState {
   return { ...state };
 }
