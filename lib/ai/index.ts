@@ -30,5 +30,5 @@ export function getMealProvider(): MealVisionProvider {
 }
 
 export { resolveAiMode } from "./mode.ts";
-export { ANALYSIS_ERRORS, MealAnalysisError, SUGGEST_ERRORS } from "./types.ts";
+export { ANALYSIS_ERRORS, MealAnalysisError, SCALE_ERRORS, SUGGEST_ERRORS } from "./types.ts";
 export type { AnalysisItem, Clarification, MealAnalysis, MealAnalysisResult, MealInput, TokenUsage } from "./types.ts";

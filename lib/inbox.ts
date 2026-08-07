@@ -44,6 +44,23 @@ export async function countPending(userId: number): Promise<number> {
   return rows[0]?.value ?? 0;
 }
 
+/**
+ * Приходило ли от бота хоть что-нибудь за всё время.
+ *
+ * Нужно первым шагам (`lib/first-run.ts`): подсказку «снимок можно прислать
+ * мне в переписку» показываем только тому, кто так ни разу не делал.
+ * `countPending` для этого не годится — он считает неразобранное, а человек,
+ * который всё разобрал, ботом пользовался.
+ */
+export async function everUsedInbox(userId: number): Promise<boolean> {
+  const rows = await getDb()
+    .select({ value: count() })
+    .from(photoInbox)
+    .where(eq(photoInbox.userId, userId))
+    .limit(1);
+  return (rows[0]?.value ?? 0) > 0;
+}
+
 /** Неразобранные снимки за конкретный день — основание для вечернего дайджеста. */
 export async function countPendingOnDay(userId: number, day: string): Promise<number> {
   const rows = await getDb()

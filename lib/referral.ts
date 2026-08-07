@@ -1,70 +1,72 @@
 /**
- * Реферальные ссылки: `https://t.me/jivelo_bot?start=ref_K7M2QX`.
+ * Приглашения: код, ссылка и разбор того, что пришло обратно.
  *
- * Механика диплинков уже была — метки `plan`, `web`, `site` говорят боту,
- * откуда человек пришёл (lib/bot-public.ts). Реферальная ссылка устроена так
- * же, только вместо места в ней стоит код пригласившего.
- *
- * ## Чего здесь нет и почему
- *
- * Наград. Обещать скидку до того, как появился платный тариф, — обещать то,
- * чем мы не распоряжаемся, а «бонусные разборы» превратили бы приглашение
- * друзей в способ обойти дневной лимит. Пока ссылка только считает: человек
- * видит, сколько людей пришло по ней. Когда тариф появится, награду можно
- * привязать к этому же счётчику, ничего не переделывая.
- *
- * ## Алфавит кода
- *
- * Без нуля, буквы O, единицы, I и L: код читают с чужого экрана и
- * пересказывают голосом, и «0» против «O» здесь стоит потерянного человека.
- * Шесть знаков из тридцати одного — около 900 миллионов вариантов; при
- * коллизии генератор просто пробует ещё раз.
- *
- * Модуль чистый: работа с базой — в lib/referral-store.ts. Разбор ссылки и
- * форма кода проверяются тестами без Postgres.
+ * Модуль чистый — база в lib/referral-store.ts. Это позволяет проверять
+ * разбор `start`-параметра тестами: именно он приходит снаружи, от Telegram,
+ * и именно он не должен уметь ничего, кроме как назвать пригласившего.
  */
 
-const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-export const REFERRAL_CODE_LENGTH = 6;
-
-/** Префикс в диплинке. Telegram разрешает в payload буквы, цифры, `_` и `-`. */
-const PREFIX = "ref_";
-
-const CODE_RE = new RegExp(`^[${ALPHABET}]{${REFERRAL_CODE_LENGTH}}$`);
+import { botLink } from "./bot-public.ts";
 
 /**
- * Новый код. `random` передаётся аргументом, чтобы тест мог проверить форму
- * и алфавит, не полагаясь на удачу.
+ * Префикс в `start`-параметре: `t.me/<бот>?start=ref_<код>`.
+ *
+ * Отдельный от обычных меток (START_PAYLOADS) префикс нужен потому, что
+ * метки — это закрытый список из трёх слов, а код приглашения — произвольная
+ * строка. Без префикса бот не отличил бы одно от другого и однажды принял бы
+ * код за метку или наоборот.
  */
-export function generateReferralCode(random: () => number = Math.random): string {
-  let code = "";
-  for (let i = 0; i < REFERRAL_CODE_LENGTH; i += 1) {
-    code += ALPHABET[Math.floor(random() * ALPHABET.length) % ALPHABET.length];
+export const REFERRAL_PREFIX = "ref_";
+
+/**
+ * Длина кода. Восемь символов алфавита из 32 — это 32^8 ≈ 10^12 вариантов:
+ * перебором ссылку не найти, а сама она остаётся достаточно короткой, чтобы
+ * не пугать в сообщении.
+ */
+export const CODE_LENGTH = 8;
+
+/**
+ * Алфавит без похожих начертаний: нет 0/O, 1/I/l. Код читают с экрана и
+ * иногда диктуют, и «ноль или буква O» — единственная ошибка, которую здесь
+ * реально совершают.
+ */
+const ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz";
+
+/** Сгенерировать код. `random` — для тестов; в бою это crypto. */
+export function makeReferralCode(random: () => number = cryptoRandom): string {
+  let out = "";
+  for (let i = 0; i < CODE_LENGTH; i += 1) {
+    out += ALPHABET[Math.floor(random() * ALPHABET.length)];
   }
-  return code;
+  return out;
 }
 
-export function isReferralCode(value: string): boolean {
-  return CODE_RE.test(value);
+function cryptoRandom(): number {
+  // Веб-крипто есть и в Node 22, и в браузере; Math.random для ссылки,
+  // которая должна быть неугадываемой, не годится.
+  const buffer = new Uint32Array(1);
+  crypto.getRandomValues(buffer);
+  return buffer[0] / 2 ** 32;
+}
+
+/** Код похож на наш? Проверка до похода в базу. */
+export function isReferralCode(value: unknown): value is string {
+  return typeof value === "string"
+    && value.length === CODE_LENGTH
+    && [...value].every((char) => ALPHABET.includes(char));
+}
+
+/** Ссылка-приглашение. */
+export function referralLink(code: string): string {
+  return botLink(`${REFERRAL_PREFIX}${code}`);
 }
 
 /**
- * Достаёт код из payload диплинка. `null` — «это не реферальная ссылка», и
- * вызывающий идёт дальше своими ветками.
- *
- * Регистр не важен: `/start` в боте приводит payload к верхнему, а человек
- * мог переслать ссылку как угодно.
+ * Вытащить код из `start`-параметра. `null` для всего остального, включая
+ * обычные метки: снаружи сюда приходит что угодно.
  */
-export function parseReferralPayload(payload: string): string | null {
-  const trimmed = payload.trim();
-  if (trimmed.length !== PREFIX.length + REFERRAL_CODE_LENGTH) return null;
-  if (trimmed.slice(0, PREFIX.length).toLowerCase() !== PREFIX) return null;
-
-  const code = trimmed.slice(PREFIX.length).toUpperCase();
+export function referralFromStart(start: string | null | undefined): string | null {
+  if (typeof start !== "string" || !start.startsWith(REFERRAL_PREFIX)) return null;
+  const code = start.slice(REFERRAL_PREFIX.length);
   return isReferralCode(code) ? code : null;
-}
-
-/** Payload для ссылки: `ref_K7M2QX`. */
-export function referralPayload(code: string): string {
-  return `${PREFIX}${code}`;
 }

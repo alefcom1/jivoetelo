@@ -124,12 +124,42 @@ export function HeroAdaptive() {
   </Frame>;
 }
 
+/** Три одинаковые тарелки, под каждой — своя лента чисел разной длины. */
+export function HeroMismatch() {
+  const plates = [190, 400, 610];
+  const bars = [130, 210, 165];
+  return <Frame>
+    {plates.map((cx, i) => <g key={cx}>
+      <circle cx={cx} cy={165} r={62} fill={PALETTE.white} stroke={PALETTE.ink} strokeWidth="4" />
+      <circle cx={cx} cy={165} r={40} fill="none" stroke={PALETTE.line} strokeWidth="3" />
+      <rect x={cx - bars[i] / 2} y={278} width={bars[i]} height="22" rx="11"
+        fill={i === 1 ? PALETTE.coral : PALETTE.lime} stroke={PALETTE.ink} strokeWidth="3" />
+    </g>)}
+    <path d="M190 227 V 278 M400 227 V 278 M610 227 V 278" stroke={PALETTE.line} strokeWidth="3" strokeDasharray="2 10" />
+  </Frame>;
+}
+
+/** Маленький плотный кружок разбухает в большой бледный — крупа и каша. */
+export function HeroSwell() {
+  return <Frame>
+    <circle cx="230" cy="225" r="70" fill={PALETTE.ink} />
+    <path d="M340 225 h150" stroke={PALETTE.ink} strokeWidth="6" strokeLinecap="round" />
+    <path d="M462 200 l28 25 l-28 25" fill="none" stroke={PALETTE.ink} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="610" cy="225" r="130" fill={PALETTE.white} stroke={PALETTE.ink} strokeWidth="5" />
+    <circle cx="610" cy="225" r="130" fill={PALETTE.coral} opacity="0.16" />
+    <circle cx="230" cy="225" r="70" fill="none" stroke={PALETTE.coral} strokeWidth="5" />
+    <circle cx="610" cy="225" r="130" fill="none" stroke={PALETTE.coral} strokeWidth="5" />
+  </Frame>;
+}
+
 export const HEROES: Record<string, () => React.ReactElement> = {
   "kak-ustroen-dnevnik-po-foto": HeroPhoto,
   "sravnenie-prilozhenij-dlya-podscheta-kalorij": HeroCompare,
   "dnevnik-pitaniya-v-telegram": HeroTelegram,
   "pochemu-diapazon-chestnee-tochnogo-chisla": HeroRange,
   "norma-kalorij-kotoraya-uchitsya": HeroAdaptive,
+  "pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor": HeroMismatch,
+  "grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods": HeroSwell,
 };
 
 /**

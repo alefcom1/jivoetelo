@@ -62,7 +62,17 @@ export function planButton(links: BotLinks): InlineKeyboardButton {
   return { text: "Посчитать норму", url: links.planUrl };
 }
 
-/** Кнопка оплаты. Появляется только когда приём денег включён (docs/payments.md). */
+/**
+ * Кнопка тарифа. Появляется, только когда приём денег включён (docs/payments.md).
+ *
+ * Ведёт на экран тарифа, а не сразу в оплату. Ссылки Tribute несут подписанную
+ * метку человека (lib/payments/tribute.ts), и подпись ставится на сервере, где
+ * живёт секрет; собрать такую ссылку в сообщении бота значило бы либо вынести
+ * секрет сюда, либо отправить человека платить без метки — а тогда платёж не
+ * найдёт, кому его засчитать.
+ */
 export function premiumButton(links: BotLinks): InlineKeyboardButton {
-  return { text: "Перейти к оплате", url: links.premiumUrl };
+  return links.miniAppUrl
+    ? { text: "Открыть тариф", web_app: { url: links.miniAppUrl } }
+    : { text: "Открыть тариф", url: links.premiumUrl };
 }

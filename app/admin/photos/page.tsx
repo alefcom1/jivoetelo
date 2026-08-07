@@ -72,10 +72,21 @@ export default async function AdminPhotosPage() {
                     он делся, но одобрить его нельзя. */}
                 <form action={reviewCatalogPhotoAction} className="admin-photo-actions">
                   <input type="hidden" name="id" value={photo.id} />
+                  {/* Два поля, а не одно. Первое человек прочитает, второе
+                      не должен: «на снимке видно документы» — это ему, а
+                      «дубль вчерашнего» — себе. В одном поле они неминуемо
+                      перемешались бы, и однажды внутренняя пометка ушла бы
+                      автору. */}
                   <input
                     type="text"
                     name="reason"
-                    placeholder="Причина отказа — её увидит человек"
+                    placeholder="Что написать автору — он это получит"
+                    maxLength={500}
+                  />
+                  <input
+                    type="text"
+                    name="moderatorNote"
+                    placeholder="Заметка для себя — автор её не увидит"
                     maxLength={500}
                   />
                   <div className="button-row">

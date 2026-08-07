@@ -12,6 +12,8 @@ import Telegram from "../content/dnevnik-pitaniya-v-telegram";
 import Diapazon from "../content/pochemu-diapazon-chestnee-tochnogo-chisla";
 import Norma from "../content/norma-kalorij-kotoraya-uchitsya";
 import Disciplina from "../content/myagkaya-disciplina-dlya-tela";
+import RazniyeCifry from "../content/pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor";
+import Grechka from "../content/grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods";
 
 /**
  * Тексты статей — компоненты, а не markdown: им нужны скриншоты с
@@ -26,6 +28,8 @@ const CONTENT: Record<string, () => React.ReactElement> = {
   "pochemu-diapazon-chestnee-tochnogo-chisla": Diapazon,
   "norma-kalorij-kotoraya-uchitsya": Norma,
   "myagkaya-disciplina-dlya-tela": Disciplina,
+  "pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor": RazniyeCifry,
+  "grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods": Grechka,
 };
 
 type Params = { params: Promise<{ slug: string }> };

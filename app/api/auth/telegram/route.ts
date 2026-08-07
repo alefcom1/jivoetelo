@@ -2,7 +2,7 @@ import { getDb } from "@/db";
 import { userConsents, users } from "@/db/schema";
 import { createSession } from "@/lib/auth";
 import { LEGAL_VERSION } from "@/lib/legal";
-import { claimReferral } from "@/lib/referral-store";
+import { applyPendingInvite } from "@/lib/referral-store";
 import {
   findUserByTelegram,
   TelegramAuthError,
@@ -90,9 +90,15 @@ export async function POST(request: Request) {
       { userId, kind: "terms", version: LEGAL_VERSION, source: "telegram" },
       { userId, kind: "ai_processing", version: LEGAL_VERSION, source: "telegram" },
     ]);
-    // Второй из двух входов, где заводится аккаунт по Telegram. Забыть его
-    // значило бы, что половина приглашений не считается.
-    await claimReferral(userId, telegramUserId);
+    // Второй из двух входов, где заводится аккаунт по Telegram (первый —
+    // app/api/tg/register). Приглашение привязывается и здесь: человек мог
+    // прийти по ссылке друга, но завести аккаунт не в Mini App, а на сайте
+    // кнопкой «Войти через Telegram», — и тогда приглашение просто пропадало.
+    // Не роняем регистрацию: несосчитанный реферал дешевле незаведённого
+    // аккаунта.
+    await applyPendingInvite(userId, telegramUserId).catch((error) => {
+      console.error("apply pending invite failed", error);
+    });
     await createSession(userId);
     return Response.json({ ok: true, created: true });
   } catch (error) {

@@ -80,9 +80,13 @@ function makeDeps(overrides = {}) {
     },
     async referral(userId) {
       referrals.push({ userId });
-      return { link: "https://t.me/jivelo_bot?start=ref_K7M2QX", joined: overrides.joined ?? 0 };
+      return {
+        link: "https://t.me/jivelo_bot?start=ref_k7m2qx7z",
+        joined: overrides.joined ?? 0,
+        reward: { afterDays: 7, days: 30 },
+      };
     },
-    async rememberReferral(telegramUserId, code) {
+    async rememberInvite(telegramUserId, code) {
       referralVisits.push({ telegramUserId, code });
     },
     async plan() {
@@ -732,7 +736,7 @@ test("/invite отдаёт личную ссылку и счётчик", async (
   const { deps, sent, referrals } = makeDeps({ joined: 3 });
   await handleUpdate(linkedText("/invite"), deps);
   assert.deepEqual(referrals, [{ userId: 7 }]);
-  assert.match(sent[0].text, /ref_K7M2QX/);
+  assert.match(sent[0].text, /ref_k7m2qx7z/);
   assert.match(sent[0].text, /<b>3<\/b>/);
 });
 
@@ -740,16 +744,18 @@ test("переход по чужой ссылке запоминается, но
   // «Вас пригласил такой-то» в первом же сообщении звучит как слежка: человек
   // пришёл смотреть сервис, а не читать про себя.
   const { deps, sent, referralVisits } = makeDeps();
-  await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text: "/start ref_K7M2QX" } }, deps);
+  // Код приглашения строчный: разбирается из исходной строки, а не из
+  // приведённой к верхнему регистру — верхний регистр нужен кодам привязки.
+  await handleUpdate({ message: { from: { id: 999 }, chat: { id: 999 }, text: "/start ref_k7m2qx7z" } }, deps);
 
-  assert.deepEqual(referralVisits, [{ telegramUserId: "999", code: "K7M2QX" }]);
+  assert.deepEqual(referralVisits, [{ telegramUserId: "999", code: "k7m2qx7z" }]);
   assert.equal(sent[0].text, TEXTS.greetingUnlinked);
 });
 
 test("/premium при выключенном приёме оплаты не показывает кнопку", async () => {
   const { deps, sent } = makeDeps();
   await handleUpdate(linkedText("/premium"), deps);
-  assert.match(sent[0].text, /Платного тарифа сейчас нет/);
+  assert.match(sent[0].text, /Приём оплаты сейчас выключен/);
   assert.equal(sent[0].options?.replyMarkup, undefined);
 });
 
@@ -762,7 +768,7 @@ test("/premium при включённом приёме оплаты ведёт 
 test("/premium уже подключившему не предлагает купить снова", async () => {
   const { deps, sent } = makeDeps({ paymentsEnabled: true, plan: "premium" });
   await handleUpdate(linkedText("/premium"), deps);
-  assert.match(sent[0].text, /уже Про/);
+  assert.match(sent[0].text, /доступ у вас уже открыт/);
 });
 
 test("инлайн-запрос отвечает без аккаунта и без обращения в базу", async () => {

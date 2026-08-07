@@ -1,204 +1,190 @@
-import { listApplications, listSpecialists } from "@/lib/pro/store";
-import type { SpecialistStatus } from "@/lib/pro/access";
-import { confirmSpecialistAction, setSpecialistStatusAction } from "./actions";
-
-const dateTimeFormat = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
-
-/** Человеческие подписи статуса — одни и те же в таблице и нигде больше. */
-const STATUS_LABELS: Record<string, string> = {
-  pending: "На рассмотрении",
-  approved: "Подтверждён",
-  rejected: "Отклонён",
-  suspended: "Приостановлен",
-};
-
-/** Тексты отказа `createSpecialistByEmail` — ровно два кода, ровно два текста. */
-const CONFIRM_ERRORS: Record<string, string> = {
-  no_user: "У этой почты нет аккаунта на сайте. Человек должен сначала зарегистрироваться.",
-  exists: "Профиль специалиста уже заведён.",
-};
+import {
+  activity,
+  aiSpend,
+  awardSpread,
+  firstStepsFunnel,
+  paidSummary,
+  registrationSources,
+  registrationsByDay,
+  retention,
+} from "@/lib/admin-stats";
+import { awardByKey } from "@/lib/awards";
+import { OPERATION_LABELS } from "@/lib/quota";
+import { voucherSummary } from "@/lib/vouchers-store";
 
 /**
- * Какие переходы статуса осмысленны из текущего. Не показываем кнопку,
- * ведущую туда, где специалист и так уже находится, и не показываем
- * «Приостановить» тому, кто ещё не был подтверждён — приостанавливать
- * нечего.
+ * Обзор: цифры, по которым принимают решения.
+ *
+ * Чего здесь сознательно нет — «всего пользователей» крупным шрифтом. Это
+ * число растёт само собой, ни на что не влияет и смотрится один раз. Вместо
+ * него удержание: сервисом дневника пользуются или не пользуются на второй
+ * неделе, и это единственное, что говорит, работает ли продукт.
+ *
+ * Страница читает только сводные цифры — ничьего дневника здесь нет, поэтому
+ * в журнал обращений она не пишет (см. drizzle/0024).
  */
-function statusActions(status: string): { label: string; target: SpecialistStatus }[] {
-  switch (status) {
-    case "pending":
-      return [
-        { label: "Подтвердить", target: "approved" },
-        { label: "Отклонить", target: "rejected" },
-      ];
-    case "approved":
-      return [
-        { label: "Приостановить", target: "suspended" },
-        { label: "Отклонить", target: "rejected" },
-      ];
-    case "suspended":
-      return [
-        { label: "Подтвердить", target: "approved" },
-        { label: "Отклонить", target: "rejected" },
-      ];
-    case "rejected":
-      return [{ label: "Подтвердить", target: "approved" }];
-    default:
-      return [];
-  }
+export const dynamic = "force-dynamic";
+
+const share = (value: number) => `${Math.round(value * 100)}%`;
+
+/** Столбики регистраций. SVG вместо библиотеки: тридцать чисел — это тридцать прямоугольников. */
+function Sparkbars({ points }: { points: Array<{ day: string; count: number }> }) {
+  const max = Math.max(1, ...points.map((p) => p.count));
+  const width = points.length * 12;
+  // preserveAspectRatio="none" обязателен: по умолчанию SVG вписывается
+  // целиком и при фиксированной высоте в 60px сжимается до своей натуральной
+  // ширины, собираясь комком посреди страницы. Пропорции здесь и не нужны —
+  // по горизонтали лежит номер дня, а не величина.
+  return <svg className="adm-bars" viewBox={`0 0 ${width} 60`} preserveAspectRatio="none" role="img"
+    aria-label={`Регистрации по дням, максимум ${max} в день`}>
+    {points.map((point, i) => (
+      <rect
+        key={point.day}
+        x={i * 12 + 2} y={60 - (point.count / max) * 56}
+        width={8} height={Math.max(1, (point.count / max) * 56)}
+        rx={2}
+      >
+        <title>{`${point.day}: ${point.count}`}</title>
+      </rect>
+    ))}
+  </svg>;
 }
 
-export default async function AdminPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ admError?: string; admEmail?: string; admConfirmed?: string }>;
-}) {
-  const [applications, specialists] = await Promise.all([listApplications(), listSpecialists()]);
-  const { admError, admEmail, admConfirmed } = await searchParams;
+export default async function AdminOverviewPage() {
+  const [days, sources, keep, act, funnel, spend, awards, paid, vouchers] = await Promise.all([
+    registrationsByDay(30),
+    registrationSources(30),
+    retention([1, 7, 30]),
+    activity(),
+    firstStepsFunnel(),
+    aiSpend(30),
+    awardSpread(),
+    paidSummary(),
+    voucherSummary(),
+  ]);
 
-  return (
-    <>
-      <section className="adm-section" id="applications">
-        <h2>Заявки в пилот</h2>
-        <p className="adm-section-lead">
-          Первую группу набираем руками: каждую заявку читаем и решаем сами, а не по галочке в форме.
-          «Подтвердить как специалиста» заводит профиль по указанной почте — сработает только для тех, у кого уже
-          есть аккаунт на сайте.
-        </p>
+  const monthTotal = days.reduce((sum, point) => sum + point.count, 0);
+  const spendTotal = spend.reduce((sum, row) => sum + row.costUsd, 0);
+  // Себестоимость активного человека за месяц — то самое число, без которого
+  // цену назначать наугад.
+  const perActive = act.month > 0 ? spendTotal / act.month : 0;
 
-        {applications.length === 0 ? (
-          <p className="adm-empty">Заявок пока нет.</p>
-        ) : (
-          <div className="adm-app-list">
-            {applications.map((app) => (
-              <article className="adm-app-card" id={`application-${app.id}`} key={app.id}>
-                <div className="adm-app-top">
-                  <b>{app.name}</b>
-                  <time>{dateTimeFormat.format(app.createdAt)}</time>
-                </div>
-                <ul className="adm-app-meta">
-                  <li>
-                    Почта: <b>{app.email}</b>
-                  </li>
-                  {app.specialization && (
-                    <li>
-                      Специализация: <b>{app.specialization}</b>
-                    </li>
-                  )}
-                  {app.city && (
-                    <li>
-                      Город: <b>{app.city}</b>
-                    </li>
-                  )}
-                  {app.clientsCount && (
-                    <li>
-                      Клиентов сейчас: <b>{app.clientsCount}</b>
-                    </li>
-                  )}
-                  {app.currentTools && (
-                    <li>
-                      Сейчас пользуется: <b>{app.currentTools}</b>
-                    </li>
-                  )}
-                </ul>
-                {app.comment && <p className="adm-app-comment">«{app.comment}»</p>}
+  return <main className="adm-page">
+    <section className="adm-section">
+      <h2>Кто пользуется</h2>
+      <div className="adm-tiles">
+        <div className="adm-tile"><strong>{act.today}</strong><span>записали сегодня</span></div>
+        <div className="adm-tile"><strong>{act.week}</strong><span>за неделю</span></div>
+        <div className="adm-tile"><strong>{act.month}</strong><span>за месяц</span></div>
+        <div className="adm-tile"><strong>{act.medianMealsWeek}</strong><span>записей за неделю, медиана</span></div>
+      </div>
+      <p className="adm-muted">
+        Медиана — по людям, а не по записям: один человек с сорока записями не должен отвечать за всех.
+      </p>
+    </section>
 
-                {admError && admEmail === app.email && (
-                  <p className="form-error">{CONFIRM_ERRORS[admError] ?? "Не получилось. Попробуйте ещё раз."}</p>
-                )}
-
-                <form className="adm-confirm" action={confirmSpecialistAction}>
-                  <input type="hidden" name="applicationId" value={app.id} />
-                  <input type="hidden" name="email" value={app.email} />
-                  <label>
-                    Имя для клиентов
-                    <input name="displayName" defaultValue={app.name} required maxLength={100} />
-                  </label>
-                  <label>
-                    Специализация
-                    <input name="specialization" defaultValue={app.specialization ?? ""} maxLength={100} />
-                  </label>
-                  <label>
-                    Город
-                    <input name="city" defaultValue={app.city ?? ""} maxLength={100} />
-                  </label>
-                  <button className="black-button" type="submit">
-                    Подтвердить как специалиста
-                  </button>
-                </form>
-              </article>
-            ))}
+    <section className="adm-section">
+      <h2>Удержание</h2>
+      <p className="adm-section-lead">
+        Доля зарегистрировавшихся, у кого есть запись на этот день и позже. В когорту идут только те,
+        кто зарегистрировался достаточно давно, чтобы успеть дожить.
+      </p>
+      <div className="adm-tiles">
+        {keep.map((point) => (
+          <div className="adm-tile" key={point.day}>
+            <strong>{share(point.share)}</strong>
+            <span>день {point.day} · {point.returned} из {point.cohort}</span>
           </div>
-        )}
-      </section>
+        ))}
+      </div>
+    </section>
 
-      <section className="adm-section" id="specialists">
-        <h2>Специалисты</h2>
-        <p className="adm-section-lead">Статус решает не только видимость в разделе, но и доступ к данным клиентов — см. пояснение у кнопки «Приостановить».</p>
+    <section className="adm-section">
+      <h2>Регистрации за 30 дней</h2>
+      <Sparkbars points={days} />
+      <div className="adm-tiles">
+        <div className="adm-tile"><strong>{monthTotal}</strong><span>всего за месяц</span></div>
+        <div className="adm-tile"><strong>{sources.web}</strong><span>с почтой (веб)</span></div>
+        <div className="adm-tile"><strong>{sources.telegram}</strong><span>без почты (Mini App)</span></div>
+        <div className="adm-tile"><strong>{sources.invited}</strong><span>по приглашению</span></div>
+      </div>
+      <p className="adm-muted">
+        «По приглашению» — не третий источник, а признак: такие есть и среди пришедших с почтой, и среди тех, кто без неё.
+      </p>
+    </section>
 
-        {admConfirmed && <p className="adm-banner">Профиль специалиста создан: {admConfirmed}.</p>}
+    <section className="adm-section">
+      <h2>Первые шаги</h2>
+      <ol className="adm-funnel">
+        {funnel.map((step, i) => {
+          const first = funnel[0].count;
+          const previous = i === 0 ? null : funnel[i - 1].count;
+          return <li key={step.key}>
+            <b>{step.label}</b>
+            <span>{step.count}</span>
+            {first > 0 && <em>{share(step.count / first)} от всех</em>}
+            {/* Падение к предыдущему шагу — то, ради чего воронку и смотрят:
+                оно показывает, где именно люди останавливаются. */}
+            {previous !== null && previous > 0 && <i>{share(step.count / previous)} от предыдущего</i>}
+          </li>;
+        })}
+      </ol>
+    </section>
 
-        {specialists.length === 0 ? (
-          <p className="adm-empty">Специалистов пока нет.</p>
-        ) : (
-          <div className="adm-table-wrap">
+    <section className="adm-section">
+      <h2>Расход на распознавание за 30 дней</h2>
+      <div className="adm-table-wrap">
+        <table className="adm-table">
+          <thead><tr><th>Операция</th><th>Обращений</th><th>Стоимость</th></tr></thead>
+          <tbody>
+            {spend.length === 0
+              ? <tr><td colSpan={3}>Обращений не было.</td></tr>
+              : spend.map((row) => <tr key={row.operation}>
+                  <td>{OPERATION_LABELS[row.operation] ?? row.operation}</td>
+                  <td>{row.calls}</td>
+                  <td>${row.costUsd.toFixed(2)}</td>
+                </tr>)}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>Итого</td>
+              <td>{spend.reduce((sum, row) => sum + row.calls, 0)}</td>
+              <td>${spendTotal.toFixed(2)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p className="adm-muted">
+        На одного активного за месяц: ${perActive.toFixed(3)}. Оценка по прейскуранту, то есть не ниже
+        фактической, — предохранитель должен ошибаться в сторону осторожности.
+      </p>
+    </section>
+
+    <section className="adm-section">
+      <h2>Платный доступ</h2>
+      <div className="adm-tiles">
+        <div className="adm-tile"><strong>{paid.active}</strong><span>доступ открыт сейчас</span></div>
+        <div className="adm-tile"><strong>{paid.expiringWeek}</strong><span>кончается на этой неделе</span></div>
+        <div className="adm-tile"><strong>{paid.paidEver}</strong><span>платили хоть раз</span></div>
+        <div className="adm-tile"><strong>{vouchers.used} / {vouchers.issued}</strong><span>ваучеров погашено</span></div>
+      </div>
+    </section>
+
+    <section className="adm-section">
+      <h2>Награды</h2>
+      {awards.length === 0
+        ? <p className="adm-empty">Пока никто не дошёл до первой награды.</p>
+        : <div className="adm-table-wrap">
             <table className="adm-table">
-              <thead>
-                <tr>
-                  <th>Имя</th>
-                  <th>Почта</th>
-                  <th>Статус</th>
-                  <th>Клиентов</th>
-                  <th>Заведён</th>
-                  <th>Действия</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Награда</th><th>Человек</th></tr></thead>
               <tbody>
-                {specialists.map((s) => (
-                  <tr key={s.userId}>
-                    <td>
-                      {s.displayName}
-                      {s.specialization && (
-                        <>
-                          <br />
-                          <span className="adm-muted">{s.specialization}</span>
-                        </>
-                      )}
-                    </td>
-                    <td>{s.email}</td>
-                    <td>
-                      <span className={`adm-status adm-status-${s.status}`}>{STATUS_LABELS[s.status] ?? s.status}</span>
-                    </td>
-                    <td>{s.clientCount}</td>
-                    <td>{dateTimeFormat.format(s.createdAt)}</td>
-                    <td>
-                      <div className="adm-status-actions">
-                        {statusActions(s.status).map((a) => (
-                          <form action={setSpecialistStatusAction} key={a.target}>
-                            <input type="hidden" name="userId" value={s.userId} />
-                            <input type="hidden" name="status" value={a.target} />
-                            <button className={a.target === "rejected" ? "danger-button" : "link-button"} type="submit">
-                              {a.label}
-                            </button>
-                          </form>
-                        ))}
-                      </div>
-                      {s.status === "approved" && (
-                        <p className="adm-suspend-note">
-                          После приостановки специалист сразу перестанет видеть данные всех своих клиентов: проверка
-                          доступа смотрит на статус специалиста при каждом обращении, а не только в момент выдачи
-                          приглашения. Связи с клиентами при этом не удаляются — доступ вернётся, если статус снова
-                          станет «Подтверждён».
-                        </p>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {awards.map((row) => <tr key={row.key}>
+                  <td>{awardByKey(row.key)?.title ?? row.key}</td>
+                  <td>{row.count}</td>
+                </tr>)}
               </tbody>
             </table>
-          </div>
-        )}
-      </section>
-    </>
-  );
+          </div>}
+    </section>
+  </main>;
 }

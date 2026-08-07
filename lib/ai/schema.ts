@@ -58,6 +58,11 @@ export const MEAL_ANALYSIS_SCHEMA = {
         required: ["question", "options"],
         properties: {
           question: { type: "string" },
+          refinesIndex: {
+            type: "integer",
+            description:
+              "Номер позиции в items, которую уточняет вопрос. Ставить, когда вариант ответа не добавляет новый ингредиент, а называет ту же позицию точнее. Без него выбранный вариант дописывается к списку, и позиция задваивается.",
+          },
           options: {
             type: "array",
             items: {
@@ -159,7 +164,17 @@ export function validateMealAnalysis(raw: unknown): MealAnalysis {
         .filter((o): o is NonNullable<typeof o> => o !== null)
         .slice(0, 5);
       if (options.length < 2) return null;
-      return { question, options };
+
+      // Индекс проверяем здесь, а не при применении: модель вполне может
+      // прислать 5 при трёх позициях, и лучше сразу забыть такое поле, чем
+      // разбираться с ним в двух вкладках по отдельности.
+      const raw_index = c.refinesIndex;
+      const refinesIndex =
+        typeof raw_index === "number" && Number.isInteger(raw_index) && raw_index >= 0 && raw_index < items.length
+          ? raw_index
+          : undefined;
+
+      return refinesIndex === undefined ? { question, options } : { question, options, refinesIndex };
     })
     .filter((c): c is Clarification => c !== null)
     .slice(0, 2);

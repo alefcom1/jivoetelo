@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import { parseWeightMessage, MAX_WEIGHT_KG, MIN_WEIGHT_KG } from "../lib/bot/weight-message.ts";
 import { daySummaryText, formatWeight, weightSavedText } from "../lib/bot/day-summary.ts";
 import { inlineResults } from "../lib/bot/inline.ts";
-import { generateReferralCode, isReferralCode, parseReferralPayload, referralPayload } from "../lib/referral.ts";
 import { planWeighReminder, WEIGH_REMINDER_HOUR } from "../lib/reminders.ts";
 import { htmlProblem } from "../lib/bot/markup.ts";
 import { PREMIUM, ANSWERS, inviteText } from "../lib/bot/texts.ts";
@@ -203,37 +202,25 @@ test("инлайн: разметка сообщений валидна", () => {
   }
 });
 
-// ===== Реферальные ссылки =====
+// ===== Приглашения =====
+//
+// Разбор ссылки и генерация кода проверяются в tests/referral.test.mjs — там
+// же, где живёт сама реализация (lib/referral.ts). Здесь только текст, который
+// бот показывает по /invite.
 
-test("реферальный код: алфавит без похожих знаков", () => {
-  // Код читают с чужого экрана и пересказывают голосом: «0» против «O» здесь
-  // стоит потерянного человека.
-  for (let i = 0; i < 200; i += 1) {
-    const code = generateReferralCode();
-    assert.ok(isReferralCode(code), `невалидный код: ${code}`);
-    assert.doesNotMatch(code, /[01OIL]/, `в коде похожие знаки: ${code}`);
-  }
-});
+/** Те же числа, что применяет lib/referral-store.ts. */
+const REWARD = { afterDays: 7, days: 30 };
 
-test("реферальная ссылка: разбор payload", () => {
-  const code = "K7M2QX";
-  assert.equal(parseReferralPayload(referralPayload(code)), code);
-  assert.equal(parseReferralPayload("REF_K7M2QX"), code);
-  assert.equal(parseReferralPayload("ref_k7m2qx"), code);
-  // Не наше: метки места, код привязки, мусор.
-  assert.equal(parseReferralPayload("plan"), null);
-  assert.equal(parseReferralPayload("A1B2C3D4"), null);
-  assert.equal(parseReferralPayload("ref_K7M2Q"), null);
-  assert.equal(parseReferralPayload("ref_K7M2QX1"), null);
-  assert.equal(parseReferralPayload("ref_K7M20X"), null);
-});
-
-test("приглашение: наград не обещаем", () => {
-  const text = inviteText("https://t.me/jivelo_bot?start=ref_K7M2QX", 0);
+test("приглашение: условие награды названо целиком", () => {
+  const text = inviteText("https://t.me/jivelo_bot?start=ref_k7m2qx7z", 0, REWARD);
   assert.match(text, /пока никто не пришёл/);
   assert.equal(htmlProblem(text), null);
-  assert.equal(htmlProblem(inviteText("https://t.me/jivelo_bot?start=ref_K7M2QX", 3)), null);
-  assert.match(inviteText("x", 3), /<b>3<\/b>/);
+  assert.equal(htmlProblem(inviteText("https://t.me/jivelo_bot?start=ref_k7m2qx7z", 3, REWARD)), null);
+  assert.match(inviteText("x", 3, REWARD), /<b>3<\/b>/);
+  // Неприятная половина условия — «после недели записей», а не за переход —
+  // должна стоять в тексте: умолчав, мы пообещали бы доступ за нажатие.
+  assert.match(inviteText("x", 0, REWARD), /7 дней с записями/);
+  assert.match(inviteText("x", 0, REWARD), /30 дней платного доступа/);
 });
 
 // ===== Напоминание взвеситься =====
@@ -275,11 +262,15 @@ test("весы: только утром и только с профилем", ()
 
 // ===== Платный доступ =====
 
-test("платный доступ: пока выключен — никаких «скоро» и кнопок", () => {
-  assert.match(PREMIUM.notYet, /Платного тарифа сейчас нет/);
+test("платный доступ: без выдуманных цен и лимитов в тексте бота", () => {
+  // Числа живут в lib/paid.ts и lib/quota-policy.ts и показываются на экране
+  // тарифа оттуда же. Повтор их в сообщении — второе место, которое однажды
+  // разойдётся с первым, и разойдётся молча.
   for (const text of Object.values(PREMIUM)) {
     assert.equal(htmlProblem(text), null);
+    assert.doesNotMatch(text, /\d+\s*(₽|руб|ккал|разбор)/i, `в тексте премиума есть число: ${text}`);
   }
+  assert.match(PREMIUM.notYet, /приём оплаты сейчас выключен/i);
 });
 
 test("справка перечисляет новые команды", () => {

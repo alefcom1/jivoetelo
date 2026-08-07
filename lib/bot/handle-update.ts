@@ -13,7 +13,7 @@ import { localMoment } from "../dates.ts";
 import { snoozeUntil } from "../reminders.ts";
 import { foodCategory } from "../food-category.ts";
 import { isStartPayload } from "../bot-public.ts";
-import { parseReferralPayload } from "../referral.ts";
+import { referralFromStart } from "../referral.ts";
 import { MAX_AUDIO_BYTES, MAX_DURATION_SEC } from "../speech/limits.ts";
 import { SPEECH_ERRORS, SpeechError, type SpeechInput, type TranscriptResult } from "../speech/types.ts";
 import { daySummaryText, weightSavedText, type DaySummaryInput } from "./day-summary.ts";
@@ -111,6 +111,14 @@ export type BotStore = {
     takenTime: string;
   }): Promise<void>;
   setRemindersEnabled(userId: number, enabled: boolean): Promise<void>;
+  /**
+   * Запомнить приглашение до регистрации.
+   *
+   * Необязательный: сценарии бота проверяются на поддельном хранилище, и
+   * требовать этот метод от каждой заглушки в тестах значило бы, что
+   * приглашения ломают проверки, к которым отношения не имеют.
+   */
+  rememberInvite?(telegramUserId: string, code: string): Promise<void>;
   snoozeReminders(userId: number, until: Date): Promise<void>;
   /**
    * Замер веса за день. Возвращает строку тренда («−0,4 кг за неделю») или
@@ -120,10 +128,19 @@ export type BotStore = {
   saveWeight(userId: number, day: string, weightKg: number): Promise<string | null>;
   /** Итог дня — уже посчитанный теми же модулями, что и в приложении. */
   daySummary(userId: number, day: string): Promise<DaySummaryInput>;
-  /** Личная ссылка приглашения и сколько людей по ней пришло. */
-  referral(userId: number): Promise<{ link: string; joined: number }>;
-  /** Запоминает переход по чужой ссылке до регистрации. */
-  rememberReferral(telegramUserId: string, code: string): Promise<void>;
+  /**
+   * Личная ссылка приглашения и сколько людей по ней пришло.
+   *
+   * Ссылку и счётчик считает lib/referral-store.ts — тот же код, что и у
+   * кнопки «Позвать друга» в Mini App. Две реализации одной ссылки означали
+   * бы, что в чате и в приложении у человека разные коды.
+   */
+  referral(userId: number): Promise<{
+    link: string;
+    joined: number;
+    /** Правило награды — числами оттуда же, где оно применяется. */
+    reward: { afterDays: number; days: number };
+  }>;
   /** Тариф пользователя — от него зависит ответ на /premium. */
   plan(userId: number): Promise<"free" | "premium">;
   /** Выключить утренние напоминания о весе — отдельно от вечерних. */
@@ -318,17 +335,23 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
 
   // /start может прийти с кодом привязки в диплинке: /start A1B2C3D4.
   if (text === "/start" || text.startsWith("/start ")) {
-    const payload = text.slice("/start".length).trim().toUpperCase();
+    const raw = text.slice("/start".length).trim();
+    const payload = raw.toUpperCase();
     if (LINK_CODE_RE.test(payload)) return await tryLink(payload, tgId, chatId, deps);
 
-    // Реферальная ссылка. Запоминаем молча и продолжаем обычным приветствием:
-    // человек пришёл смотреть сервис, а не читать, что его пригласили, — и
-    // «вас позвал такой-то» в первом же сообщении звучит как слежка.
-    const referral = parseReferralPayload(payload);
-    if (referral) {
-      await deps.store.rememberReferral(tgId, referral).catch((error) => {
-        console.error("bot referral visit failed", error);
-      });
+    /**
+     * Приглашение по ссылке друга. Разбираем из исходной строки, а не из
+     * приведённой к верхнему регистру: код приглашения строчный, и `payload`
+     * его уже испортил — верхний регистр нужен только кодам привязки.
+     *
+     * Запоминаем, а не привязываем: аккаунта у человека ещё нет, он появится
+     * при регистрации в Mini App (lib/referral-store.ts).
+     */
+    const invite = referralFromStart(raw);
+    if (invite && deps.store.rememberInvite) {
+      // Ошибка здесь не должна мешать поздороваться: приглашение — приятная
+      // мелочь, а приветствие — то, ради чего человек нажал кнопку.
+      await deps.store.rememberInvite(tgId, invite).catch(() => {});
     }
 
     const linked = await deps.store.findUserByTelegram(tgId);
@@ -508,8 +531,8 @@ async function sendInvite(tgId: string, chatId: number, deps: BotDeps): Promise<
     return;
   }
 
-  const { link, joined } = await deps.store.referral(user.id);
-  await say(deps.client, chatId, inviteText(link, joined), { disablePreview: true });
+  const { link, joined, reward } = await deps.store.referral(user.id);
+  await say(deps.client, chatId, inviteText(link, joined, reward), { disablePreview: true });
 }
 
 /**

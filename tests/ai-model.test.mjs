@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveModel, supportsEffort, timeoutFor } from "../lib/ai/client.ts";
+import { MODEL_OPERATIONS } from "../lib/quota-policy.ts";
 
 /**
  * Модель под задачу, а не одна на всё (docs/ai-proxy.md): фото — дороже
@@ -103,7 +104,7 @@ test("идентификаторы моделей — те, что приним�
   // грубая и неполная: она не подтверждает, что модель существует, — это
   // выясняется только живым вызовом. Но форму «haiku без даты» она ловит.
   withEnv({}, () => {
-    for (const op of ["analyze_photo", "analyze_text", "suggest"]) {
+    for (const op of MODEL_OPERATIONS) {
       const model = resolveModel(op);
       assert.match(model, /^claude-/, `${op}: ${model}`);
       if (model.includes("haiku")) {
@@ -131,7 +132,7 @@ test("умолчания моделей не получают effort по оши
   // Сверяем не константы между собой, а умолчание с возможностью модели:
   // именно расхождение этих двух вещей и уронило две операции из трёх.
   withEnv({}, () => {
-    for (const operation of ["analyze_photo", "analyze_text", "suggest"]) {
+    for (const operation of MODEL_OPERATIONS) {
       const model = resolveModel(operation);
       // Утверждение простое: если модель effort не понимает, мы его и не
       // шлём. Проверяется связка «умолчание ↔ возможность», а не константа
@@ -164,7 +165,7 @@ test("у разбора фото времени кратно больше, че�
 });
 
 test("ни одна операция не осталась без предела", () => {
-  for (const operation of ["analyze_photo", "analyze_text", "suggest"]) {
+  for (const operation of MODEL_OPERATIONS) {
     const value = timeoutFor(operation);
     assert.ok(Number.isFinite(value) && value > 0, `${operation}: ${value}`);
     // Полминуты — нижняя граница здравого смысла: меньше обрубает даже

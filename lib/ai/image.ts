@@ -93,11 +93,20 @@ export async function compressPhotoForAi(
    * отдавала бы картинку хуже, чем можно.
    */
   targetBytes: number = TARGET_BYTES,
+  /**
+   * Потолок по длинной стороне. Умолчание рассчитано на еду, где важны цвет и
+   * форма, а не резкость.
+   *
+   * Чтение весов передаёт сюда больше (lib/ai/scale.ts): там задача обратная —
+   * узнать цифру высотой в несколько десятков точек, и каждый снятый пиксель
+   * идёт прямо в число, которое попадёт в историю веса.
+   */
+  maxDimension: number = MAX_DIMENSION_PX,
 ): Promise<CompressedPhoto | null> {
   try {
     const metadata = await sharp(data, { failOn: "none" }).metadata();
     const longSide = Math.max(metadata.width ?? 0, metadata.height ?? 0);
-    const fitsByPixels = longSide > 0 && longSide <= MAX_DIMENSION_PX;
+    const fitsByPixels = longSide > 0 && longSide <= maxDimension;
     const fitsByBytes = data.length <= targetBytes;
     if (fitsByPixels && fitsByBytes) {
       return null;
@@ -109,8 +118,8 @@ export async function compressPhotoForAi(
     const resized = sharp(data, { failOn: "none" })
       .rotate()
       .resize({
-        width: MAX_DIMENSION_PX,
-        height: MAX_DIMENSION_PX,
+        width: maxDimension,
+        height: maxDimension,
         fit: "inside",
         withoutEnlargement: true,
       });

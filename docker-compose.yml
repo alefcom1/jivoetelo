@@ -77,6 +77,12 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-}
       EMAIL_ENABLED: ${EMAIL_ENABLED:-}
       SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-}
+      # Приём оплаты. Рабочий провайдер — Tribute; Unitpay оставлен про запас
+      # (docs/payments.md). PAYMENTS_ENABLED общий: он включает приём вообще.
+      TRIBUTE_API_KEY: ${TRIBUTE_API_KEY:-}
+      TRIBUTE_LINK_MONTH: ${TRIBUTE_LINK_MONTH:-}
+      TRIBUTE_LINK_YEAR: ${TRIBUTE_LINK_YEAR:-}
+      TRIBUTE_REF_SECRET: ${TRIBUTE_REF_SECRET:-}
       UNITPAY_PUBLIC_KEY: ${UNITPAY_PUBLIC_KEY:-}
       UNITPAY_SECRET_KEY: ${UNITPAY_SECRET_KEY:-}
       PAYMENTS_ENABLED: ${PAYMENTS_ENABLED:-}

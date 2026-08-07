@@ -1,5 +1,7 @@
+import { freshest, newlyEarned } from "@/lib/awards";
+import { awardCounters, grantAwards, storedAwardKeys } from "@/lib/awards-store";
 import { localToday, MEAL_TYPE_LABELS } from "@/lib/dates";
-import { countPending } from "@/lib/inbox";
+import { countPending, everUsedInbox } from "@/lib/inbox";
 import { splitMacroTargets } from "@/lib/macro-split";
 import { getDaySummary, listLoggedDays } from "@/lib/meals";
 import { isSpeechEnabled } from "@/lib/speech/mode";
@@ -15,12 +17,34 @@ export async function GET(request: Request) {
   const today = localToday();
   // Независимые чтения — параллельно, а не одно за другим: ни одно не зависит
   // от результата другого.
-  const [summary, inboxPending, weights, loggedDays] = await Promise.all([
+  const [summary, inboxPending, weights, loggedDays, botEverUsed, counters, storedAwards] = await Promise.all([
     getDaySummary(auth.user.id, today),
     countPending(auth.user.id),
     listRecentWeights(auth.user.id, 30),
     listLoggedDays(auth.user.id),
+    // Для первых шагов: подсказку про бота показываем только тому, кто им
+    // ни разу не пользовался (lib/first-run.ts).
+    everUsedInbox(auth.user.id),
+    awardCounters(auth.user.id),
+    storedAwardKeys(auth.user.id),
   ]);
+
+  const streak = computeStreak(loggedDays, today);
+
+  /**
+   * Награды. Считаются здесь же, при обычной загрузке экрана, а не отдельным
+   * заходом: состояние для них — это те же дни и записи, которые уже
+   * посчитаны выше.
+   *
+   * Взятое записывается сразу, показывается — одна, самая крупная. Человек,
+   * вернувшийся после перерыва, может пересечь три рубежа за день, и три
+   * поздравления подряд читаются как поток, а не как событие.
+   */
+  const fresh = newlyEarned(
+    { totalDays: streak.totalDays, mealCount: counters.mealCount, bestStreak: streak.bestStreak },
+    storedAwards,
+  );
+  if (fresh.length > 0) await grantAwards(auth.user.id, fresh, today);
 
   const trend = weightTrend(weights);
   // Жир и углеводы не хранятся отдельной целью (см. lib/macro-split.ts) —
@@ -54,6 +78,19 @@ export async function GET(request: Request) {
     weight: trend.length > 0 ? { entries: trend, weeklyChangeKg: weeklyTrendChange(trend) } : null,
     // Числа серии считаются здесь, а текст — на клиенте (lib/mascot.ts):
     // реплики персонажа живут рядом с картинкой, которую они подписывают.
-    streak: computeStreak(loggedDays, today),
+    streak,
+    /** Награда, взятая только что, или null — обычный и самый частый исход. */
+    freshAward: freshest(fresh),
+    /**
+     * Всё, что нужно первым шагам сверх уже отданного. Отдельного запроса
+     * ради подсказок не делаем — состояние собирается из того, что и так
+     * приходит на экран.
+     */
+    firstRun: {
+      seen: auth.user.firstRunHints ?? [],
+      hasPlan: summary.targets !== null,
+      loggedDays: loggedDays.length,
+      botEverUsed,
+    },
   });
 }

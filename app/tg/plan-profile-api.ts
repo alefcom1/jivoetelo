@@ -83,6 +83,27 @@ export async function addMeasurement(weightKg: number): Promise<{ ok: true }> {
   }));
 }
 
+/**
+ * Ответ распознавания весов. `ok: false` — не сбой, а нормальный исход:
+ * индикатор не разобрать, и человеку возвращается совет, а не ошибка.
+ */
+export type ScaleScanResponse =
+  | { ok: true; weightKg: number; warning: string | null }
+  | { ok: false; message: string };
+
+/** Прочитать показания весов со снимка. Замер не сохраняется — только читает. */
+export async function scanScale(photo: File): Promise<ScaleScanResponse> {
+  const body = new FormData();
+  body.set("photo", photo);
+  // Заголовок с подписью ставится вручную, Content-Type — нет: границу
+  // multipart проставляет браузер, и заданный руками тип её потеряет.
+  return handle(await fetch("/api/tg/profile/weight/scan", {
+    method: "POST",
+    headers: initDataHeader(),
+    body,
+  }));
+}
+
 export async function saveReminders(payload: {
   remindersEnabled: boolean;
   digestHour: number;
@@ -105,4 +126,13 @@ export async function snoozeReminders(): Promise<{ ok: true }> {
 
 export async function unlinkTelegram(): Promise<{ ok: true }> {
   return handle(await fetch("/api/tg/unlink", { method: "POST", headers: initDataHeader() }));
+}
+
+/** Текст приглашения с личной ссылкой. `award` — если делятся наградой. */
+export async function fetchShareText(award?: string): Promise<{ text: string; invited: number }> {
+  return handle(await fetch("/api/tg/share", {
+    method: "POST",
+    headers: { ...initDataHeader(), "Content-Type": "application/json" },
+    body: JSON.stringify(award ? { award } : {}),
+  }));
 }

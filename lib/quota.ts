@@ -23,7 +23,9 @@ export async function getUsageToday(userId: number): Promise<Record<AiOperation,
     .where(and(eq(aiUsage.userId, userId), eq(aiUsage.onDate, localToday())))
     .groupBy(aiUsage.kind);
 
-  const used: Record<AiOperation, number> = { analyze_photo: 0, analyze_text: 0, suggest: 0, transcribe: 0 };
+  const used: Record<AiOperation, number> = {
+    analyze_photo: 0, analyze_text: 0, suggest: 0, read_scale: 0, transcribe: 0,
+  };
   for (const row of rows) {
     if (row.kind in used) used[row.kind as AiOperation] = Number(row.count);
   }
@@ -80,7 +82,7 @@ export async function checkQuota(userId: number, plan: Plan, operation: AiOperat
   if (recent.length > 0) return { allowed: false, reason: "too_fast" };
 
   const used = (await getUsageToday(userId))[operation];
-  if (used >= limit) return { allowed: false, reason: "daily_limit", used, limit, operation };
+  if (used >= limit) return { allowed: false, reason: "daily_limit", used, limit, operation, plan };
 
   if ((await spentTodayUsd()) >= globalDailyBudgetUsd()) {
     return { allowed: false, reason: "service_budget" };

@@ -468,6 +468,23 @@
 
 .tg-profile-add-weight { display: flex; gap: 8px; margin-top: 10px; }
 .tg-profile-add-weight .tg-input { flex: 1; }
+
+/* Снимок весов. Ярлык поверх скрытого input: системная кнопка выбора файла
+   подписана на языке телефона, а не приложения. Начертание второстепенное —
+   число вводят чаще, а снимок нужен тем, кому лень набирать.
+
+   Обе кнопки одной строкой и одной ширины: это два способа одного действия. */
+.tg-weight-actions { display: flex; gap: 8px; margin-top: 8px; }
+.tg-weight-actions .tg-button { flex: 1; }
+.tg-scale-scan { flex: 1; position: relative; }
+.tg-scale-scan input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
+.tg-scale-scan span {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--tg-hint) 30%, transparent);
+  border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--tg-text);
+}
+.tg-scale-scan input:disabled + span { color: var(--tg-hint); }
 .tg-profile-weights { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .tg-profile-weights li { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 0; border-top: 1px solid color-mix(in srgb, var(--tg-hint) 12%, transparent); }
 .tg-profile-weights li:first-child { border-top: 0; }
@@ -986,3 +1003,257 @@
   border: 0; border-radius: 14px; min-height: 48px;
   background: color-mix(in srgb, var(--tg-text) 8%, transparent);
 }
+
+/* ===== Живело: движение =====
+
+   Позы — статические картинки, и менять это ради движения незачем:
+   анимированный webp весил бы в разы больше ради секунды, которая нужна
+   только при появлении. Всё движение делает CSS.
+
+   Три вещи, и все короткие:
+     — появление: подъём на 6px с проявлением, 320 мс;
+     — покой: очень медленное «дыхание», 4 секунды на цикл, амплитуда 1,5%.
+       Именно медленное: заметная анимация рядом с числами дня отвлекает от
+       чисел, а незаметная просто не даёт картинке выглядеть наклейкой;
+     — смена позы: короткий толчок, чтобы переход был виден.
+
+   Всё выключается при prefers-reduced-motion — в приложении о питании
+   движение на экране не должно мешать тем, кому оно физически неприятно. */
+
+@keyframes tg-mascot-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes tg-mascot-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.015); }
+}
+
+@keyframes tg-say-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Реплика по поводу: енот слева, строка справа. Тон подложки тот же, что у
+   подсказок, — это пояснение, а не тревога. */
+.tg-say {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 12px 0;
+  background: var(--tg-card);
+  border-radius: 14px;
+  animation: tg-say-in 320ms ease-out both;
+}
+.tg-say p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--tg-hint);
+}
+.tg-say-mascot {
+  display: block;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  animation: tg-mascot-in 320ms ease-out both, tg-mascot-breathe 4s ease-in-out 320ms infinite;
+}
+.tg-say-compact { padding: 8px 10px; margin: 8px 0; }
+.tg-say-compact .tg-say-mascot { width: 34px; height: 34px; }
+.tg-say-compact p { font-size: 12px; }
+
+/* Карточка серии: то же дыхание, чтобы персонаж был один и тот же. Появление
+   там не нужно — карточка стоит на экране с самого открытия. */
+.tg-mascot { animation: tg-mascot-breathe 4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-say,
+  .tg-say-mascot,
+  .tg-mascot {
+    animation: none;
+  }
+}
+
+/* ===== Первые шаги: подсказка Живело =====
+
+   Стоит над содержимым «Сегодня», а не поверх него. Перекрывать действие, о
+   котором рассказываешь, — самая частая ошибка обучающих подсказок: человек
+   видит «нажмите сюда» и не видит куда.
+
+   Крестик обязателен и он настоящая тач-цель: закрытая подсказка не
+   возвращается никогда, и промахнуться по ней человек не должен.
+
+   Класс `.tg-first`, а не `.tg-hint-card`: последний уже занят карточкой
+   «здесь пока нечего показать» на четырёх вкладках. Первая версия называлась
+   так же — и молча получала от неё `flex-direction: column`: енот уезжал
+   наверх, текст под него, и карточка переставала выглядеть карточкой. */
+.tg-first {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 40px 12px 12px;
+  margin: 0 0 12px;
+  background: var(--tg-surface);
+  border-radius: 16px;
+  animation: tg-say-in 320ms ease-out both;
+}
+.tg-first-mascot {
+  display: block;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  animation: tg-mascot-in 320ms ease-out both, tg-mascot-breathe 4s ease-in-out 320ms infinite;
+}
+.tg-first-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.tg-first-body p { margin: 0; font-size: 13px; line-height: 1.45; }
+.tg-first-action {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand-coral);
+  font-size: 13px;
+  font-weight: 700;
+}
+.tg-first-close {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--tg-hint);
+  font-size: 20px;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-first, .tg-first-mascot { animation: none; }
+}
+
+/* ===== Награды и «поделиться» =====
+
+   Карточка награды стоит на месте карточки серии, поэтому и выглядит как она:
+   енот слева, текст справа. Отличие одно — лаймовая заливка: это событие, а
+   не ежедневная строка, и один раз в жизни оно вправе занять цвет. */
+.tg-award {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  margin: 0 0 12px;
+  background: var(--brand-lime);
+  border-radius: var(--radius);
+  animation: tg-say-in 320ms ease-out both;
+}
+.tg-award-mascot {
+  display: block;
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+  animation: tg-mascot-in 320ms ease-out both, tg-mascot-breathe 4s ease-in-out 320ms infinite;
+}
+.tg-award-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+/* Тон текста задан явно, а не наследуется: заливка лаймовая в обеих темах, и
+   светлый текст тёмной темы на ней не читается. */
+.tg-award-body b { font-size: 15px; color: #1d2410; }
+.tg-award-body p { margin: 0; font-size: 13px; line-height: 1.45; color: #3c4626; }
+.tg-award-share {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #5a3a1e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-award, .tg-award-mascot { animation: none; }
+}
+
+/* Список наград в «Профиле». Дата справа мелко: она нужна, чтобы вспомнить
+   когда, но не должна соревноваться с названием. */
+.tg-awards { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.tg-awards li {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding-top: 10px; border-top: 1px solid color-mix(in srgb, var(--tg-hint) 14%, transparent);
+}
+.tg-awards li:first-child { border-top: 0; padding-top: 0; }
+.tg-awards b { font-size: 14px; }
+.tg-awards p { margin: 2px 0 0; font-size: 13px; line-height: 1.45; color: var(--tg-hint); }
+.tg-awards time { margin-left: auto; flex: none; font-size: 12px; color: var(--tg-hint); white-space: nowrap; }
+
+/* «Позвать друга» внизу «Сегодня». Строкой, а не кнопкой: это предложение,
+   а не действие дня, и по весу оно должно уступать всему выше. */
+.tg-invite-row {
+  display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+  width: 100%; min-height: 44px; padding: 12px 14px; margin: 4px 0 0;
+  border: 1px solid color-mix(in srgb, var(--tg-hint) 24%, transparent);
+  border-radius: var(--radius); background: transparent; text-align: left;
+}
+.tg-invite-row span { font-size: 14px; font-weight: 600; color: var(--tg-text); }
+.tg-invite-row em { font-style: normal; font-size: 12px; line-height: 1.4; color: var(--tg-hint); }
+
+/* Лист «поделиться». Снизу, а не по центру: на телефоне низ экрана — это то,
+   до чего дотягивается палец, и модальные листы там ждут по привычке. */
+.tg-share-backdrop {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(0, 0, 0, 0.42);
+  animation: tg-say-in 200ms ease-out both;
+}
+.tg-share {
+  width: 100%; max-width: 520px;
+  display: flex; flex-direction: column; gap: 12px; align-items: stretch;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  background: var(--tg-bg);
+  border-radius: 20px 20px 0 0;
+}
+.tg-share h2 { margin: 0; font: 500 22px var(--brand-serif); letter-spacing: -0.02em; }
+/* Текст показывается до отправки: его отправляют друзьям от своего имени, и
+   человек вправе прочитать, что именно уйдёт. */
+.tg-share-preview {
+  margin: 0; padding: 12px 14px;
+  background: var(--tg-surface); border-radius: 14px;
+  font-size: 13px; line-height: 1.5; white-space: pre-line; word-break: break-word;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-share-backdrop { animation: none; }
+}
+
+/* Срез месяц-к-месяцу. Таблица, а не карточки: сравнивают здесь по столбцам,
+   и глазу нужна общая линия, вдоль которой числа стоят друг под другом. */
+.tg-season table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tg-season th, .tg-season td { padding: 8px 0; text-align: right; font-variant-numeric: tabular-nums; }
+.tg-season thead th {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--tg-hint); padding-bottom: 6px;
+}
+.tg-season tbody th, .tg-season thead th:first-child { text-align: left; font-weight: 600; }
+.tg-season tbody tr { border-top: 1px solid color-mix(in srgb, var(--tg-hint) 14%, transparent); }
+/* Месяц, не идущий в сравнение, приглушён — но показан: человек должен
+   видеть, что месяц был, и понимать, почему он не участвует. */
+.tg-season-thin th, .tg-season-thin td { color: var(--tg-hint); }
+.tg-season .tg-hint { margin: 10px 0 0; }
+.tg-season-notes { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tg-season-notes li { font-size: 13px; line-height: 1.5; padding-left: 14px; position: relative; }
+.tg-season-notes li::before {
+  content: ""; position: absolute; left: 0; top: 8px;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--brand-coral);
+}
+
+/* Тариф в профиле: кнопки столбиком — на телефоне это единственный способ
+   не сжать «Оплатить — год, 1900 ₽» до нечитаемого. */
+.tg-access{display:flex;flex-direction:column;gap:10px}

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  AI_OPERATIONS,
   estimateCostUsd,
   normalizePlan,
   OPERATION_LABELS,
@@ -8,12 +9,44 @@ import {
   quotaMessage,
 } from "../lib/quota-policy.ts";
 
-test("бесплатный тариф покрывает реальный день с большим запасом", () => {
+/**
+ * Что этот тест сторожит после снижения лимитов (6 августа 2026).
+ *
+ * До того здесь стояло «бесплатный тариф покрывает реальный день с большим
+ * запасом»: 15 разборов по фото, 30 по тексту, 10 советов. Это была проверка
+ * прежней политики — «лимиты не монетизация», — и вместе с политикой она
+ * ушла. Просто ослабить числа было бы неправильно: тогда тест перестал бы
+ * сторожить что-либо вообще и молча пропустил бы и единицу, и ноль.
+ *
+ * Поэтому здесь теперь нижняя граница смысла, а не удобства: бесплатный
+ * тариф обязан позволять **записать день целиком** — три приёма пищи по
+ * фотографии. Ниже этого он перестаёт быть тарифом и становится показом
+ * возможностей, а это уже другой продукт, и решаться такое должно явно, а не
+ * очередной правкой числа.
+ */
+test("бесплатного тарифа хватает записать день целиком", () => {
   const free = PLAN_LIMITS.free;
-  // Реальный сценарий: 3–5 приёмов пищи + пара советов в день.
-  assert.ok(free.analyze_photo >= 15, `фото: ${free.analyze_photo}`);
-  assert.ok(free.analyze_text >= 30, `текст: ${free.analyze_text}`);
-  assert.ok(free.suggest >= 10, `советы: ${free.suggest}`);
+  assert.ok(free.analyze_photo >= 3, `фото: ${free.analyze_photo} — меньше трёх приёмов пищи`);
+  assert.ok(free.analyze_text >= free.analyze_photo, `текст: ${free.analyze_text}`);
+  assert.ok(free.suggest >= 3, `советы: ${free.suggest}`);
+});
+
+/**
+ * Главный запрет, появившийся вместе с платным тарифом.
+ *
+ * Лимит в ноль выглядит как «просто очень маленький лимит», а на деле это
+ * перевод возможности за оплату целиком. Мы обещаем обратное — и на главной,
+ * и в оферте, и в `lib/paid.ts`: платным становится объём распознавания, а не
+ * сами функции. Одна правка числа на 0 сделала бы эти обещания ложью, не
+ * сломав ничего видимого.
+ */
+test("ни одна операция не закрыта на бесплатном тарифе полностью", () => {
+  for (const operation of AI_OPERATIONS) {
+    assert.ok(
+      PLAN_LIMITS.free[operation] > 0,
+      `${operation}: ноль на бесплатном тарифе — это перевод возможности за оплату, а не лимит`,
+    );
+  }
 });
 
 test("расшифровка речи считается, но денег не стоит", () => {
@@ -21,17 +54,36 @@ test("расшифровка речи считается, но денег не �
   // всё равно нужен — точка приёма мегабайтных файлов без ограничения
   // частоты занимает сервер целиком.
   assert.equal(estimateCostUsd({ inputTokens: 1_000_000, outputTokens: 1_000_000 }, "transcribe"), 0);
-  assert.ok(PLAN_LIMITS.free.transcribe >= 20, `расшифровок: ${PLAN_LIMITS.free.transcribe}`);
+  assert.ok(PLAN_LIMITS.free.transcribe > 0, `расшифровок: ${PLAN_LIMITS.free.transcribe}`);
   assert.equal(typeof OPERATION_LABELS.transcribe, "string");
 });
 
 test("у каждой считаемой операции есть подпись и лимит", () => {
-  // Забытая подпись видна только на экране лимитов, и то как «undefined».
-  for (const operation of Object.keys(OPERATION_LABELS)) {
+  // Список берётся из AI_OPERATIONS, а не из самих таблиц: раньше они
+  // сверялись друг с другом, и операция, забытая в обеих сразу, проходила
+  // молча. Именно так чуть не уехало чтение весов — новая операция требует
+  // записи в четырёх таблицах, и «забыл везде» выглядит как «всё сходится».
+  for (const operation of AI_OPERATIONS) {
     assert.equal(typeof PLAN_LIMITS.free[operation], "number", `нет лимита для ${operation}`);
-  }
-  for (const operation of Object.keys(PLAN_LIMITS.free)) {
     assert.equal(typeof OPERATION_LABELS[operation], "string", `нет подписи для ${operation}`);
+  }
+  assert.equal(Object.keys(OPERATION_LABELS).length, AI_OPERATIONS.length, "в подписях есть лишнее");
+  assert.equal(Object.keys(PLAN_LIMITS.free).length, AI_OPERATIONS.length, "в лимитах есть лишнее");
+});
+
+test("у каждой операции своя ставка, а не запасная", () => {
+  // Забытая цена не ломает ничего заметного: предохранитель просто начинает
+  // считать по самой дорогой ставке и обрубает разбор раньше времени.
+  // Ровно это уже случалось, когда на всё стояла одна ставка Opus.
+  const MILLION = { inputTokens: 1_000_000, outputTokens: 1_000_000 };
+  const fallback = estimateCostUsd(MILLION, undefined);
+  for (const operation of AI_OPERATIONS) {
+    if (operation === "transcribe") continue; // Своя установка, цена честный ноль.
+    assert.notEqual(
+      estimateCostUsd(MILLION, operation),
+      fallback,
+      `${operation} считается по запасной ставке — цены для него нет`,
+    );
   }
 });
 

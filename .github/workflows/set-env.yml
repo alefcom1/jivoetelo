@@ -1,0 +1,104 @@
+name: Задать переменную в .env на сервере
+
+# Запасная дверь к настройкам сервера.
+#
+# `.env` лежит вне git и правится вручную по SSH — пока SSH работает. Когда
+# доступ потерян (сменился адрес, сработал fail2ban, закрыт парольный вход),
+# поменять настройку становится нечем, хотя ключ выкатки продолжает пускать
+# GitHub Actions на тот же сервер. Этот workflow пользуется ровно тем же
+# ключом и теми же секретами, что и обычная выкатка, — новых прав он не
+# создаёт: у того, кто может запустить workflow, и так есть право отправить в
+# `main` любой код и выкатить его.
+#
+# Только вручную, никаких `push` и расписаний: правка окружения не должна
+# случаться как побочный эффект чего-то ещё.
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: Какую переменную задать
+        required: true
+        # Список, а не свободная строка. Опечатка в имени — самый тихий отказ
+        # из возможных: ADMIN_EMAIL вместо ADMIN_EMAILS запишется без ошибки,
+        # приложение его не прочитает, и выглядеть это будет как «ничего не
+        # изменилось». Новая переменная добавляется сюда одной строкой.
+        type: choice
+        options:
+          - ADMIN_EMAILS
+      value:
+        description: Значение (для ADMIN_EMAILS — адреса через запятую)
+        required: true
+        type: string
+
+# Тот же замок, что у выкатки: две правки окружения или правка во время
+# выкатки — это гонка за один и тот же .env и один и тот же контейнер.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  set-env:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Забрать код
+        uses: actions/checkout@v4
+
+      - name: Проверить секреты выкатки
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          missing=""
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Не заданы секреты репозитория:$missing"
+            exit 1
+          fi
+
+      - name: Настроить SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      # Кодируем на runner'е, раскодируем на сервере. Значение введено
+      # человеком и идёт в команду ssh — то есть разбирается оболочкой дважды;
+      # кавычка или `$(` в нём означали бы выполнение чужой команды на сервере.
+      # В алфавите base64 таких знаков нет.
+      #
+      # `::add-mask::` прячет значение в логе на случай, если сюда однажды
+      # заведут токен: маска ставится до первого упоминания, потом поздно.
+      - name: Подготовить значение
+        env:
+          VALUE: ${{ inputs.value }}
+        run: |
+          echo "::add-mask::$VALUE"
+          printf '%s' "$VALUE" | base64 -w0 > /tmp/value.b64
+          echo "Длина значения: ${#VALUE}"
+
+      - name: Записать на сервере и перезапустить приложение
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/root/jivoetelo' }}
+          NAME: ${{ inputs.name }}
+        run: |
+          VALUE_B64="$(cat /tmp/value.b64)"
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' bash -s -- '$NAME' '$VALUE_B64'" \
+            < deploy/set-env.sh
+
+      - name: Убрать ключ
+        if: always()
+        run: rm -f ~/.ssh/deploy_key /tmp/value.b64

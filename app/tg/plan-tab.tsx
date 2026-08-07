@@ -7,6 +7,7 @@
 // же, одной прокруткой из нескольких секций.
 
 import { useEffect, useState } from "react";
+import type { SeasonReport } from "@/lib/season";
 import { pointsToArea } from "@/lib/sparkline";
 import { buildWeightChart } from "@/lib/weight-chart";
 import { ArtTrend } from "./illustrations";
@@ -116,6 +117,50 @@ function formatDecimalRu(value: number | null): string {
   return value === null ? "—" : value.toFixed(1).replace(".", ",");
 }
 
+/**
+ * Срез месяц-к-месяцу.
+ *
+ * Показывается только когда есть что сравнивать: два месяца, в каждом хотя бы
+ * по горстке записей. Раздел, объясняющий «данных пока мало», занимал бы
+ * место каждый месяц и ничего не сообщал — его тут нет вовсе.
+ *
+ * Несравнимые месяцы всё же показаны, но числами без сравнения: человек
+ * должен видеть, что месяц был, и понимать, почему он не участвует.
+ */
+function SeasonSection({ season }: { season: SeasonReport }) {
+  if (!season.enough) return null;
+  const shown = season.months.filter((month) => month.loggedDays > 0);
+  if (shown.length === 0) return null;
+
+  return <section className="tg-section">
+    <h2>Месяц к месяцу</h2>
+    <div className="tg-card tg-season">
+      <table>
+        <thead>
+          <tr><th>Месяц</th><th>Дней</th><th>Белок</th><th>Вес</th></tr>
+        </thead>
+        <tbody>
+          {shown.map((month) => <tr key={month.month} className={month.comparable ? "" : "tg-season-thin"}>
+            <th scope="row">{month.label.split(" ")[0]}</th>
+            <td>{month.loggedDays}</td>
+            <td>{month.proteinPerDay === null ? "—" : `${month.proteinPerDay} г`}</td>
+            <td>{month.weightKg === null ? "—" : `${String(month.weightKg).replace(".", ",")} кг`}</td>
+          </tr>)}
+        </tbody>
+      </table>
+      {/* Строка про несравнимые месяцы — только когда такие есть: иначе это
+          объяснение к тому, чего человек не видит. */}
+      {shown.some((month) => !month.comparable) && <p className="tg-hint">
+        Месяцы с малым числом записей показаны, но в сравнение не идут: по ним видно не то, как вы ели,
+        а то, какие дни успели записать.
+      </p>}
+      {season.notes.length > 0 && <ul className="tg-season-notes">
+        {season.notes.map((note) => <li key={note}>{note}</li>)}
+      </ul>}
+    </div>
+  </section>;
+}
+
 export function PlanTab({ showCalories }: { showCalories: boolean }) {
   const [data, setData] = useState<PlanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -219,6 +264,11 @@ export function PlanTab({ showCalories }: { showCalories: boolean }) {
               : "Пока слишком мало дней, чтобы показывать средние: одна запись — это запись, а не закономерность."}</p>
           </div>}
     </section>
+
+    {/* Срез месяц-к-месяцу. Стоит после недели и до веса: неделя отвечает на
+        «как сейчас», срез — на «изменилось ли вообще», а вес идёт следом как
+        одна из величин, которые в этом срезе и сравниваются. */}
+    <SeasonSection season={data.season} />
 
     {/* Динамика веса */}
     <section className="tg-section">

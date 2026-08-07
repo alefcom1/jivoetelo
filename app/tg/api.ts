@@ -30,6 +30,8 @@ export type TgMeal = {
 export type TgWeightPoint = { onDate: string; weightKg: number; trendKg: number };
 export type TgWeight = { entries: TgWeightPoint[]; weeklyChangeKg: number | null };
 
+import type { FreshAward } from "./award-card";
+
 export type TodayResponse = {
   showCalories: boolean;
   /** Упрощённый режим учёта: тарелка вместо чисел (lib/simple-log.ts). */
@@ -53,7 +55,34 @@ export type TodayResponse = {
    * которую подписывают, а не двумя наборами слов в разных местах.
    */
   streak: StreakResult;
+  /**
+   * Награда, взятая только что, или null — обычный и самый частый исход.
+   * Считается сервером при обычной загрузке экрана (lib/awards.ts).
+   */
+  freshAward: FreshAward | null;
+  /** Состояние первых шагов — из чего собирается подсказка (lib/first-run.ts). */
+  firstRun: {
+    seen: string[];
+    hasPlan: boolean;
+    loggedDays: number;
+    botEverUsed: boolean;
+  };
 };
+
+/** Отметить объяснения пройденными. Ошибку глушим: подсказка — не данные. */
+export async function markHints(hints: string[]): Promise<void> {
+  if (hints.length === 0) return;
+  try {
+    await request("/api/tg/hints", {
+      method: "POST",
+      headers: { ...initDataHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify({ hints }),
+    });
+  } catch {
+    // Неудачная отметка означает, что подсказка появится ещё раз. Это
+    // терпимо; ронять из-за неё экран — нет.
+  }
+}
 
 export type ApiFailure = { reason: "not_linked" | "invalid_signature" | "not_configured" | "error"; message?: string };
 
@@ -212,6 +241,8 @@ export type AnalysisItemDto = {
 export type ClarificationDto = {
   question: string;
   options: Array<{ label: string; addItem?: AnalysisItemDto }>;
+  /** Позиция, которую вопрос уточняет: вариант заменит её, а не добавится. */
+  refinesIndex?: number;
 };
 
 export async function saveMeal(payload: unknown): Promise<{ ok: true; id: number }> {

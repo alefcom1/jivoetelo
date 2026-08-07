@@ -7,11 +7,17 @@
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { botPreferences, users, weightEntries } from "@/db/schema";
-import { botLink } from "../bot-public.ts";
 import { addToInbox, countInboxToday, countPendingOnDay } from "../inbox.ts";
 import { getDaySummary } from "../meals.ts";
-import { countReferrals, ensureReferralCode, rememberReferralVisit } from "../referral-store.ts";
-import { referralPayload } from "../referral.ts";
+import { effectivePlan } from "../paid.ts";
+import {
+  ensureReferralCode,
+  invitedCount,
+  rememberInvite,
+  REFERRAL_REWARD_AFTER_DAYS,
+  REFERRAL_REWARD_DAYS,
+} from "../referral-store.ts";
+import { referralLink } from "../referral.ts";
 import { getSpeechProvider, isSpeechEnabled } from "../speech/index.ts";
 import { savePhoto } from "../storage.ts";
 import { consumeLinkCode, findUserByTelegram } from "../telegram.ts";
@@ -109,18 +115,40 @@ export const botStore: BotStore = {
     };
   },
 
+  /**
+   * Ссылка и счётчик — из lib/referral-store.ts, того же модуля, что и кнопка
+   * «Позвать друга» в Mini App. Своей реализации здесь быть не должно: два
+   * генератора кода означали бы, что в чате и в приложении у человека разные
+   * ссылки, и приглашённый по одной из них не засчитается.
+   */
   async referral(userId) {
-    const [code, joined] = await Promise.all([ensureReferralCode(userId), countReferrals(userId)]);
-    return { link: botLink(referralPayload(code)), joined };
+    const [code, joined] = await Promise.all([ensureReferralCode(userId), invitedCount(userId)]);
+    return {
+      link: referralLink(code),
+      joined,
+      reward: { afterDays: REFERRAL_REWARD_AFTER_DAYS, days: REFERRAL_REWARD_DAYS },
+    };
   },
 
-  async rememberReferral(telegramUserId, code) {
-    await rememberReferralVisit(telegramUserId, code);
+  async rememberInvite(telegramUserId, code) {
+    await rememberInvite(telegramUserId, code);
   },
 
+  /**
+   * Тариф считается из срока доступа, а не читается из `users.plan`.
+   *
+   * Так устроен весь платный доступ (lib/paid.ts): источник истины один —
+   * `access_until`, а `plan` из него выводится при каждом чтении. Прочитать
+   * колонку было бы короче ровно до первого просроченного доступа: у
+   * человека, чей месяц кончился вчера, бот отвечал бы «у вас уже Про».
+   */
   async plan(userId) {
-    const rows = await getDb().select({ plan: users.plan }).from(users).where(eq(users.id, userId)).limit(1);
-    return rows[0]?.plan === "premium" ? "premium" : "free";
+    const rows = await getDb()
+      .select({ accessUntil: users.accessUntil })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    return effectivePlan(rows[0]?.accessUntil ?? null, new Date());
   },
 };
 

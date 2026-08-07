@@ -102,11 +102,29 @@ export const MILESTONES: readonly Milestone[] = [
   { days: 30, title: "Месяц", unlocks: "месячная статистика и устойчивый тренд веса" },
   // MIN_PAIRS_STATISTICAL в lib/weight-response.ts
   { days: 60, title: "Два месяца", unlocks: "наблюдения по еде и весу проходят статистическую проверку" },
+  // Дальше растёт окно среза месяц-к-месяцу — seasonWindow в lib/season-window.ts.
+  // Обещание тут именно про размах: сам срез появляется раньше, как только
+  // наберётся два сравнимых месяца, но охватить три месяца он может только у
+  // того, кто эти три месяца вёл.
+  { days: 90, title: "Три месяца", unlocks: "срез месяц к месяцу за три месяца" },
+  { days: 180, title: "Полгода", unlocks: "срез разворачивается на полгода" },
+  { days: 365, title: "Год", unlocks: "годовой срез: двенадцать месяцев рядом" },
 ] as const;
 
 export type StreakResult = {
   /** Дней подряд. Сегодняшний день входит, только если он уже записан. */
   current: number;
+  /**
+   * Самая длинная серия за всю историю — без заморозок, по фактическим дням.
+   *
+   * От `current` отличается тем, что не убывает никогда: это уже случившееся.
+   * Награды считаются по ней (lib/awards.ts) именно поэтому — награда,
+   * которую можно потерять, наказывает за болезнь и отпуск.
+   *
+   * Заморозки сюда не входят сознательно: они существуют, чтобы человек не
+   * терял живую серию из-за одного дня, а не чтобы дорисовывать историю.
+   */
+  bestStreak: number;
   /** Все дни с записями за всё время. Не обнуляется ни при каких условиях. */
   totalDays: number;
   /** Недель, где записей было CARING_WEEK_DAYS и больше. */
@@ -140,6 +158,26 @@ function weekKey(day: string): string {
 function daysBetween(from: string, to: string): number {
   const ms = Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`);
   return Math.round(ms / 86_400_000);
+}
+
+/**
+ * Самая длинная непрерывная цепочка дней за всю историю.
+ *
+ * Считается по отсортированному списку, а не шагами по календарю от сегодня:
+ * от сегодня видна только последняя серия, а нужна лучшая — она могла быть
+ * год назад и с тех пор ни разу не повториться.
+ */
+function longestRun(logged: Set<string>): number {
+  const days = [...logged].sort();
+  let best = 0;
+  let run = 0;
+  let previous: string | null = null;
+  for (const day of days) {
+    run = previous !== null && shiftDay(previous, 1) === day ? run + 1 : 1;
+    if (run > best) best = run;
+    previous = day;
+  }
+  return best;
 }
 
 function countCaringWeeks(logged: Set<string>): number {
@@ -211,6 +249,7 @@ export function computeStreak(loggedDays: string[], today: string): StreakResult
 
   return {
     current,
+    bestStreak: longestRun(logged),
     totalDays,
     caringWeeks: countCaringWeeks(logged),
     loggedToday,

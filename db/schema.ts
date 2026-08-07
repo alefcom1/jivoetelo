@@ -1,4 +1,4 @@
-import { boolean, date, doublePrecision, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { boolean, date, doublePrecision, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const waitlistSubscribers = pgTable("waitlist_subscribers", {
   id: serial("id").primaryKey(),
@@ -66,30 +66,117 @@ export const users = pgTable("users", {
    */
   simpleMode: boolean("simple_mode").notNull().default(false),
   /**
-   * Личный код в реферальной ссылке `?start=ref_XXXXXX`.
+   * Пройденные объяснения первых шагов — массив ключей из lib/first-run.ts.
    *
-   * Выдаётся лениво, при первом запросе `/invite`: большинство аккаунтов
-   * никого не приглашает, и выписывать им код при регистрации — значит
-   * занимать пространство кодов ради строк, которые никто не откроет.
+   * Массив, а не столбец на каждый шаг: шагов семь, и каждый новый иначе
+   * стоил бы миграции. Отметка ставится и когда человек закрыл подсказку, и
+   * когда он сделал действие сам, не увидев её.
    */
-  referralCode: text("referral_code").unique(),
-  /** Кто пригласил. Проставляется один раз при создании аккаунта. */
-  referredBy: integer("referred_by").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+  firstRunHints: jsonb("first_run_hints").notNull().default([]).$type<string[]>(),
+  /**
+   * Код приглашения — хвост ссылки t.me/<бот>?start=ref_<код>.
+   *
+   * Пусто до первого нажатия «Позвать друга»: заводить код всем заранее нечего,
+   * а миграция по живой таблице тем более. Уникален среди существующих —
+   * частичный индекс в drizzle/0023.
+   */
+  referralCode: text("referral_code"),
+  /**
+   * Кто пригласил. Ссылка на человека, а не копия кода: код можно перевыпустить,
+   * а факт «пришёл от него» — нет.
+   */
+  invitedBy: integer("invited_by"),
+  /**
+   * До какого момента открыт платный доступ. `null` — никогда не открывался.
+   *
+   * Источник истины один на оплату и на ваучеры; `plan` из него вычисляется
+   * (lib/paid.ts) и больше нигде не пишется. Флаг вместо срока пришлось бы
+   * снимать по расписанию, и упавший cron оставлял бы доступ неоплаченным.
+   */
+  accessUntil: timestamp("access_until", { withTimezone: true }),
+  /**
+   * Когда начислена награда за приглашение. Отметка стоит у ПРИГЛАШЁННОГО:
+   * у него она одна на всю жизнь, у пригласившего их было бы столько,
+   * сколько друзей. Условие `IS NULL` в WHERE делает начисление однократным.
+   */
+  referralRewardedAt: timestamp("referral_rewarded_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 /**
- * Переход по чужой ссылке до того, как аккаунт появился.
+ * Ваучеры: код на бесплатный доступ.
  *
- * В момент `/start ref_XXXXXX` человека в `users` ещё нет, а до регистрации
- * может пройти неделя. Ключ — telegram_user_id: это единственное, что мы о
- * нём в тот момент знаем.
+ * Строка живёт и после погашения — по ней отвечают на вопрос «кому и когда мы
+ * это выдали», а он возникает не в день выдачи.
  */
-export const referralVisits = pgTable("referral_visits", {
-  telegramUserId: text("telegram_user_id").primaryKey(),
-  referrerUserId: integer("referrer_user_id")
+export const vouchers = pgTable("vouchers", {
+  id: serial("id").primaryKey(),
+  /** Канонический вид: заглавные, без дефиса (lib/vouchers.ts). */
+  code: text("code").notNull().unique(),
+  /** Днями, а не тарифом: тариф подорожает, а обещание «месяц» уже роздано. */
+  days: integer("days").notNull(),
+  /** Кто выдал. null — начислено автоматически за приглашение. */
+  issuedBy: integer("issued_by"),
+  /** Кому предназначен, если известно заранее. */
+  issuedTo: integer("issued_to"),
+  note: text("note"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  usedBy: integer("used_by"),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Журнал обращений администратора к персональным данным.
+ *
+ * Доступ полный — так решено владельцем. Журнал его не ограничивает, а
+ * записывает: при жалобе или проверке спрашивают именно «кто и когда
+ * смотрел». Сводные цифры сюда не идут — в них нет ничьего дневника.
+ */
+export const adminAccessLog = pgTable("admin_access_log", {
+  id: serial("id").primaryKey(),
+  adminId: integer("admin_id")
     .notNull()
-    .references((): AnyPgColumn => users.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" }),
+  subjectId: integer("subject_id"),
+  /** profile | diary | photos */
+  scope: text("scope").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Взятые награды (lib/awards.ts). Строка на награду, не удаляется никогда:
+ * награда, которую можно потерять, наказывает за болезнь и отпуск.
+ */
+export const userAwards = pgTable(
+  "user_awards",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    awardKey: text("award_key").notNull(),
+    earnedOn: date("earned_on").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // «Сегодня» открыто в вебе и в Mini App разом, и оба экрана считают взятое
+  // при загрузке: без уникальности награда задвоится.
+  (table) => [uniqueIndex("user_awards_user_key").on(table.userId, table.awardKey)],
+);
+
+/**
+ * Приглашение, пришедшее раньше аккаунта.
+ *
+ * По ссылке человек попадает в чат с ботом, а запись в users заводится позже —
+ * при регистрации в Mini App. Между этими двумя событиями приглашение негде
+ * держать: users ещё нет, а initData о ссылке в чат уже не знает. Ключ —
+ * telegram_user_id, единственное, что известно по обе стороны разрыва.
+ */
+export const pendingInvites = pgTable("pending_invites", {
+  telegramUserId: text("telegram_user_id").primaryKey(),
+  inviterId: integer("inviter_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -218,13 +305,52 @@ export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
   provider: text("provider").notNull().default("unitpay"),
   externalId: text("external_id").notNull().unique(),
+  /**
+   * Кому зачли. Нулевой намеренно: Tribute — посредник, и покупатель у него
+   * не обязан совпасть с нашим аккаунтом. Платёж без человека не теряется, а
+   * ждёт в админке привязки руками.
+   */
   userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
   sum: text("sum").notNull(),
-  status: text("status").notNull(), // checked | paid | failed
+  status: text("status").notNull(), // checked | paid | failed | refunded
+  /** Ключ тарифа: цены меняются, а выданные дни остаются. */
+  tariff: text("tariff"),
+  /** Как нашли человека: ref | telegram | email | manual. */
+  matchedBy: text("matched_by"),
+  /** Когда доступ действительно продлили. Пусто — деньги есть, доступа нет. */
+  appliedAt: timestamp("applied_at", { withTimezone: true }),
   payload: jsonb("payload"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Сырые уведомления платёжного сервиса — до того, как из них что-то поняли.
+ *
+ * Заведена под Tribute, документация которого из нашей среды недоступна:
+ * имена полей в обработчике восстановлены по вторичным источникам, и первое
+ * настоящее уведомление здесь и есть та спецификация, которой у нас нет.
+ * Хранится всё, включая не прошедшее проверку подписи, — иначе непонятно,
+ * почему деньги у провайдера есть, а доступа у человека нет.
+ */
+export const paymentEvents = pgTable(
+  "payment_events",
+  {
+    id: serial("id").primaryKey(),
+    provider: text("provider").notNull().default("tribute"),
+    /** Доступ выдаётся только по проверенным подписью. */
+    verified: boolean("verified").notNull().default(false),
+    eventType: text("event_type"),
+    externalId: text("external_id"),
+    raw: jsonb("raw"),
+    headers: jsonb("headers"),
+    /** applied | unmatched | ignored | bad_signature | disabled */
+    outcome: text("outcome").notNull(),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("payment_events_created").on(table.createdAt)],
+);
 
 /**
  * Фото-инбокс: снимок, присланный боту в любой момент дня, попадает сюда, а
@@ -692,7 +818,19 @@ export const catalogPhotos = pgTable(
     caption: text("caption").notNull(),
     /** pending | approved | rejected */
     status: text("status").notNull().default("pending"),
+    /** Причина отказа — её читает автор. */
     rejectionReason: text("rejection_reason"),
+    /**
+     * Внутренняя заметка модератора: «лицо в отражении», «дубль вчерашнего».
+     * Отдельно от причины отказа сознательно — первое автор прочитает,
+     * второе не должен.
+     */
+    moderatorNote: text("moderator_note"),
+    /**
+     * Когда решение ушло автору. `null` — не отправляли. Без этого признака
+     * повторный разбор очереди слал бы одно и то же сообщение дважды.
+     */
+    notifiedAt: timestamp("notified_at", { withTimezone: true }),
     /**
      * Редакция документов на момент согласия. Та же логика, что в
      * `user_consents`: через год надо уметь показать, на что именно человек

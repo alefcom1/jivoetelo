@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
 import { ARTICLES } from "@/lib/articles";
 import { DISHES, dishUpdatedAt } from "@/lib/dishes";
-import { GLOSSARY } from "@/lib/glossary";
-import { PRODUCTS } from "@/lib/products";
+import { GLOSSARY, glossaryUpdatedAt } from "@/lib/glossary";
+import { PRODUCTS, productUpdatedAt } from "@/lib/products";
 import { LEGAL_UPDATED_AT } from "@/lib/legal";
 
 /**
@@ -16,7 +16,31 @@ import { LEGAL_UPDATED_AT } from "@/lib/legal";
  */
 const SITE_URL = "https://jivoetelo.ru";
 
-const STATIC_PAGES: Array<{ path: string; priority: number; changeFrequency: "monthly" | "yearly" }> = [
+/**
+ * Дата последней содержательной правки статических страниц — расчётов,
+ * методологии, хабов.
+ *
+ * Отдельно от `LEGAL_UPDATED_AT` по той же причине, по которой у каталога
+ * блюд своя дата: правка оферты не меняет содержимое страницы ИМТ, а карта
+ * сайта, раз за разом показывающая несуществующие изменения, учит поисковик
+ * не верить полю целиком. Здесь это било по шестидесяти пяти адресам из
+ * восьмидесяти шести — то есть почти по всему сайту.
+ *
+ * Правится руками, когда расчёты или тексты действительно менялись. Дата у
+ * страницы `/legal/*` остаётся своя: там правка документа и есть изменение
+ * содержимого.
+ */
+const SITE_UPDATED_AT = "2026-08-06";
+
+type StaticPage = {
+  path: string;
+  priority: number;
+  changeFrequency: "monthly" | "yearly";
+  /** Своя дата — у документов, живущих отдельной редакцией. */
+  updatedAt?: string;
+};
+
+const STATIC_PAGES: StaticPage[] = [
   { path: "/", priority: 1, changeFrequency: "monthly" },
   { path: "/raschet", priority: 0.8, changeFrequency: "monthly" },
   { path: "/raschet/plan", priority: 0.9, changeFrequency: "monthly" },
@@ -50,24 +74,24 @@ const STATIC_PAGES: Array<{ path: string; priority: number; changeFrequency: "mo
   { path: "/pro", priority: 0.7, changeFrequency: "monthly" },
   { path: "/register", priority: 0.6, changeFrequency: "yearly" },
   { path: "/login", priority: 0.3, changeFrequency: "yearly" },
-  { path: "/legal", priority: 0.3, changeFrequency: "yearly" },
-  { path: "/legal/terms", priority: 0.2, changeFrequency: "yearly" },
-  { path: "/legal/privacy", priority: 0.2, changeFrequency: "yearly" },
-  { path: "/legal/consent", priority: 0.2, changeFrequency: "yearly" },
-  { path: "/legal/health", priority: 0.3, changeFrequency: "yearly" },
-  { path: "/legal/cookies", priority: 0.2, changeFrequency: "yearly" },
+  { path: "/legal", priority: 0.3, changeFrequency: "yearly", updatedAt: LEGAL_UPDATED_AT },
+  { path: "/legal/terms", priority: 0.2, changeFrequency: "yearly", updatedAt: LEGAL_UPDATED_AT },
+  { path: "/legal/privacy", priority: 0.2, changeFrequency: "yearly", updatedAt: LEGAL_UPDATED_AT },
+  { path: "/legal/consent", priority: 0.2, changeFrequency: "yearly", updatedAt: LEGAL_UPDATED_AT },
+  { path: "/legal/tarify", priority: 0.3, changeFrequency: "yearly", updatedAt: LEGAL_UPDATED_AT },
+  { path: "/legal/health", priority: 0.3, changeFrequency: "yearly", updatedAt: LEGAL_UPDATED_AT },
+  { path: "/legal/cookies", priority: 0.2, changeFrequency: "yearly", updatedAt: LEGAL_UPDATED_AT },
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  // Дата сборки, а не «сейчас» на каждый запрос: страницы статические, и
-  // ежедневно менять lastModified у неизменившегося текста — способ научить
-  // поисковик не верить этому полю.
-  const lastModified = new Date(LEGAL_UPDATED_AT);
-
+  // Даты — на уровне содержимого, а не «сейчас» на каждый запрос: страницы
+  // статические, и ежедневно менять lastModified у неизменившегося текста —
+  // способ научить поисковик не верить этому полю. По той же причине у
+  // каждого раздела своя дата, а не одна общая на весь сайт.
   return [
     ...STATIC_PAGES.map((page) => ({
       url: `${SITE_URL}${page.path}`,
-      lastModified,
+      lastModified: new Date(page.updatedAt ?? SITE_UPDATED_AT),
       changeFrequency: page.changeFrequency,
       priority: page.priority,
     })),
@@ -76,13 +100,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // которой карта заведена для блюд.
     ...PRODUCTS.map((product) => ({
       url: `${SITE_URL}/produkty/${product.slug}`,
-      lastModified,
+      lastModified: productUpdatedAt(product),
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),
     ...GLOSSARY.map((term) => ({
       url: `${SITE_URL}/slovar/${term.slug}`,
-      lastModified,
+      lastModified: glossaryUpdatedAt(term),
       changeFrequency: "yearly" as const,
       priority: 0.6,
     })),

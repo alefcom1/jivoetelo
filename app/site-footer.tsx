@@ -98,6 +98,7 @@ export function SiteFooter({ children, authed = false }: { children?: React.Reac
         <Link href="/legal/terms">Пользовательское соглашение</Link>
         <Link href="/legal/privacy">Политика конфиденциальности</Link>
         <Link href="/legal/consent">Согласие на обработку данных</Link>
+        <Link href="/legal/tarify">Тарифы и оферта</Link>
         <Link href="/legal/health">Границы сервиса</Link>
         <Link href="/legal/cookies">Файлы cookie</Link>
       </div>

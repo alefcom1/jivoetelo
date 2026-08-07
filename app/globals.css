@@ -42,7 +42,7 @@
 .range-principles article{display:grid;grid-template-columns:34px 1fr;gap:14px;align-items:start}
 .range-principles span{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--coral-text);padding-top:3px}
 .range-principles h3{margin:0 0 5px;font-size:15px;font-weight:800}
-.range-principles p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.6}.experience{padding:145px max(32px,calc((100% - 1280px)/2));background:var(--paper)}.section-top{display:grid;grid-template-columns:1fr 1fr;align-items:start;margin-bottom:66px}.section-top h2,.principles h2,.specialists h2,.footer-top h2{font:500 clamp(44px,5vw,72px)/.87 var(--serif);letter-spacing:-.075em;margin:0}.product-frame img,.pro-screen img{display:block;width:100%;height:auto}.pro-screen{align-self:center;margin:0;box-shadow:17px 17px 0 var(--coral)}.section-top div>p{max-width:295px;margin:22px 0 0;color:var(--muted);font-size:12px;line-height:1.65}.oneday{padding:168px max(32px,calc((100% - 1280px)/2));background:var(--paper)}.oneday-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:36px}.oneday-steps figure{margin:0}.oneday-steps img{display:block;width:100%;height:auto}.oneday-steps h3{margin:24px 0 10px;font:500 27px var(--serif);letter-spacing:-.04em}.oneday-steps p{margin:0;color:var(--muted);font-size:13px;line-height:1.65}.oneday-note{max-width:520px;margin:44px 0 0;color:var(--muted);font-size:12px;line-height:1.65}.range{display:grid;grid-template-columns:1.05fr .95fr;gap:80px;align-items:center;padding:168px max(32px,calc((100% - 1280px)/2));background:var(--white)}.range h2{margin:26px 0 30px;font:500 clamp(36px,4vw,54px)/.92 var(--serif);letter-spacing:-.06em}.range p{max-width:520px;margin:0 0 17px;color:#5c5e57;font-size:14px;line-height:1.75}.range .black-button{display:inline-block;margin-top:16px}.range img{display:block;width:100%;height:auto}.limits{padding:168px max(32px,calc((100% - 1280px)/2));background:var(--black);color:var(--white)}.limits h2{margin:26px 0 0;font:500 clamp(40px,4.6vw,64px)/.88 var(--serif);letter-spacing:-.07em}.limits-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start;margin-top:56px}.limits-list{display:grid;gap:30px;align-content:start}.limits-list h3{margin:0 0 8px;font:500 24px var(--serif);letter-spacing:-.035em}.limits-list p{margin:0;max-width:430px;color:#bcbdb5;font-size:13px;line-height:1.65}.limits-more{font-size:12px;font-weight:800;text-decoration:underline;text-underline-offset:3px}.limits-more:hover{color:var(--coral-text)}.limits img{display:block;width:100%;height:auto}.tools{padding:168px max(32px,calc((100% - 1280px)/2));background:var(--paper)}.tools-banner{display:block;width:100%;height:auto;margin-bottom:52px}.tools-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}.tools-grid a{display:flex;flex-direction:column;justify-content:space-between;gap:44px;min-height:168px;padding:24px;background:var(--white)}.tools-grid span{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}.tools-grid b{font:500 25px/1.05 var(--serif);letter-spacing:-.04em}.tools-grid a:hover b{color:var(--coral-text)}.tools-all{margin:28px 0 0;font-size:12px;font-weight:800}.tools-all a:hover{color:var(--coral-text)}.faq{padding:168px max(32px,calc((100% - 1280px)/2));background:var(--paper)}.faq-list{border-top:1px solid var(--line)}.faq-list details{border-bottom:1px solid var(--line)}.faq-list summary{display:flex;justify-content:space-between;align-items:baseline;gap:24px;padding:25px 0;cursor:pointer;list-style:none;font:500 25px var(--serif);letter-spacing:-.035em}.faq-list summary::-webkit-details-marker{display:none}.faq-list summary::after{content:'+';flex:none;font:400 24px var(--sans);color:var(--coral-text)}.faq-list details[open] summary::after{content:'–'}.faq-list summary:hover{color:var(--coral-text)}.faq-list p{max-width:760px;margin:0 0 27px;color:#5c5e57;font-size:14px;line-height:1.7}.principles{--muted:#606159;display:grid;grid-template-columns:.85fr 1.15fr;padding:168px max(32px,calc((100% - 1280px)/2));background:#deded4}.principles-list{border-top:1px solid #aaa9a0}.principles-list article{display:grid;grid-template-columns:44px 1fr 20px;gap:15px;padding:27px 0;border-bottom:1px solid #aaa9a0}.principles-list span{font-size:11px;font-weight:800}.principles-list h3{margin:0;font:500 28px var(--serif);letter-spacing:-.045em}.principles-list p{max-width:385px;margin:9px 0 0;color:var(--muted);font-size:12px;line-height:1.6}.principles-list b{font-size:20px}.specialists{display:grid;grid-template-columns:1fr 1fr;gap:80px;padding:168px max(32px,calc((100% - 1280px)/2));background:var(--black);color:var(--white)}.specialists>div>p:not(.kicker){max-width:365px;margin:25px 0 33px;color:#bcbdb5;font-size:12px;line-height:1.65}.white-button{background:var(--white);color:var(--black)}footer{padding:76px max(32px,calc((100% - 1280px)/2)) 25px;background:var(--paper)}.footer-top{display:grid;grid-template-columns:1fr 1fr auto;align-items:start}.footer-top h2{font-size:57px}.coral-button{margin-top:18px;background:var(--coral);color:#201b18}.footer-bottom{display:flex;gap:26px;margin-top:104px;border-top:1px solid var(--line);padding-top:17px;color:var(--muted);font-size:11px;font-weight:700}.footer-bottom a:first-of-type{margin-left:auto}.footer-links{display:grid;grid-template-columns:repeat(4,1fr);gap:26px;margin-top:80px;padding-top:28px;border-top:1px solid var(--line)}
+.range-principles p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.6}.experience{padding:145px max(32px,calc((100% - 1280px)/2));background:var(--paper)}.section-top{display:grid;grid-template-columns:1fr 1fr;align-items:start;margin-bottom:66px}.section-top h2,.principles h2,.specialists h2,.footer-top h2{font:500 clamp(44px,5vw,72px)/.87 var(--serif);letter-spacing:-.075em;margin:0}.product-frame img,.pro-screen img{display:block;width:100%;height:auto}.pro-screen{align-self:center;margin:0;box-shadow:17px 17px 0 var(--coral)}.section-top div>p{max-width:295px;margin:22px 0 0;color:var(--muted);font-size:12px;line-height:1.65}.oneday{padding:168px max(32px,calc((100% - 1280px)/2));background:var(--paper)}.oneday-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:36px}.oneday-steps figure{margin:0}.oneday-steps img{display:block;width:100%;height:auto}.oneday-steps h3{margin:24px 0 10px;font:500 27px var(--serif);letter-spacing:-.04em}.oneday-steps p{margin:0;color:var(--muted);font-size:13px;line-height:1.65}.oneday-note{max-width:520px;margin:44px 0 0;color:var(--muted);font-size:12px;line-height:1.65}.range{display:grid;grid-template-columns:1.05fr .95fr;gap:80px;align-items:center;padding:168px max(32px,calc((100% - 1280px)/2));background:var(--white)}.range h2{margin:26px 0 30px;font:500 clamp(36px,4vw,54px)/.92 var(--serif);letter-spacing:-.06em}.range p{max-width:520px;margin:0 0 17px;color:#5c5e57;font-size:14px;line-height:1.75}.range .black-button{display:inline-block;margin-top:16px}.range img{display:block;width:100%;height:auto}.limits{padding:168px max(32px,calc((100% - 1280px)/2));background:var(--black);color:var(--white)}.limits h2{margin:26px 0 0;font:500 clamp(40px,4.6vw,64px)/.88 var(--serif);letter-spacing:-.07em}.limits-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start;margin-top:56px}.limits-list{display:grid;gap:30px;align-content:start}.limits-list h3{margin:0 0 8px;font:500 24px var(--serif);letter-spacing:-.035em}.limits-list p{margin:0;max-width:430px;color:#bcbdb5;font-size:13px;line-height:1.65}.limits-more{font-size:12px;font-weight:800;text-decoration:underline;text-underline-offset:3px}.limits-more:hover{color:var(--coral-text)}.limits img{display:block;width:100%;height:auto}.tools{padding:168px max(32px,calc((100% - 1280px)/2));background:var(--paper)}.tools-banner{display:block;width:100%;height:auto;margin-bottom:52px}.tools-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}.tools-grid a{display:flex;flex-direction:column;justify-content:space-between;gap:44px;min-height:168px;padding:24px;background:var(--white)}.tools-grid span{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}.tools-grid b{font:500 25px/1.05 var(--serif);letter-spacing:-.04em}.tools-grid a:hover b{color:var(--coral-text)}.tools-all{margin:28px 0 0;font-size:12px;font-weight:800}.tools-all a:hover{color:var(--coral-text)}.price{display:grid;grid-template-columns:.85fr 1.15fr;gap:80px;padding:168px max(32px,calc((100% - 1280px)/2));background:var(--white)}.price h2{margin:26px 0 0;font:500 clamp(40px,4.6vw,64px)/.88 var(--serif);letter-spacing:-.07em}.price p{max-width:560px;margin:0 0 18px;color:#5c5e57;font-size:14px;line-height:1.75}.price strong{font-weight:800;color:var(--black)}.faq{padding:168px max(32px,calc((100% - 1280px)/2));background:var(--paper)}.faq-list{border-top:1px solid var(--line)}.faq-list details{border-bottom:1px solid var(--line)}.faq-list summary{display:flex;justify-content:space-between;align-items:baseline;gap:24px;padding:25px 0;cursor:pointer;list-style:none;font:500 25px var(--serif);letter-spacing:-.035em}.faq-list summary::-webkit-details-marker{display:none}.faq-list summary::after{content:'+';flex:none;font:400 24px var(--sans);color:var(--coral-text)}.faq-list details[open] summary::after{content:'–'}.faq-list summary:hover{color:var(--coral-text)}.faq-list p{max-width:760px;margin:0 0 27px;color:#5c5e57;font-size:14px;line-height:1.7}.principles{--muted:#606159;display:grid;grid-template-columns:.85fr 1.15fr;padding:168px max(32px,calc((100% - 1280px)/2));background:#deded4}.principles-list{border-top:1px solid #aaa9a0}.principles-list article{display:grid;grid-template-columns:44px 1fr 20px;gap:15px;padding:27px 0;border-bottom:1px solid #aaa9a0}.principles-list span{font-size:11px;font-weight:800}.principles-list h3{margin:0;font:500 28px var(--serif);letter-spacing:-.045em}.principles-list p{max-width:385px;margin:9px 0 0;color:var(--muted);font-size:12px;line-height:1.6}.principles-list b{font-size:20px}.specialists{display:grid;grid-template-columns:1fr 1fr;gap:80px;padding:168px max(32px,calc((100% - 1280px)/2));background:var(--black);color:var(--white)}.specialists>div>p:not(.kicker){max-width:365px;margin:25px 0 33px;color:#bcbdb5;font-size:12px;line-height:1.65}.white-button{background:var(--white);color:var(--black)}footer{padding:76px max(32px,calc((100% - 1280px)/2)) 25px;background:var(--paper)}.footer-top{display:grid;grid-template-columns:1fr 1fr auto;align-items:start}.footer-top h2{font-size:57px}.coral-button{margin-top:18px;background:var(--coral);color:#201b18}.footer-bottom{display:flex;gap:26px;margin-top:104px;border-top:1px solid var(--line);padding-top:17px;color:var(--muted);font-size:11px;font-weight:700}.footer-bottom a:first-of-type{margin-left:auto}.footer-links{display:grid;grid-template-columns:repeat(4,1fr);gap:26px;margin-top:80px;padding-top:28px;border-top:1px solid var(--line)}
 /* Без верхнего блока (везде, кроме главной) подвал начинается со ссылок —
    отступ под несуществующий заголовок оставил бы пустую полосу. */
 footer>.footer-links:first-child{margin-top:0;padding-top:0;border-top:0}.footer-links div{display:flex;flex-direction:column;gap:12px}.footer-links p{margin:0;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}.footer-links a{font-size:14px}.footer-links a:hover{color:var(--coral-text)}
@@ -88,8 +88,35 @@ footer>.footer-links:first-child{margin-top:0;padding-top:0;border-top:0}.footer
 .shell{min-height:100vh}
 .shell-header{height:64px;padding:0 max(20px,calc((100% - 960px)/2));display:flex;align-items:center;gap:28px;background:var(--white);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:10}
 .shell-nav{display:flex;gap:20px;margin-left:8px}
-.shell-nav a{font-size:12px;font-weight:700}
+/* Отступ по вертикали, а не голая строка: 18px текста — это не тач-цель,
+   а по семи ссылкам подряд промахиваются постоянно. */
+.shell-nav a{padding:11px 0;font-size:12px;font-weight:700;white-space:nowrap}
 .shell-header form{margin-left:auto}
+/* На телефоне семь ссылок в строку не помещаются, и раньше вбок ехала вся
+   страница: шапка растягивала документ до 690px, и каждый экран кабинета
+   таскался горизонтально. Прокручивается теперь сама навигация, а документ
+   стоит на месте. Перенос по строкам не годится — шапка липкая, и в три
+   строки она съела бы треть экрана. */
+@media(max-width:860px){
+  .shell-header{gap:14px;padding-left:16px;padding-right:16px}
+  .shell-nav{flex:1;min-width:0;margin-left:0;gap:2px;overflow-x:auto;scrollbar-width:none}
+  .shell-nav::-webkit-scrollbar{display:none}
+  /* Отступ внутрь, а не расстояние между: у коротких слов («Вес», «Обзор»)
+     цель иначе получается уже пальца, а промежуток на глаз тот же. */
+  .shell-nav a{padding:11px 9px}
+  .shell-header form{margin-left:0;flex:none}
+}
+/* Ниже 560px словесная часть логотипа уходит: знак остаётся, а освободившиеся
+   80 пикселей достаются навигации, ради которой человек сюда и смотрит. */
+@media(max-width:560px){
+  .shell-header .logo{min-width:40px}
+  .shell-header .logo b{display:none}
+  /* Растворяющийся край — единственный признак того, что ссылки продолжаются:
+     без него «Обзор», «Настройки» и «Доступ» просто перестают существовать
+     для того, кто зашёл с телефона. Только на этой ширине, где переполнение
+     гарантировано: на широком экране такой край съедал бы последнее слово. */
+  .shell-nav{mask-image:linear-gradient(90deg,#000 calc(100% - 24px),#0000)}
+}
 .shell-content{max-width:960px;margin:0 auto;padding:28px 20px 80px}
 
 /* День */
@@ -259,6 +286,45 @@ footer>.footer-links:first-child{margin-top:0;padding-top:0;border-top:0}.footer
 .streak-strip p{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
 .streak-strip em{font-style:normal;font-size:13px;font-weight:700;color:var(--coral-text)}
 
+/* Первые шаги: объяснение от Живело.
+   Стоит над содержимым дня, а не поверх него: подсказка, перекрывающая то,
+   о чём рассказывает, — самая частая ошибка обучающих слоёв.
+   Оформлена как .streak-strip, только с крестиком и левой чертой, — это
+   один и тот же персонаж, а не второй жанр сообщений. Черта отличает
+   разовое объяснение от постоянной полосы серии. */
+.first-hint{position:relative;display:flex;gap:14px;align-items:center;background:var(--white);border:1px solid var(--line);border-left:3px solid var(--coral);padding:14px 52px 14px 16px;margin-bottom:20px;animation:hint-in 320ms ease-out both}
+.first-hint>img{width:64px;height:64px;flex:none;animation:hint-breathe 4s ease-in-out 320ms infinite}
+.first-hint>div{display:flex;flex-direction:column;gap:8px;align-items:flex-start;min-width:0}
+.first-hint p{margin:0;font-size:14px;line-height:1.55}
+.first-hint-action{display:inline-flex;align-items:center;min-height:40px;font-size:13px;font-weight:700;color:var(--coral-text)}
+/* Крестик — настоящая тач-цель: закрытая подсказка не возвращается никогда,
+   и промахнуться по ней человек не должен. */
+.first-hint>button{position:absolute;top:6px;right:6px;width:40px;height:40px;border:0;background:transparent;color:var(--muted);font-size:20px;line-height:1}
+.first-hint>button:hover{color:var(--black)}
+@keyframes hint-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes hint-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.015)}}
+@media(prefers-reduced-motion:reduce){.first-hint,.first-hint>img{animation:none}}
+@media(max-width:560px){.first-hint>img{width:52px;height:52px}}
+
+/* Страница-шпаргалка. Колонка уже кабинетной (640px): это сплошной текст,
+   а не таблицы и карточки, и строка в 90 знаков читается тяжело.
+   Нумерация у списка — своя, счётчиком: браузерная ставит цифру вне карточки,
+   а нужна она внутри, рядом с заголовком шага. */
+.help{max-width:640px}
+.help-head{display:flex;gap:18px;align-items:center;margin-bottom:28px}
+.help-head img{width:96px;height:96px;flex:none}
+.help-head h1{margin:0 0 8px;font:500 34px/1 var(--serif);letter-spacing:-.03em}
+.help-head p{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
+.help-list{list-style:none;counter-reset:help;margin:0 0 36px;padding:0;display:flex;flex-direction:column;gap:14px}
+.help-list li{counter-increment:help;background:var(--white);border:1px solid var(--line);padding:20px 22px}
+.help-list h2{display:flex;gap:12px;align-items:baseline;margin:0 0 10px;font:500 21px var(--serif);letter-spacing:-.03em}
+.help-list h2::before{content:counter(help);flex:none;font:800 12px var(--sans);color:var(--coral-text)}
+.help-list p{margin:0;font-size:14px;line-height:1.65}
+.help-action{display:inline-block;margin-top:12px;font-size:13px;font-weight:700;color:var(--coral-text)}
+.help-more-title{margin:0 0 14px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.help-foot{max-width:640px;margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+@media(max-width:560px){.help-head{gap:14px}.help-head img{width:72px;height:72px}.help-head h1{font-size:28px}}
+
 /* Добавление позиции: поиск по справочнику, а под ним — ручной ввод.
    Раньше кнопка «+ Добавить позицию» сразу давала форму с нулями, и записи
    без единого числа заводились сами собой. */
@@ -331,8 +397,31 @@ a.header-cta{display:inline-flex;align-items:center}
 .onboarding-numbers label,.weight-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
 .onboarding-numbers input,.weight-form input{padding:11px;border:1px solid var(--line);background:white;font-size:14px;width:130px}
 .onboarding-form .black-button{align-self:flex-start}
-.weight-form{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.weight-form{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:14px}
 .weight-saved{font-size:12px;color:var(--muted)}
+
+/* Снимок весов. Второстепенным начертанием, а не рядом с «Записать»: числом
+   вес вводят чаще и быстрее, а распознавание — удобство для тех, кому лень
+   набирать. Кнопка того же веса, что и основная, обещала бы обратное. */
+.weight-entry{max-width:560px}
+/* Обе кнопки одной строкой. Полная ширина строки в flex-контейнере формы —
+   чтобы они всегда переносились вместе, а не так, что «Записать» осталось у
+   полей, а снимок уехал вниз: это два способа одного действия. */
+.weight-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.scale-scan{display:inline-block;position:relative}
+.scale-scan input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.scale-scan input:disabled{cursor:progress}
+/* Высота и радиус — как у .black-button рядом: разное начертание не должно
+   означать разный размер, иначе строка выглядит съехавшей. */
+.scale-scan span{display:inline-block;padding:13px 16px;border:1px solid var(--line);border-radius:3px;font-size:12px;font-weight:800;color:#5c5e57}
+.scale-scan:hover span,.scale-scan input:focus-visible+span{border-color:var(--black);color:var(--black)}
+/* Ответ распознавания — своей строкой с воздухом: без отступа он слипался с
+   текстом страницы и читался как её часть, а не как ответ на действие. */
+.scale-read,.scale-warning{margin:14px 0 0;font-size:13px;line-height:1.5;max-width:460px}
+.scale-read{color:var(--muted)}
+/* Предупреждение — не ошибка: число прочитано и сохранить его можно.
+   Коралловый без рамки, а не красная плашка: это повод посмотреть, а не стоп. */
+.scale-warning{color:var(--coral-text)}
 .suggestions{display:flex;flex-direction:column;gap:12px;max-width:640px;align-items:flex-start}
 .suggestion{width:100%;background:var(--white);border:1px solid var(--line);padding:18px 20px}
 .suggestion h3{margin:0 0 6px;font:500 21px var(--serif)}
@@ -374,7 +463,10 @@ label.consent input{margin:0;padding:0;border:0;flex:0 0 auto}
 .consent a:hover{color:var(--coral-text)}
 .footer-disclaimer{max-width:640px;margin:64px 0 0;color:var(--muted);font-size:12px;line-height:1.65}
 .auth-note{max-width:360px;margin:22px auto 0;color:var(--muted);font-size:12px;line-height:1.55}
-.legal-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:26px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:700}
+.legal-links{display:flex;flex-wrap:wrap;gap:2px 14px;margin-top:26px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:700}
+/* Ссылки на документы стоят отдельным рядом, а не внутри абзаца, — значит,
+   это самостоятельные цели, и 18px высоты им мало. */
+.legal-links a{display:inline-flex;align-items:center;min-height:40px}
 .legal-links a:hover{color:var(--coral-text)}
 .danger-zone{border-color:#e8c9c1}
 .danger-zone .settings-label{color:#a8503c}
@@ -600,3 +692,62 @@ footer>.footer-app:first-child{margin-top:0}
   .footer-app-go{margin-left:0;width:100%;text-align:center}
   .footer-app+.footer-links{margin-top:30px}
 }
+
+/* Взятая награда в кабинете. Полосой на месте .streak-strip — тот же
+   персонаж и то же место, только повод другой. Лаймовая заливка отличает
+   событие от ежедневной строки: рубеж берётся один раз. */
+.award-strip{display:flex;gap:14px;align-items:center;background:var(--lime);border:1px solid #c3cf83;padding:14px 16px;margin-bottom:20px}
+.award-strip img{width:64px;height:64px;flex:none}
+.award-strip>div{display:flex;flex-direction:column;gap:4px;align-items:flex-start;min-width:0}
+.award-strip b{font-size:16px;color:#1d2410}
+.award-strip p{margin:0;font-size:13px;line-height:1.5;color:#3c4626}
+.award-strip .link-button{color:#5a3a1e;min-height:36px;padding:4px 0}
+.award-note{font-size:12px;color:#3c4626}
+
+/* Срез месяц-к-месяцу и список наград в «Обзоре». */
+.review-season,.review-awards{margin-top:34px}
+.review-season h2,.review-awards h2{margin:0 0 14px;font:500 24px var(--serif);letter-spacing:-.03em}
+.season-scroll{max-width:640px;overflow-x:auto}
+.season-table{width:100%;min-width:420px;border-collapse:collapse;background:var(--white);border:1px solid var(--line)}
+.season-table th,.season-table td{padding:10px 14px;text-align:right;font-size:14px;font-variant-numeric:tabular-nums}
+.season-table thead th{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+.season-table tbody th,.season-table thead th:first-child{text-align:left;font-weight:700}
+.season-table tbody tr+tr th,.season-table tbody tr+tr td{border-top:1px solid var(--line)}
+/* Месяц, не идущий в сравнение, приглушён — но показан: человек должен
+   видеть, что месяц был, и понимать, почему он не участвует. */
+.season-thin th,.season-thin td{color:var(--muted)}
+.season-notes{list-style:none;margin:16px 0 0;padding:0;max-width:640px;display:flex;flex-direction:column;gap:9px}
+.season-notes li{position:relative;padding-left:16px;font-size:14px;line-height:1.6}
+.season-notes li::before{content:"";position:absolute;left:0;top:9px;width:6px;height:6px;border-radius:50%;background:var(--coral)}
+.awards-list{list-style:none;margin:0;padding:0;max-width:640px;display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line)}
+.awards-list li{display:flex;align-items:flex-start;gap:14px;background:var(--white);padding:14px 16px}
+.awards-list b{font-size:15px}
+.awards-list p{margin:3px 0 0;font-size:13px;line-height:1.5;color:var(--muted)}
+.awards-list time{margin-left:auto;flex:none;font-size:12px;color:var(--muted);white-space:nowrap}
+@media(max-width:560px){.season-table th,.season-table td{padding:9px 8px;font-size:13px}}
+
+/* Доступ и код в настройках. Поле кода шире прочих: в него вставляют из
+   буфера, и обрезанный посередине код выглядит как чужой. */
+.access-panel{display:flex;flex-direction:column;gap:12px}
+.voucher-form{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.voucher-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
+.voucher-form input{padding:11px;border:1px solid var(--line);background:var(--white);font-size:15px;letter-spacing:.08em;width:180px;text-transform:uppercase}
+
+/* Лимиты и тарифы на главной. Числами в ряд, а не строкой текста: их
+   сравнивают глазами, а перечисление через запятую заставляет читать.
+   Числа приходят из PLAN_LIMITS и TARIFFS — см. комментарий в app/page.tsx. */
+.price-limits,.price-tariffs{list-style:none;margin:0 0 22px;padding:0;display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border:1px solid var(--line)}
+.price-limits li,.price-tariffs li{flex:1 1 130px;background:var(--white);padding:14px 16px;display:flex;flex-direction:column;gap:3px}
+.price-limits b{font:600 24px var(--serif)}
+.price-limits span,.price-tariffs span{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+/* Цена крупнее лимита: это то, ради чего блок и открывают. */
+.price-tariffs strong{font:600 30px var(--serif);letter-spacing:-.02em}
+.price-note{font-size:13px;color:var(--muted)}
+.price-note a{text-decoration:underline;text-underline-offset:3px}
+.price-note a:hover{color:var(--coral-text)}
+
+/* Кнопки оплаты в настройках. Строкой на широком экране, столбиком на узком:
+   две кнопки рядом на телефоне сжимаются до нечитаемых. */
+.pay-links{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 0}
+.pay-links .black-button{flex:1 1 220px;text-align:center}
+.access-note{flex:1 1 100%;margin:4px 0 0;font-size:13px;color:var(--muted,#6b6560)}

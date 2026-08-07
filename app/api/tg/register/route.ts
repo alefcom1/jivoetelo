@@ -1,7 +1,7 @@
 import { getDb } from "@/db";
 import { userConsents, users } from "@/db/schema";
+import { applyPendingInvite } from "@/lib/referral-store";
 import { LEGAL_VERSION } from "@/lib/legal";
-import { claimReferral } from "@/lib/referral-store";
 import { findUserByTelegram, TelegramAuthError, verifyInitData } from "@/lib/telegram";
 
 /**
@@ -75,9 +75,17 @@ export async function POST(request: Request) {
       { userId, kind: "ai_processing", version: LEGAL_VERSION, source: "telegram" },
     ]);
 
-    // Приглашение, если человек пришёл по чужой ссылке. Не бросает: несчитанный
-    // реферал — не повод не создать аккаунт.
-    await claimReferral(userId, telegramUserId);
+    /**
+     * Приглашение, запомненное ботом при переходе по ссылке друга. Именно
+     * здесь ему и место: до этой строки аккаунта не существовало, а к
+     * следующей загрузке экрана оно уже никому не видно.
+     *
+     * Сбой не должен ронять регистрацию: человек пришёл завести дневник, а не
+     * поучаствовать в чьей-то статистике приглашений.
+     */
+    await applyPendingInvite(userId, telegramUserId).catch((error) => {
+      console.error("tg register: не удалось привязать приглашение", error);
+    });
 
     return Response.json({ ok: true, created: true });
   } catch (error) {

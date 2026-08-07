@@ -120,15 +120,69 @@ export async function submitPhoto(input: {
  * сбрасывает кеш по той же причине, но обратной: снятый снимок должен
  * исчезнуть со страницы сразу, а не когда-нибудь.
  */
-export async function reviewPhoto(id: number, status: Exclude<PhotoStatus, "pending">, reason?: string) {
+export async function reviewPhoto(
+  id: number,
+  status: Exclude<PhotoStatus, "pending">,
+  reason?: string,
+  /** Внутренняя заметка модератора. Автор её не увидит — она не для него. */
+  moderatorNote?: string | null,
+) {
   const rows = await getDb()
     .update(catalogPhotos)
-    .set({ status, rejectionReason: reason ?? null, reviewedAt: new Date() })
+    .set({
+      status,
+      rejectionReason: reason ?? null,
+      ...(moderatorNote === undefined ? {} : { moderatorNote }),
+      reviewedAt: new Date(),
+    })
     .where(eq(catalogPhotos.id, id))
     .returning({ productSlug: catalogPhotos.productSlug });
 
   const slug = rows[0]?.productSlug;
   if (slug) revalidatePath(`/produkty/${slug}`);
+}
+
+/**
+ * Написать автору о решении по снимку.
+ *
+ * Отдельным шагом после `reviewPhoto`, а не внутри него: решение должно быть
+ * записано, даже если Telegram и почта недоступны разом. Не дошедшее видно по
+ * пустому `notified_at` — и его можно будет разослать повторно, не гадая, кому
+ * уже написали.
+ */
+export async function notifyDecision(id: number, comment: string | null): Promise<boolean> {
+  const rows = await getDb()
+    .select({
+      status: catalogPhotos.status,
+      productSlug: catalogPhotos.productSlug,
+      notifiedAt: catalogPhotos.notifiedAt,
+      email: users.email,
+      telegramUserId: users.telegramUserId,
+    })
+    .from(catalogPhotos)
+    .innerJoin(users, eq(users.id, catalogPhotos.userId))
+    .where(eq(catalogPhotos.id, id))
+    .limit(1);
+  const row = rows[0];
+  if (!row || row.status === "pending") return false;
+  // Уже писали — второй раз не пишем. Повторный разбор очереди иначе слал бы
+  // одно и то же сообщение.
+  if (row.notifiedAt) return false;
+
+  const { notifyPhotoDecision } = await import("./catalog-photo-notify.ts");
+  const { findProduct } = await import("./products.ts");
+  const sent = await notifyPhotoDecision(
+    { email: row.email, telegramUserId: row.telegramUserId },
+    {
+      productTitle: findProduct(row.productSlug)?.name ?? row.productSlug,
+      approved: row.status === "approved",
+      comment,
+    },
+  );
+  if (sent) {
+    await getDb().update(catalogPhotos).set({ notifiedAt: new Date() }).where(eq(catalogPhotos.id, id));
+  }
+  return sent;
 }
 
 export type PendingPhoto = CatalogPhoto & {

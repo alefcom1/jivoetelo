@@ -67,6 +67,13 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
+      # Снимок карты сайта до выкатки: по разнице с послевыкаточной понятно,
+      # какие именно страницы изменились. Шаг не обязан удаться — если сайт
+      # не ответил, уведомление просто не отправится (scripts/indexnow.mjs).
+      - name: Карта сайта до выкатки
+        continue-on-error: true
+        run: node scripts/indexnow.mjs snapshot /tmp/sitemap-before.json
+
       - name: Выкатить
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -77,6 +84,12 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "DEPLOY_PATH='$DEPLOY_PATH' bash -s -- '${{ github.sha }}'" \
             < deploy/remote-deploy.sh
+
+      # Сюда доходим только после успешной выкатки: remote-deploy.sh не вернёт
+      # ноль, пока health не ответит «ok», — значит новая карта сайта уже живая.
+      - name: Сообщить поисковикам об изменениях
+        continue-on-error: true
+        run: node scripts/indexnow.mjs submit /tmp/sitemap-before.json
 
       - name: Убрать ключ
         if: always()

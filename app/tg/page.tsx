@@ -1,9 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { localToday } from "@/lib/dates";
-import { ApiError, fetchToday, type InboxItemDto, type TodayResponse } from "./api";
+import { nextHint, passedByData } from "@/lib/first-run";
+import { mascotSpeech } from "@/lib/mascot";
+import { shouldRefresh } from "@/lib/refresh";
+import { ApiError, fetchToday, markHints, type InboxItemDto, type TodayResponse } from "./api";
 import { CameraTab } from "./camera-tab";
+import { FirstRunHint } from "./first-run-hint";
+import { ShareSheet } from "./share-sheet";
 import { DiaryTab } from "./diary-tab";
 import { IconAdd, IconInbox, IconPlan, IconProfile, IconToday } from "./icons";
 import { InboxTab } from "./inbox-tab";
@@ -61,6 +66,30 @@ export default function MiniApp() {
    * вкладки размонтирует экран, и после «Камеры» человек возвращался бы на
    * сегодня, а не на тот день, с которого уходил. */
   const [diaryDay, setDiaryDay] = useState(() => localToday());
+
+  /**
+   * Первые шаги. `diaryOpened` живёт в localStorage, а не на сервере: это
+   * единственное условие, которое не выводится из данных — «человек заходил
+   * в дневник» нигде не записано, а заводить ради подсказки таблицу событий
+   * несоразмерно. Локальная память тут честнее: на новом устройстве
+   * подсказка появится снова, и это правильно — интерфейс там тоже новый.
+   *
+   * `dismissed` — закрытые в этой сессии. Сервер узнает о них тем же
+   * запросом, но экран должен убрать подсказку сразу, не дожидаясь ответа.
+   */
+  const [diaryOpened, setDiaryOpened] = useState(() => {
+    // Инициализатор, а не эффект: чтение в эффекте вызывает лишний проход
+    // рендера. Проверка на window обязательна — этот же код исполняется при
+    // серверном рендере страницы, где localStorage нет.
+    if (typeof window === "undefined") return false;
+    try { return localStorage.getItem("jt-diary-opened") === "1"; } catch { return false; }
+  });
+  const [dismissed, setDismissed] = useState<string[]>([]);
+  /**
+   * Лист «поделиться». `null` — закрыт; строка — ключ награды, которой
+   * делятся; пустая строка — приглашение без повода.
+   */
+  const [sharing, setSharing] = useState<string | null>(null);
   /**
    * Как выйти из черновика разбора. Живёт здесь, а не в «Камере», хотя
    * состояние черновика там: нативной кнопкой «назад» должен владеть кто-то
@@ -79,17 +108,125 @@ export default function MiniApp() {
     setDiscardDraft(() => discard);
   }, []);
 
-  const load = useCallback(async () => {
+  /**
+   * Когда «Сегодня» в последний раз успешно загрузилось.
+   *
+   * Нужно, чтобы фоновое обновление не превращалось в шквал запросов: между
+   * вкладками люди щёлкают быстро, и без порога каждый щелчок бил бы по сети.
+   */
+  const loadedAt = useRef(0);
+
+  /**
+   * Загрузка «Сегодня».
+   *
+   * `silent` — фоновое обновление: экран уже показан, и ронять его в ошибку
+   * из-за одного неудачного запроса нельзя. Пропавшая на секунду сеть не
+   * повод стирать цифры дня; человек этого не просил и не поймёт, что
+   * произошло. Поэтому в тихом режиме неудача просто ничего не меняет.
+   */
+  const load = useCallback(async (silent = false) => {
     try {
       const data = await fetchToday();
       setToday(data);
       setStatus("ready");
+      loadedAt.current = Date.now();
     } catch (error) {
+      if (silent) return;
       if (error instanceof ApiError && error.failure.reason === "not_linked") setStatus("needs_link");
       else if (error instanceof ApiError && error.failure.reason === "invalid_signature") setStatus("no_telegram");
       else setStatus("error");
     }
   }, []);
+
+  /**
+   * Обновить «Сегодня», если данные могли устареть.
+   *
+   * ## Почему это вообще понадобилось
+   *
+   * Экран загружался ровно один раз — при монтировании. Переключение вкладок
+   * монтирование не повторяет, а Telegram, когда приложение сворачивают, не
+   * убивает webview: он остаётся жив со всем состоянием. Отсюда и жалоба —
+   * цифры не менялись, пока приложение не закроешь совсем.
+   *
+   * Устареть за это время может многое, и не только от своих же действий:
+   * снимок, отправленный боту в переписке, приходит в инбокс мимо
+   * приложения, а `inboxPending` показывается на «Сегодня».
+   *
+   * ## Три правила
+   *
+   * Данных нет — грузим обычным порядком, со всеми состояниями ошибок.
+   * День сменился — грузим всегда: показывать вчерашние итоги под заголовком
+   * «сегодня» нельзя ни при каком пороге. В остальных случаях порог в десять
+   * секунд: он гасит щелчки по вкладкам туда-сюда и не мешает вернуться к
+   * свежим числам через минуту.
+   */
+  /**
+   * Какую подсказку показать. Состояние собирается из уже пришедших данных —
+   * отдельного запроса ради подсказок нет.
+   *
+   * `passedByData` досылается на сервер при каждой загрузке: тот, кто сделал
+   * действие сам, не увидев подсказки, не должен получить её после.
+   */
+  const hint = today
+    ? nextHint({
+        seen: [...today.firstRun.seen, ...dismissed],
+        hasPlan: today.firstRun.hasPlan,
+        loggedDays: today.firstRun.loggedDays,
+        mealsToday: today.meals.length,
+        botEverUsed: today.firstRun.botEverUsed,
+        hasWeight: today.weight !== null,
+        diaryOpened,
+        showCalories: today.showCalories,
+      })
+    : null;
+
+  /**
+   * Одна реплика Живело за раз.
+   *
+   * Подсказка и карточка серии — это один и тот же персонаж с одной и той же
+   * картинкой. Рядом они читаются как два сообщения подряд от одного
+   * собеседника, а мы обещали обратное: одна мысль за раз.
+   *
+   * Приоритет у вехи: она бывает один день и не повторяется, а подсказка
+   * вернётся при следующей загрузке — отмеченной пройденной она становится
+   * только когда её закрыли или по ней перешли. В остальные дни карточка
+   * серии уступает: подсказка говорит про сейчас, серия — про вообще.
+   */
+  const milestoneToday = today ? !!mascotSpeech(today.streak).milestone : false;
+  /**
+   * Карточка награды старше и вехи, и подсказки: рубеж берётся один раз в
+   * жизни, а подсказка вернётся при следующей загрузке. Всё вместе — три
+   * сообщения от одного персонажа подряд, чего мы не делаем нигде.
+   */
+  const freshAward = today?.freshAward ?? null;
+  const shownHint = freshAward || milestoneToday ? null : hint;
+
+  useEffect(() => {
+    if (!today) return;
+    const already = new Set(today.firstRun.seen);
+    const fresh = passedByData({
+      seen: today.firstRun.seen,
+      hasPlan: today.firstRun.hasPlan,
+      loggedDays: today.firstRun.loggedDays,
+      mealsToday: today.meals.length,
+      botEverUsed: today.firstRun.botEverUsed,
+      hasWeight: today.weight !== null,
+      diaryOpened,
+      showCalories: today.showCalories,
+    }).filter((key) => !already.has(key));
+    if (fresh.length > 0) void markHints(fresh);
+  }, [today, diaryOpened]);
+
+  const refreshIfStale = useCallback(() => {
+    const decision = shouldRefresh({
+      dataDay: today?.day ?? null,
+      today: localToday(),
+      lastLoadedAt: loadedAt.current,
+      now: Date.now(),
+    });
+    if (decision === "skip") return;
+    void load(decision === "silent");
+  }, [load, today]);
 
   useEffect(() => {
     const webApp = getWebApp();
@@ -115,6 +252,31 @@ export default function MiniApp() {
     return () => webApp.offEvent("themeChanged", onThemeChanged);
   }, [load]);
 
+  /**
+   * Возвращение в приложение.
+   *
+   * Telegram при сворачивании webview не убивает — он остаётся жив со всем
+   * состоянием, и React ничего не перемонтирует. Поэтому «открыл заново» для
+   * приложения выглядит как «ничего не произошло», и цифры оставались
+   * вчерашними до полного закрытия.
+   *
+   * Слушаем `visibilitychange` браузера, а не событие Telegram: оно есть во
+   * всех клиентах и в вебе, тогда как `activated` появился только в Bot API
+   * 8.0 и на десктопе доезжает не везде. `focus` добавлен для десктопа —
+   * там переключение между окнами видимость страницы не меняет.
+   */
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshIfStale();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", refreshIfStale);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", refreshIfStale);
+    };
+  }, [refreshIfStale]);
+
   /** Переключение нижней панели всегда закрывает инбокс поверх неё. */
   function switchTab(next: Tab) {
     haptic("tap");
@@ -129,6 +291,15 @@ export default function MiniApp() {
     // последнего, что открывали с «Сегодня».
     setOpenMealId(null);
     setTab(next);
+    // Возврат на «Сегодня» — повод свериться с сервером: пока человек был на
+    // других вкладках, он мог записать приём пищи оттуда, а бот — принять
+    // снимок в переписке.
+    if (next === "today") refreshIfStale();
+    if (next === "diary" && !diaryOpened) {
+      setDiaryOpened(true);
+      try { localStorage.setItem("jt-diary-opened", "1"); } catch { /* приватный режим */ }
+      void markHints(["diary"]);
+    }
   }
 
   /** Открыть «Камеру», запомнив, куда возвращаться и за какой день писать. */
@@ -226,9 +397,29 @@ export default function MiniApp() {
             onChanged={() => { setTodayMealId(null); void load(); }}
           />
         : <>
+            {/* Подсказка первых шагов — над содержимым «Сегодня», а не поверх
+                него: перекрывать действие, о котором рассказываешь, нельзя. */}
+            {tab === "today" && shownHint && <FirstRunHint
+              hint={shownHint}
+              onDismiss={() => { haptic("tap"); setDismissed((d) => [...d, shownHint.key]); void markHints([shownHint.key]); }}
+              onAction={(target) => {
+                setDismissed((d) => [...d, shownHint.key]);
+                void markHints([shownHint.key]);
+                if (target === "camera") openCamera("today");
+                // Намерение переводится во вкладку здесь: «неделя» живёт на
+                // «Плане», а вносится вес в «Профиле» — там же, где рост и
+                // цель. В вебе это три разных адреса, и знать про оба набора
+                // разметок модулю правил незачем.
+                else switchTab(target === "week" ? "plan" : target === "weight" ? "profile" : target);
+              }}
+            />}
             {tab === "today" && <TodayTab
               data={today}
               firstName={firstName}
+              hideStreak={!!shownHint}
+              award={freshAward}
+              onShareAward={() => { haptic("tap"); if (freshAward) setSharing(freshAward.key); }}
+              onInvite={() => { haptic("tap"); setSharing(""); }}
               onOpenCamera={() => openCamera("today")}
               onOpenInbox={() => { haptic("tap"); setInboxOpen(true); }}
               onOpenMeal={(id) => { haptic("tap"); setTodayMealId(id); }}
@@ -250,7 +441,7 @@ export default function MiniApp() {
               onDraft={handleDraft}
             />}
             {tab === "plan" && <PlanTab showCalories={today.showCalories} />}
-            {tab === "profile" && <ProfileTab />}
+            {tab === "profile" && <ProfileTab onInvite={() => { haptic("tap"); setSharing(""); }} />}
           </>}
     </div>
 
@@ -269,5 +460,10 @@ export default function MiniApp() {
         </button>;
       })}
     </nav>
+
+    {/* Лист «поделиться» — последним в дереве и поверх всего: он перекрывает
+        и нижнюю панель, иначе из него можно было бы уйти на другую вкладку,
+        не закрыв. */}
+    {sharing !== null && <ShareSheet awardKey={sharing || undefined} onClose={() => setSharing(null)} />}
   </div>;
 }

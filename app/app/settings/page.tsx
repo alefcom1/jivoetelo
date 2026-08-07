@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { reportPreferences, userConsents, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { daysLeft, TARIFFS } from "@/lib/paid";
+import { getTributeConfig, paymentLink } from "@/lib/payments/tribute";
 import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
 import { PhotoConsent } from "./photo-consent";
 import { getBotPreferences } from "@/lib/bot/store";
@@ -18,12 +20,26 @@ import { OwnTarget } from "./own-target";
 import { ReportSettings } from "./report-settings";
 import { TelegramLink } from "./telegram-link";
 import { UsagePanel } from "./usage-panel";
+import { AccessPanel } from "./access-panel";
 
 const consentDate = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+const accessDate = consentDate;
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  // Ссылки собираются на сервере: в них подписанная метка человека, и
+  // подпись ставится там, где живёт секрет (lib/payments/tribute.ts).
+  const tribute = getTributeConfig();
+  const payLinks = tribute?.enabled
+    ? TARIFFS.map((tariff) => ({
+        key: tariff.key,
+        label: tariff.label,
+        priceRub: tariff.priceRub,
+        url: paymentLink(tribute, tariff.key, user.id),
+      }))
+    : null;
 
   const db = getDb();
   // Норма и разбор — из того же места, что кормит Mini App: правило одно,
@@ -78,7 +94,22 @@ export default async function SettingsPage() {
     <section className="settings-block">
       <p className="settings-label">Аккаунт</p>
       <p>{user.email ?? "Вход через Telegram — почта не указана"}</p>
-      <p className="field-note">Тариф: бесплатный — доступны все возможности сервиса.</p>
+    </section>
+    <section className="settings-block">
+      <p className="settings-label">Доступ</p>
+      <AccessPanel
+        daysLeft={daysLeft(user.accessUntil, new Date())}
+        until={user.accessUntil ? accessDate.format(user.accessUntil) : null}
+        payLinks={payLinks}
+      />
+    </section>
+    {/* Шпаргалка стоит вторым блоком, а не в подвале настроек: подсказки на
+        «Сегодня» показываются один раз и не возвращаются, и это единственное
+        место, где потом можно перечитать объяснение. */}
+    <section className="settings-block">
+      <p className="settings-label">Как всё устроено</p>
+      <p>Все объяснения Живело на одной странице: запись еды, кольцо, дневник, вес, неделя.</p>
+      <Link className="black-button" href="/app/pomosch">Открыть шпаргалку</Link>
     </section>
     <section className="settings-block">
       <p className="settings-label">Распознавание сегодня</p>
