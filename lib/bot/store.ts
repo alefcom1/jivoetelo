@@ -170,6 +170,7 @@ export const botStore: BotStore = {
     const rows = await getDb()
       .select({
         accessUntil: users.accessUntil,
+        createdAt: users.createdAt,
         reminders: sql<boolean>`coalesce(${botPreferences.remindersEnabled}, true)`,
         weighReminders: sql<boolean>`coalesce(${botPreferences.weighRemindersEnabled}, true)`,
       })
@@ -182,7 +183,11 @@ export const botStore: BotStore = {
     return {
       reminders: row?.reminders ?? true,
       weighReminders: row?.weighReminders ?? true,
-      plan: effectivePlan(row?.accessUntil ?? null, new Date()),
+      // Тариф считаем тем же вызовом, что и `plan` выше: у доступа две
+      // причины — оплата и пробный месяц от регистрации, — и подставить
+      // здесь одну лишь `access_until` значило бы показать «бесплатный»
+      // человеку, у которого пробный месяц ещё идёт.
+      plan: row ? effectivePlan(row.accessUntil, row.createdAt, new Date()) : "free",
     };
   },
 };

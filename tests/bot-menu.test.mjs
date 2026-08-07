@@ -104,9 +104,12 @@ test("экран настроек показывает состояние, а н
   const on = settingsText({ reminders: true, weighReminders: true, plan: "premium" });
   assert.ok(on.includes("включены"));
   assert.ok(on.includes("раз в неделю"));
-  assert.ok(on.includes("премиум"));
+  assert.ok(on.includes("открыт"));
 
   const off = settingsText({ reminders: false, weighReminders: false, plan: "free" });
   assert.ok(off.includes("выключены"));
-  assert.ok(off.includes("бесплатный"));
+  // Не «бесплатный»: после пробного месяца free означает закрытый разбор, и
+  // назвать это бесплатным тарифом — прямая неправда.
+  assert.ok(off.includes("нужен доступ"));
+  assert.ok(!off.includes("бесплатн"), "«бесплатный» обещает то, чего у человека уже нет");
 });
