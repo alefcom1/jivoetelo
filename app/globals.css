@@ -898,3 +898,11 @@ footer>.footer-app:first-child{margin-top:0}
   .intro-copy{padding:0;border:0;background:none;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 .intro-copy h1 em{color:#c9553d}
+
+/* Страница «О проекте»: ряд действий внизу и иллюстрация. */
+.about-actions{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.about-link{font-size:12px;font-weight:800}
+.about-link:hover{color:var(--coral-text)}
+.about-art{margin:12px 0 44px}
+.about-art img{display:block;width:100%;height:auto;border-radius:4px}
+.about-art figcaption{margin-top:12px;color:var(--muted);font-size:12.5px;line-height:1.6}
