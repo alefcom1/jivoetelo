@@ -1,4 +1,5 @@
-import { botState, botVerdict } from "@/lib/bot/health";
+import { botVerdict, type BotState } from "@/lib/bot/health";
+import { readBotHealth } from "@/lib/bot/health-store";
 import { botTransport } from "@/lib/bot/transport";
 import { botToken, createTelegramClient } from "@/lib/telegram-api";
 
@@ -19,6 +20,23 @@ import { botToken, createTelegramClient } from "@/lib/telegram-api";
  *
  * Секретов на странице нет: ни токена, ни адреса прокси, ни секрета вебхука.
  * Только «задано / не задано» и то, что и так публично.
+ *
+ * ## Откуда берутся данные
+ *
+ * Из трёх мест, и это не усложнение, а необходимость.
+ *
+ * `process.env` — прямо здесь: переменные общие на весь процесс, и «задан ли
+ * токен» страница знает точно.
+ *
+ * `getWebhookInfo` — живым запросом через тот же клиент и тот же прокси, что и
+ * весь бот: если канал до Telegram лежит, это видно тут же, отдельной проверки
+ * не нужно.
+ *
+ * А вот сердцебиение опроса — из базы, а не из памяти процесса. Память не
+ * подходит: цикл поднимает instrumentation.ts, страницу рендерит серверный
+ * компонент, и Next собирает их в разные бандлы. Модуль состояния попадает в
+ * оба, инстанса выходит два, и страница читала бы собственную пустую копию,
+ * сообщая «бот не запускался» при работающем боте (см. lib/bot/health-store.ts).
  */
 export const dynamic = "force-dynamic";
 
@@ -59,10 +77,24 @@ async function fetchWebhookInfo(): Promise<{ info: WebhookInfo | null; error: st
 
 export default async function AdminBotPage() {
   const now = new Date();
-  const state = botState();
-  const verdict = botVerdict(now, state);
-  const { info, error } = await fetchWebhookInfo();
+  const [stored, webhook] = await Promise.all([readBotHealth(), fetchWebhookInfo()]);
+  const { info, error } = webhook;
   const configured = botTransport();
+
+  // Переменные окружения читаем здесь, а не берём из записи: они общие на весь
+  // процесс и всегда актуальны, тогда как строка в базе — снимок на момент
+  // старта. Если .env правили после запуска, расхождение и есть ответ.
+  const state: BotState = {
+    transport: stored?.transport ?? null,
+    hasToken: Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()),
+    hasApiBase: Boolean(process.env.TELEGRAM_API_BASE?.trim()),
+    startedAt: stored?.startedAt ?? null,
+    lastPollAt: stored?.lastPollAt ?? null,
+    lastUpdateAt: stored?.lastUpdateAt ?? null,
+    lastError: stored?.lastError ?? null,
+    notStartedReason: stored?.notStartedReason ?? null,
+  };
+  const verdict = botVerdict(now, state);
 
   return <div className="adm-page">
     <h1 className="adm-title">Бот</h1>

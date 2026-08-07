@@ -396,6 +396,27 @@ export const photoInbox = pgTable(
  * статистики: планировщик решает «отправлять ли сегодня» именно по этим
  * полям, и запись даты — это захват права на отправку, а не отчёт о ней.
  */
+/**
+ * Состояние бота — одна строка на сервис, видимая из админки.
+ *
+ * В памяти процесса держать нельзя: цикл опроса поднимает instrumentation.ts,
+ * страницу рендерит серверный компонент, и Next собирает их в разные бандлы —
+ * модуль состояния оказывается в двух экземплярах. Подробности и как это
+ * поймали — в lib/bot/health-store.ts.
+ */
+export const botHealth = pgTable("bot_health", {
+  // Строка ровно одна; единственность держит CHECK в миграции 0028.
+  id: integer("id").primaryKey().default(1),
+  transport: text("transport"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  lastPollAt: timestamp("last_poll_at", { withTimezone: true }),
+  lastUpdateAt: timestamp("last_update_at", { withTimezone: true }),
+  lastError: text("last_error"),
+  lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
+  notStartedReason: text("not_started_reason"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const botPreferences = pgTable("bot_preferences", {
   userId: integer("user_id")
     .primaryKey()

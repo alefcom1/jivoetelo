@@ -24,6 +24,7 @@ import { botLinks } from "./links.ts";
 import { absoluteUrl } from "../site.ts";
 import { botToken, createTelegramClient } from "../telegram-api.ts";
 import { noteBotError, noteBotNotStarted, noteBotStart } from "./health.ts";
+import { recordBotError, recordBotNotStarted, recordBotStart } from "./health-store.ts";
 
 const COMMANDS = [
   { command: "start", description: "Как всё устроено" },
@@ -78,13 +79,16 @@ export async function ensureWebhook(): Promise<void> {
     const reason = "TELEGRAM_BOT_TOKEN не задан в окружении контейнера — бот не запущен.";
     console.error(`[bot] ${reason}`);
     noteBotNotStarted(reason);
+    void recordBotNotStarted(reason);
     return;
   }
   noteBotStart("webhook");
+  void recordBotStart("webhook");
   if (!secret) {
     const reason = "TELEGRAM_WEBHOOK_SECRET не задан — вебхук не зарегистрирован, бот отвечать не будет.";
     console.warn(`[bot] ${reason}`);
     noteBotNotStarted(reason);
+    void recordBotNotStarted(reason);
     return;
   }
 
@@ -93,6 +97,7 @@ export async function ensureWebhook(): Promise<void> {
     const reason = `SITE_URL не https (${webhookUrl}) — Telegram такой вебхук не примет.`;
     console.warn(`[bot] ${reason}`);
     noteBotNotStarted(reason);
+    void recordBotNotStarted(reason);
     return;
   }
 
@@ -106,6 +111,7 @@ export async function ensureWebhook(): Promise<void> {
     if (info?.last_error_message) {
       console.warn(`[bot] последняя ошибка доставки: ${info.last_error_message}`);
       noteBotError(`доставка вебхука: ${info.last_error_message}`);
+      void recordBotError(`доставка вебхука: ${info.last_error_message}`);
       console.warn(`[bot] ${explainDeliveryError(info.last_error_message)}`);
     }
     if ((info?.pending_update_count ?? 0) > 0) {

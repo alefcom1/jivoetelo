@@ -26,6 +26,7 @@ import { handleUpdate } from "./handle-update.ts";
 import { botLinks } from "./links.ts";
 import { botStore, botTranscriber } from "./store.ts";
 import { noteBotError, noteBotNotStarted, noteBotStart, notePollOk } from "./health.ts";
+import { recordBotError, recordBotNotStarted, recordBotStart, recordPoll } from "./health-store.ts";
 import { paymentsEnabled } from "../payments/config.ts";
 import { ALLOWED_UPDATES } from "./ensure-webhook.ts";
 import { botToken, createTelegramClient, type TelegramUpdate } from "../telegram-api.ts";
@@ -65,10 +66,14 @@ export function startPolling(): void {
     const reason = "TELEGRAM_BOT_TOKEN не задан в окружении контейнера — бот не запущен.";
     console.error(`[bot] ${reason}`);
     noteBotNotStarted(reason);
+    void recordBotNotStarted(reason);
     return;
   }
   started = true;
   noteBotStart("polling");
+  // И в память, и в базу: память отвечает быстро, но её не видит страница
+  // админки — она рендерится из другого бандла (см. lib/bot/health-store.ts).
+  void recordBotStart("polling");
 
   const client = createTelegramClient(token);
   let offset = 0;
@@ -96,6 +101,7 @@ export function startPolling(): void {
         // нет неделю. Без него «бот молчит» и «боту никто не пишет»
         // выглядят одинаково.
         notePollOk((updates ?? []).length);
+        void recordPoll((updates ?? []).length);
 
         for (const update of updates ?? []) {
           // Сдвигаем offset до обработки: упавший на одном сообщении бот не
@@ -121,6 +127,7 @@ export function startPolling(): void {
         if (!/timeout|aborted|socket|ECONNRESET/i.test(message)) {
           console.error(`[bot] опрос сорвался: ${message}${networkDetail(error)}`);
           noteBotError(`${message}${networkDetail(error)}`);
+          void recordBotError(`${message}${networkDetail(error)}`);
         }
         await new Promise((resolve) => setTimeout(resolve, backoff));
         backoff = Math.min(backoff * 2, MAX_BACKOFF_MS);
