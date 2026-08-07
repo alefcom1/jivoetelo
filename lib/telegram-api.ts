@@ -46,12 +46,39 @@ export class TelegramApiError extends Error {
   }
 
   /**
-   * 403 приходит, когда пользователь заблокировал бота или удалил чат.
-   * Это не сбой — это ответ, который нужно запомнить, а не повторять.
+   * Человек заблокировал бота или удалил чат. Это не сбой, а ответ: повторять
+   * не нужно, и в неполадки такое не пишется.
+   *
+   * **Одного кода 403 для этого мало, и на этом мы уже обожглись.** Наш
+   * прокси-воркер отвечает тем же кодом, когда не сходится общий секрет
+   * (TELEGRAM_API_AUTH), — и его отказ читался как «человек заблокировал
+   * бота». Последствия ровно те, что искали два дня: `sendWelcomeCard`
+   * возвращал «отправлено», запасной путь текстом не запускался, `trySend`
+   * молчал, потому что блокировку в ошибки не пишут. Бот получал сообщения,
+   * не отвечал ни строчкой и не оставлял ни следа.
+   *
+   * Поэтому смотрим не только на код, но и на то, что сказал сам Telegram.
+   * Своих формулировок у него немного, и они устойчивы годами. Чужой 403 —
+   * будь то прокси, балансировщик или нечитаемое тело — теперь настоящая
+   * ошибка, которую видно.
    */
   get isBlockedByUser(): boolean {
-    return this.errorCode === 403;
+    if (this.errorCode !== 403) return false;
+    return /blocked by the user|bot was kicked|user is deactivated|chat not found|bot can't initiate/i.test(
+      this.message,
+    );
   }
+}
+
+/**
+ * Кусок чужого ответа для сообщения об ошибке. Двести знаков хватает, чтобы
+ * узнать отправителя (у страниц ошибок это первая же строка), и мало, чтобы
+ * html-простыня расползлась по странице диагностики и по логу.
+ */
+function snippet(raw: string): string {
+  const text = raw.replace(/\s+/gu, " ").trim();
+  if (!text) return "пустое тело";
+  return text.length > 200 ? `${text.slice(0, 200)}…` : text;
 }
 
 export type InlineKeyboardButton =
@@ -191,11 +218,22 @@ export function createTelegramClient(token: string, fetchImpl: FetchLike = fetch
       throw new TelegramApiError(method, error instanceof Error ? error.message : "network error", null);
     }
 
+    // Тело читаем текстом, а разбираем сами. `response.json()` при неудаче
+    // выбрасывает прочитанное, и остаётся голое «unparsable response (HTTP
+    // 403)» — по нему не отличить отказ Bot API от отказа чего-то по дороге.
+    // А отвечает по дороге как раз самое интересное: прокси-воркер при
+    // несовпадении секрета, страница ошибки хостера, защита от нагрузки.
+    // Кусок тела в сообщении — обычно сразу и есть ответ, кто нам отказал.
+    const raw = await response.text().catch(() => "");
     let body: { ok?: boolean; result?: T; description?: string; error_code?: number };
     try {
-      body = (await response.json()) as typeof body;
+      body = JSON.parse(raw) as typeof body;
     } catch {
-      throw new TelegramApiError(method, `unparsable response (HTTP ${response.status})`, response.status);
+      throw new TelegramApiError(
+        method,
+        `unparsable response (HTTP ${response.status}): ${snippet(raw)}`,
+        response.status,
+      );
     }
 
     if (!body.ok) {

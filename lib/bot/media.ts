@@ -26,6 +26,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { TelegramApiError, trySend, type SendMessageOptions, type TelegramClient } from "../telegram-api.ts";
+import { reportBotProblem } from "./health.ts";
 
 /**
  * Собирается скриптом scripts/bot-image.mjs. В образе `public/` лежит рядом с
@@ -80,6 +81,12 @@ export async function sendWelcomeCard(
 
   // Человек заблокировал бота — картинка ни при чём, и записывать это в
   // отказы нельзя: три таких подряд выключили бы картинки для всех.
+  //
+  // Проверка смотрит на текст ответа Telegram, а не на один код 403, и это
+  // важно именно здесь. Пока хватало кода, отказ прокси попадал в эту же
+  // ветку: `sendWelcomeCard` возвращал «отправлено», запасной путь текстом не
+  // запускался, и человек на /start не получал ничего — молча, без строки в
+  // логе. Ровно это и искали два дня.
   const blocked = (error: unknown) => error instanceof TelegramApiError && error.isBlockedByUser;
 
   if (cachedFileId) {
@@ -96,6 +103,7 @@ export async function sendWelcomeCard(
   const bytes = await welcomeBytes();
   if (!bytes) {
     failures = MAX_FAILURES;
+    reportBotProblem(`картинка ${WELCOME_FILE} не читается — приветствие уходит текстом`);
     return false;
   }
 
@@ -112,10 +120,11 @@ export async function sendWelcomeCard(
   } catch (error) {
     if (blocked(error)) return true;
     failures += 1;
-    console.warn(
-      `[bot] картинку отправить не удалось (${failures}/${MAX_FAILURES}): ` +
-        `${error instanceof Error ? error.message : error}`,
-    );
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`[bot] картинку отправить не удалось (${failures}/${MAX_FAILURES}): ${message}`);
+    // И в диагностику тоже: до этой строки единственным следом была консоль
+    // контейнера, а до неё в разборе так ни разу и не добрались.
+    reportBotProblem(`картинка приветствия не отправилась (${failures}/${MAX_FAILURES}): ${message}`);
     if (failures >= MAX_FAILURES) {
       console.warn("[bot] дальше приветствие уходит текстом. Обычно причина — прокси не пропускает multipart.");
     }

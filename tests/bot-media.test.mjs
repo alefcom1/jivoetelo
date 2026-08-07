@@ -100,6 +100,22 @@ test("заблокировавший бота не считается отказ
   assert.equal(client.calls.photos.length, 5);
 });
 
+test("403 не от Telegram не выдаётся за успех: приветствие уходит текстом", async () => {
+  // Наш прокси отвечает 403 при несовпадении секрета. Пока это считалось
+  // блокировкой, функция возвращала «отправлено», запасной путь не запускался
+  // и человек на /start не получал ничего вовсе — без единой строки в логе.
+  resetWelcomeCard();
+  const client = clientStub({
+    photo: () => {
+      throw new TelegramApiError("sendPhoto", "unparsable response (HTTP 403): forbidden", 403);
+    },
+  });
+
+  await sendWelcome(client, 1, "привет");
+
+  assert.equal(client.calls.messages.length, 1, "иначе на /start не приходит ничего");
+});
+
 test("подпись и клавиатура доходят до Telegram", async () => {
   resetWelcomeCard();
   const client = clientStub();

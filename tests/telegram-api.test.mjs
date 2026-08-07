@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { setBotProblemSink } from "../lib/bot/health.ts";
 import {
   TelegramApiError,
   createTelegramClient,
@@ -64,8 +65,51 @@ test("сетевой сбой тоже становится TelegramApiError, а
 
 test("trySend гасит блокировку бота и возвращает false", async () => {
   const client = createTelegramClient("token", async () =>
-    jsonResponse({ ok: false, error_code: 403, description: "blocked" }, 403));
+    jsonResponse({ ok: false, error_code: 403, description: "Forbidden: bot was blocked by the user" }, 403));
   assert.equal(await trySend(client, 1, "привет"), false);
+});
+
+test("403 не от Telegram — это не «человек заблокировал бота»", () => {
+  // Прокси-воркер отвечает тем же кодом при несовпадении TELEGRAM_API_AUTH.
+  // Пока хватало одного кода, его отказ читался как уход пользователя: ответ
+  // не уходил, ошибка никуда не писалась, приветствие считалось отправленным.
+  // Снаружи это выглядело как «бот получает сообщения и молчит без следов».
+  const proxy = new TelegramApiError("sendMessage", "unparsable response (HTTP 403): forbidden", 403);
+  assert.equal(proxy.isBlockedByUser, false);
+
+  for (const description of [
+    "Forbidden: bot was blocked by the user",
+    "Forbidden: bot was kicked from the group chat",
+    "Forbidden: user is deactivated",
+  ]) {
+    assert.ok(new TelegramApiError("sendMessage", description, 403).isBlockedByUser, description);
+  }
+});
+
+test("чужой 403 доходит до диагностики, а ушедший человек — нет", async () => {
+  const seen = [];
+  setBotProblemSink((message) => seen.push(message));
+  try {
+    const proxy = createTelegramClient("token", async () => new Response("forbidden", { status: 403 }));
+    assert.equal(await trySend(proxy, 1, "привет"), false);
+    assert.equal(seen.length, 1, "молчащий отказ — то, из-за чего разбор и затянулся");
+    assert.match(seen[0], /403/);
+
+    const gone = createTelegramClient("token", async () =>
+      jsonResponse({ ok: false, error_code: 403, description: "Forbidden: bot was blocked by the user" }, 403));
+    assert.equal(await trySend(gone, 1, "привет"), false);
+    assert.equal(seen.length, 1, "иначе диагностику завалит шумом от тех, кто просто ушёл");
+  } finally {
+    setBotProblemSink(null);
+  }
+});
+
+test("нечитаемый ответ называет того, кто ответил", async () => {
+  // «unparsable response (HTTP 403)» не отличает прокси от Bot API, а разница
+  // между ними — это разница между «поправить секрет» и «поправить код».
+  const client = createTelegramClient("token", async () =>
+    new Response("<html>\n  <title>403 Forbidden</title>\n</html>", { status: 403 }));
+  await assert.rejects(() => client.sendMessage(1, "текст"), /403 Forbidden/);
 });
 
 test("trySend возвращает true при успехе", async () => {
