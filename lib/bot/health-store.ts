@@ -31,13 +31,18 @@ import type { BotState, BotTransportMode } from "./health.ts";
 const WRITE_EVERY_MS = 60_000;
 let lastWriteAt = 0;
 
+/**
+ * Строка как её отдаёт драйвер. Даты объявлены `unknown` намеренно: обещать
+ * здесь `Date` — ровно то враньё, из-за которого страница падала. Приводит их
+ * `asDate` ниже, и это единственное место, где о них что-то утверждается.
+ */
 type Row = {
   transport: string | null;
-  started_at: Date | null;
-  last_poll_at: Date | null;
-  last_update_at: Date | null;
+  started_at: unknown;
+  last_poll_at: unknown;
+  last_update_at: unknown;
   last_error: string | null;
-  last_error_at: Date | null;
+  last_error_at: unknown;
   not_started_reason: string | null;
 };
 
@@ -76,30 +81,61 @@ export async function recordBotError(message: string): Promise<void> {
   await write({ last_error: message.slice(0, 500), last_error_at: new Date() });
 }
 
-/** Состояние для страницы админки. Нет строки — значит бот ещё не отмечался. */
-export async function readBotHealth(): Promise<Pick<
+export type StoredBotHealth = Pick<
   BotState,
   "transport" | "startedAt" | "lastPollAt" | "lastUpdateAt" | "lastError" | "notStartedReason"
-> | null> {
+>;
+
+/**
+ * Дата из базы может прийти и объектом, и строкой: тип timestamptz драйвер
+ * разбирает сам, а вот в обход драйвера (raw execute, другой пул, миграция
+ * версии pg) в поле оказывается строка. Дальше по коду на ней зовётся
+ * `.getTime()`, и страница падает пятисоткой.
+ *
+ * Это не гипотеза: ровно так диагностическая страница и слегла в первый же
+ * день. Приводим здесь, один раз, чтобы наружу выходили только настоящие Date.
+ */
+function asDate(value: unknown): Date | null {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+  if (typeof value === "string" || typeof value === "number") {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
+}
+
+/**
+ * Состояние для страницы админки.
+ *
+ * Возвращает и ошибку чтения отдельно от «строки нет»: это разные вещи, и для
+ * диагностики разница существенная. Пустая таблица означает «бот ни разу не
+ * отметился», а неудачное чтение — «мы не знаем», и выдавать второе за первое
+ * значит снова показать уверенный неверный ответ.
+ */
+export async function readBotHealth(): Promise<{ health: StoredBotHealth | null; error: string | null }> {
   try {
     const result = (await getDb().execute(
       sql`SELECT transport, started_at, last_poll_at, last_update_at, last_error, last_error_at, not_started_reason
             FROM bot_health WHERE id = 1`,
     )) as unknown as { rows: Row[] };
     const row = result.rows?.[0];
-    if (!row) return null;
+    if (!row) return { health: null, error: null };
 
+    const errorAt = asDate(row.last_error_at);
     return {
-      transport: row.transport === "polling" || row.transport === "webhook" ? row.transport : null,
-      startedAt: row.started_at,
-      lastPollAt: row.last_poll_at,
-      lastUpdateAt: row.last_update_at,
-      lastError: row.last_error && row.last_error_at ? { at: row.last_error_at, message: row.last_error } : null,
-      notStartedReason: row.not_started_reason,
+      health: {
+        transport: row.transport === "polling" || row.transport === "webhook" ? row.transport : null,
+        startedAt: asDate(row.started_at),
+        lastPollAt: asDate(row.last_poll_at),
+        lastUpdateAt: asDate(row.last_update_at),
+        lastError: row.last_error && errorAt ? { at: errorAt, message: row.last_error } : null,
+        notStartedReason: row.not_started_reason,
+      },
+      error: null,
     };
   } catch (error) {
     console.error("bot health read failed", error);
-    return null;
+    return { health: null, error: error instanceof Error ? error.message : String(error) };
   }
 }
 

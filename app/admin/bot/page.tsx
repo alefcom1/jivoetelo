@@ -80,9 +80,39 @@ async function fetchWebhookInfo(): Promise<{ info: WebhookInfo | null; error: st
   }
 }
 
+/**
+ * Диагностическая страница обязана переживать собственную поломку.
+ *
+ * Первая версия этого не умела и слегла пятисоткой в первый же день — на
+ * дате, пришедшей из базы строкой, где код звал `.getTime()`. Владелец увидел
+ * «A server error occurred» ровно там, где искал ответ, почему молчит бот.
+ *
+ * Страница, которая падает, хуже отсутствующей: она добавляет вторую загадку
+ * к первой. Поэтому весь сбор данных обёрнут, и любой отказ печатается
+ * текстом — это тоже диагностика, просто про саму страницу.
+ */
 export default async function AdminBotPage() {
+  try {
+    return await renderBotPage();
+  } catch (error) {
+    return <div className="adm-page">
+      <h1 className="adm-title">Бот</h1>
+      <p className="adm-banner adm-banner--bad">
+        <strong>Страница диагностики сама сломалась.</strong>{" "}
+        {error instanceof Error ? error.message : String(error)}
+      </p>
+      <p className="adm-muted">
+        Это ошибка страницы, а не бота: про бота она в таком виде не говорит ничего.
+        Текст выше — то, что нужно починить в app/admin/bot/page.tsx.
+      </p>
+    </div>;
+  }
+}
+
+async function renderBotPage() {
   const now = new Date();
-  const [stored, webhook] = await Promise.all([readBotHealth(), fetchWebhookInfo()]);
+  const [storedResult, webhook] = await Promise.all([readBotHealth(), fetchWebhookInfo()]);
+  const stored = storedResult.health;
   const { info, error } = webhook;
   const configured = botTransport();
 
@@ -139,6 +169,14 @@ export default async function AdminBotPage() {
         </tbody>
       </table>
       {state.notStartedReason && <p className="adm-muted">Причина отказа: {state.notStartedReason}</p>}
+      {storedResult.error && <p className="adm-muted">
+        Прочитать состояние из базы не удалось: {storedResult.error}. Значит строки ниже —
+        не «бот молчит», а «мы не знаем»; смотрите на раздел «Что говорит Telegram».
+      </p>}
+      {!storedResult.error && !stored && <p className="adm-muted">
+        В базе нет ни одной отметки: бот ни разу не доложил о запуске с тех пор, как
+        контейнер поднимали в последний раз.
+      </p>}
     </section>
 
     <section className="adm-section">
