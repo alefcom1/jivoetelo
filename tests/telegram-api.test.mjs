@@ -104,6 +104,52 @@ test("чужой 403 доходит до диагностики, а ушедши
   }
 });
 
+test("негодная кнопка не съедает сообщение: текст уходит без разметки", async () => {
+  // Telegram проверяет разметку до отправки и отвергает всё сообщение целиком.
+  // Через это мы потеряли /start: адрес Mini App был испорчен, а кнопку несло
+  // именно приветствие. Кнопка — удобство, ответ — то, ради чего написали.
+  const bodies = [];
+  const client = createTelegramClient("token", async (_url, init) => {
+    const body = JSON.parse(init.body);
+    bodies.push(body);
+    if (body.reply_markup) {
+      return jsonResponse(
+        { ok: false, error_code: 400, description: "Bad Request: inline keyboard button Web App URL 'x' is invalid" },
+        400,
+      );
+    }
+    return jsonResponse({ ok: true, result: {} });
+  });
+
+  const seen = [];
+  setBotProblemSink((message) => seen.push(message));
+  try {
+    const markup = { inline_keyboard: [[{ text: "Открыть", web_app: { url: "x" } }]] };
+    assert.equal(await trySend(client, 1, "привет", { replyMarkup: markup }), true);
+    assert.equal(bodies.length, 2, "вторая попытка обязана быть");
+    assert.equal(bodies[1].reply_markup, undefined);
+    assert.equal(bodies[1].text, "привет");
+    assert.equal(seen.length, 1, "подменять поведение молча нельзя — причину всё равно надо чинить");
+  } finally {
+    setBotProblemSink(null);
+  }
+});
+
+test("отказ не про кнопку второй попытки не получает", async () => {
+  let calls = 0;
+  const client = createTelegramClient("token", async () => {
+    calls += 1;
+    return jsonResponse({ ok: false, error_code: 400, description: "Bad Request: message text is empty" }, 400);
+  });
+  setBotProblemSink(() => {});
+  try {
+    assert.equal(await trySend(client, 1, "", { replyMarkup: { inline_keyboard: [] } }), false);
+    assert.equal(calls, 1, "повтор того же запроса ничего не чинит, а стоит секунды на каждом сообщении");
+  } finally {
+    setBotProblemSink(null);
+  }
+});
+
 test("нечитаемый ответ называет того, кто ответил", async () => {
   // «unparsable response (HTTP 403)» не отличает прокси от Bot API, а разница
   // между ними — это разница между «поправить секрет» и «поправить код».

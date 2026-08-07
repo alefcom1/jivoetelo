@@ -364,6 +364,20 @@ export function pickPhotoSize(sizes: TelegramFile[] | undefined, maxBytes: numbe
   return fitting.reduce((best, current) => ((current.file_size ?? 0) > (best.file_size ?? 0) ? current : best));
 }
 
+/**
+ * Отказ из-за кнопки. Telegram проверяет разметку до отправки и при негодной
+ * кнопке отвергает **всё сообщение**, а не только её.
+ *
+ * Мы на этом уже потеряли `/start`: в TELEGRAM_MINIAPP_URL попало её
+ * собственное имя, кнопка стала недействительной, и приветствие перестало
+ * уходить вовсе. Причина была в настройке, но цена — весь ответ бота.
+ */
+function isBadButton(error: unknown): boolean {
+  return error instanceof TelegramApiError
+    && error.errorCode === 400
+    && /button|reply_markup|keyboard/i.test(error.message);
+}
+
 /** Отправка, которая не бросает: возвращает true при успехе. */
 export async function trySend(
   client: TelegramClient,
@@ -383,6 +397,18 @@ export async function trySend(
     // Раньше здесь всё и заканчивалось. Именно этот отказ — «сообщение дошло,
     // ответ не ушёл» — оказался невидимым, когда опрос наконец заработал.
     reportBotProblem(`ответ не отправлен: ${message}`);
+
+    // Вторая попытка без кнопок. Текст почти всегда осмыслен и сам по себе, а
+    // «ничего» не осмысленно никогда. Ошибку при этом уже записали выше —
+    // молча подменять поведение эта ветка не должна.
+    if (isBadButton(error) && options?.replyMarkup) {
+      try {
+        await client.sendMessage(chatId, text, { ...options, replyMarkup: undefined });
+        return true;
+      } catch {
+        return false;
+      }
+    }
     return false;
   }
 }

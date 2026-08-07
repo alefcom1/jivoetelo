@@ -8,10 +8,21 @@
  *
  * Переменную нельзя выставлять «на всякий случай»: Telegram отвергает
  * web_app-кнопку с чужим доменом, и тогда сообщение не уйдёт вовсе.
+ *
+ * Это предупреждение стояло здесь с самого начала — и всё равно сбылось,
+ * причём в худшем виде. В переменную попало её собственное имя:
+ * `TELEGRAM_MINIAPP_URL=https://jivoetelo.ru/tg` целиком, вместе с «именем =».
+ * Так выходит, когда в поле значения вставляют строку из .env, а не значение.
+ * Telegram отверг кнопку, а вместе с ней и всё сообщение — и бот перестал
+ * отвечать на `/start` вовсе, потому что приветствие эту кнопку и несёт.
+ *
+ * Отсюда правило: **негодный адрес выключает кнопку, а не сообщение.** Кнопка
+ * — удобство, приветствие — то, ради чего человек написал боту.
  */
 
 import { absoluteUrl } from "../site.ts";
 import type { InlineKeyboardButton } from "../telegram-api.ts";
+import { reportBotProblem } from "./health.ts";
 
 export type BotLinks = {
   inboxUrl: string;
@@ -24,10 +35,44 @@ export type BotLinks = {
   dishUrl: (slug: string) => string;
 };
 
+/**
+ * Адрес Mini App — или ничего, если в переменной лежит не адрес.
+ *
+ * Проверяем именно здесь, а не полагаемся на Telegram: его отказ стоит целого
+ * сообщения, а наш — только кнопки. Требуем https — web_app другого протокола
+ * Telegram не принимает, и «http://» с локальной машины прошёл бы проверку
+ * `new URL`, но не прошёл бы отправку.
+ */
+let miniAppComplaint: string | null = null;
+
+export function miniAppUrl(): string | null {
+  const raw = process.env.TELEGRAM_MINIAPP_URL?.trim();
+  if (!raw) return null;
+
+  let parsed: URL | null = null;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    parsed = null;
+  }
+  if (parsed?.protocol === "https:") return raw.replace(/\/+$/, "");
+
+  // Жалуемся один раз за процесс: botLinks зовётся на каждое сообщение, а
+  // причина у всех одна и та же — заваливать ею диагностику незачем.
+  if (miniAppComplaint !== raw) {
+    miniAppComplaint = raw;
+    reportBotProblem(
+      `TELEGRAM_MINIAPP_URL — не https-адрес: «${raw}». Кнопка Mini App выключена, `
+        + "сообщения уходят с обычной ссылкой. Похоже, в значение попало имя переменной.",
+    );
+  }
+  return null;
+}
+
 export function botLinks(): BotLinks {
   return {
     inboxUrl: absoluteUrl("/app/inbox"),
-    miniAppUrl: process.env.TELEGRAM_MINIAPP_URL?.trim() || null,
+    miniAppUrl: miniAppUrl(),
     planUrl: absoluteUrl("/raschet/plan"),
     premiumUrl: absoluteUrl("/app/settings"),
     dishUrl: (slug: string) => absoluteUrl(`/skolko-kalorij/${slug}`),

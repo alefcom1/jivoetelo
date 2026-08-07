@@ -153,3 +153,27 @@ test("workflow отдаёт имя переменной списком, а не 
   assert.match(workflow, /name:\s*\n\s*description:[^\n]*\n\s*required: true\n(\s*#[^\n]*\n)*\s*type: choice/);
   assert.match(workflow, /options:\s*\n\s*- ADMIN_EMAILS/);
 });
+
+test("строка из .env целиком не превращается в ИМЯ=ИМЯ=значение", () => {
+  // Так мы потеряли TELEGRAM_MINIAPP_URL: в поле значения оказалась строка
+  // ровно в том виде, в каком переменная записана в .env.example. Telegram
+  // отверг кнопку с таким адресом, а вместе с кнопкой — всё сообщение, и бот
+  // замолчал на /start. Ошибка естественная, цена у неё была несоразмерная.
+  const box = sandbox();
+  run(box, "ADMIN_EMAILS", "ADMIN_EMAILS=new@example.com");
+  const line = readFileSync(path.join(box.dir, ".env"), "utf8")
+    .split("\n")
+    .find((l) => l.startsWith("ADMIN_EMAILS="));
+  assert.equal(line, "ADMIN_EMAILS=new@example.com");
+});
+
+test("имя внутри значения, но не в начале, остаётся нетронутым", () => {
+  // Срезаем только приставку и только целиком: значение, где имя переменной
+  // встречается по делу, портить нельзя.
+  const box = sandbox();
+  run(box, "ADMIN_EMAILS", "ADMIN_EMAILS@example.com");
+  const line = readFileSync(path.join(box.dir, ".env"), "utf8")
+    .split("\n")
+    .find((l) => l.startsWith("ADMIN_EMAILS="));
+  assert.equal(line, "ADMIN_EMAILS=ADMIN_EMAILS@example.com");
+});
