@@ -25,6 +25,7 @@ import { networkDetail } from "../ai/failure.ts";
 import { handleUpdate } from "./handle-update.ts";
 import { botLinks } from "./links.ts";
 import { botStore, botTranscriber } from "./store.ts";
+import { noteBotError, noteBotNotStarted, noteBotStart, notePollOk } from "./health.ts";
 import { paymentsEnabled } from "../payments/config.ts";
 import { ALLOWED_UPDATES } from "./ensure-webhook.ts";
 import { botToken, createTelegramClient, type TelegramUpdate } from "../telegram-api.ts";
@@ -56,8 +57,18 @@ type PollResult = Array<TelegramUpdate & { update_id?: number }>;
 export function startPolling(): void {
   if (started) return;
   const token = botToken();
-  if (!token) return;
+  // Раньше здесь стоял голый `return`. Это и есть тот отказ, который
+  // невозможно расследовать: бот молчит, а в логе — ни строчки, и пустой
+  // `grep "[bot]"` неотличим от «смотрю не туда». Теперь причина попадает и
+  // в лог, и в админку (lib/bot/health.ts).
+  if (!token) {
+    const reason = "TELEGRAM_BOT_TOKEN не задан в окружении контейнера — бот не запущен.";
+    console.error(`[bot] ${reason}`);
+    noteBotNotStarted(reason);
+    return;
+  }
   started = true;
+  noteBotStart("polling");
 
   const client = createTelegramClient(token);
   let offset = 0;
@@ -81,6 +92,10 @@ export function startPolling(): void {
           allowed_updates: ALLOWED_UPDATES,
         });
         backoff = MIN_BACKOFF_MS;
+        // Сердцебиение: по нему видно, что цикл жив, даже когда сообщений
+        // нет неделю. Без него «бот молчит» и «боту никто не пишет»
+        // выглядят одинаково.
+        notePollOk((updates ?? []).length);
 
         for (const update of updates ?? []) {
           // Сдвигаем offset до обработки: упавший на одном сообщении бот не
@@ -105,6 +120,7 @@ export function startPolling(): void {
         const message = error instanceof Error ? error.message : String(error);
         if (!/timeout|aborted|socket|ECONNRESET/i.test(message)) {
           console.error(`[bot] опрос сорвался: ${message}${networkDetail(error)}`);
+          noteBotError(`${message}${networkDetail(error)}`);
         }
         await new Promise((resolve) => setTimeout(resolve, backoff));
         backoff = Math.min(backoff * 2, MAX_BACKOFF_MS);

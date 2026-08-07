@@ -23,6 +23,7 @@
 import { botLinks } from "./links.ts";
 import { absoluteUrl } from "../site.ts";
 import { botToken, createTelegramClient } from "../telegram-api.ts";
+import { noteBotError, noteBotNotStarted, noteBotStart } from "./health.ts";
 
 const COMMANDS = [
   { command: "start", description: "Как всё устроено" },
@@ -70,15 +71,28 @@ export async function ensureWebhook(): Promise<void> {
   const token = botToken();
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
 
-  if (!token) return;
+  // Молчаливого выхода здесь больше нет по той же причине, что и в
+  // polling.ts: без токена бот не поднимается, а лог остаётся пустым, и
+  // расследовать нечего.
+  if (!token) {
+    const reason = "TELEGRAM_BOT_TOKEN не задан в окружении контейнера — бот не запущен.";
+    console.error(`[bot] ${reason}`);
+    noteBotNotStarted(reason);
+    return;
+  }
+  noteBotStart("webhook");
   if (!secret) {
-    console.warn("[bot] TELEGRAM_WEBHOOK_SECRET не задан — вебхук не регистрирую, бот отвечать не будет.");
+    const reason = "TELEGRAM_WEBHOOK_SECRET не задан — вебхук не зарегистрирован, бот отвечать не будет.";
+    console.warn(`[bot] ${reason}`);
+    noteBotNotStarted(reason);
     return;
   }
 
   const webhookUrl = absoluteUrl("/api/tg/webhook");
   if (!webhookUrl.startsWith("https://")) {
-    console.warn(`[bot] SITE_URL не https (${webhookUrl}) — Telegram такой вебхук не примет.`);
+    const reason = `SITE_URL не https (${webhookUrl}) — Telegram такой вебхук не примет.`;
+    console.warn(`[bot] ${reason}`);
+    noteBotNotStarted(reason);
     return;
   }
 
@@ -91,6 +105,7 @@ export async function ensureWebhook(): Promise<void> {
     const info = await client.call<WebhookInfo>("getWebhookInfo", {});
     if (info?.last_error_message) {
       console.warn(`[bot] последняя ошибка доставки: ${info.last_error_message}`);
+      noteBotError(`доставка вебхука: ${info.last_error_message}`);
       console.warn(`[bot] ${explainDeliveryError(info.last_error_message)}`);
     }
     if ((info?.pending_update_count ?? 0) > 0) {

@@ -81,6 +81,14 @@
   font-weight: 600;
 }
 
+/* Плохая новость должна отличаться от хорошей до чтения текста: лаймовая
+   плашка на странице «Бот» одинаково зелёная и когда всё работает, и когда
+   бот молчит вторые сутки. */
+.adm-banner--bad {
+  background: #f7dcd6;
+  border-left: 3px solid var(--coral);
+}
+
 .adm-muted {
   color: var(--muted);
   font-size: 12px;
