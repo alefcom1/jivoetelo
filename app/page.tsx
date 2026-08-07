@@ -193,7 +193,7 @@ export default function Home() {
             src="/site/cabinet-desk.webp"
             alt="Кабинет в браузере: кольцо дня на 1493 из 1970 ккал, белок и клетчатка с прогрессом, подсказка «что съесть дальше» и приёмы пищи с составом"
             width={1500}
-            height={1002}
+            height={1352}
             sizes="(max-width: 900px) 100vw, 820px"
           />
         </figure>
