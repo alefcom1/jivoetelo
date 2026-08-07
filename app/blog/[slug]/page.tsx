@@ -14,6 +14,7 @@ import Norma from "../content/norma-kalorij-kotoraya-uchitsya";
 import Disciplina from "../content/myagkaya-disciplina-dlya-tela";
 import RazniyeCifry from "../content/pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor";
 import Grechka from "../content/grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods";
+import TriKilogramma from "../content/tri-kilogramma-kotorye-ne-zhir-chto-pokazyvayut-vesy-na-samo";
 
 /**
  * Тексты статей — компоненты, а не markdown: им нужны скриншоты с
@@ -30,6 +31,7 @@ const CONTENT: Record<string, () => React.ReactElement> = {
   "myagkaya-disciplina-dlya-tela": Disciplina,
   "pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor": RazniyeCifry,
   "grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods": Grechka,
+  "tri-kilogramma-kotorye-ne-zhir-chto-pokazyvayut-vesy-na-samo": TriKilogramma,
 };
 
 type Params = { params: Promise<{ slug: string }> };
