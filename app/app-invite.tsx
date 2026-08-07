@@ -34,6 +34,31 @@ const SHOTS = [
   { src: "/app/plan.webp", alt: "Экран плана с нормой и тем, как она посчитана", caption: "И видно, откуда взялась норма" },
 ];
 
+/**
+ * Вход в бота: QR на широком экране, кнопка на узком.
+ *
+ * Вынесен из `AppInvite` отдельно, потому что вход нужен и там, где полного
+ * блока со снимками нет. На главной ровно так и вышло: снимки Mini App
+ * показывались дважды — в блоке «как это выглядит» и здесь, — а вход был
+ * только во втором. Блоки объединены, и вход переехал в объединённый;
+ * повторять ради него разметку QR и медиазапрос было бы третьим местом,
+ * где эту логику надо помнить.
+ */
+export function AppEntry({ start, qr, note }: { start: StartPayload; qr: string; note?: string }) {
+  return <div className="app-entry">
+    {/* Оба входа в разметке, лишний прячет CSS: так правильный виден сразу,
+        а не после того, как отработает скрипт. */}
+    <div className="app-entry-qr">
+      <Image src={qr} alt={`QR-код со ссылкой на бота ${botLink(start)}`} width={180} height={180} unoptimized />
+      <p>Наведите камеру телефона — откроется Telegram</p>
+      {note ? <p className="app-entry-note">{note}</p> : null}
+    </div>
+    <a className="app-entry-button black-button" href={botLink(start)} target="_blank" rel="noreferrer">
+      Открыть в Telegram <b>↗</b>
+    </a>
+  </div>;
+}
+
 export function AppInvite({
   title,
   lead,
@@ -73,17 +98,7 @@ export function AppInvite({
         ))}
       </div>
 
-      <div className="invite-enter">
-        {/* Оба входа в разметке, лишний прячет CSS: так правильный виден
-            сразу, а не после того, как отработает скрипт. */}
-        <div className="invite-qr">
-          <Image src={qr} alt={`QR-код со ссылкой на бота ${botLink(start)}`} width={180} height={180} unoptimized />
-          <p>Наведите камеру телефона — откроется Telegram</p>
-        </div>
-        <a className="invite-button black-button" href={botLink(start)} target="_blank" rel="noreferrer">
-          Открыть в Telegram <b>↗</b>
-        </a>
-      </div>
+      <AppEntry start={start} qr={qr} />
     </div>
   </section>;
 }
