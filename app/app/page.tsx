@@ -6,6 +6,7 @@ import { mealItems, meals, profiles } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDayRu, isValidDay, localToday, MEAL_TYPE_LABELS, shiftDay } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
+import { splitMacroTargets } from "@/lib/macro-split";
 import { computeTargets, targetInputFromProfile, type Targets } from "@/lib/targets";
 import { listLoggedDays } from "@/lib/meals";
 import { nextHint, passedByData } from "@/lib/first-run";
@@ -59,6 +60,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   if (profile && weightKg) {
     targets = computeTargets(targetInputFromProfile(profile, weightKg));
   }
+  // Граммы жира и углеводов не хранятся и не считаются `computeTargets` —
+  // они выводятся из уже известных калорий и белка тем же расчётом, которым
+  // их показывает Mini App. Без плана целей нет, и полос тоже.
+  const macros = targets ? splitMacroTargets(targets.kcalTarget, targets.proteinTarget) : null;
 
   /*
    * Первые шаги. Состояние собирается из того, что и так посчитано выше, —
@@ -141,10 +146,16 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       <div className="day-bars">
         <MacroBar label="Белок" value={dayTotals.protein} target={targets?.proteinTarget ?? null} unit="г" macro="protein" />
         <MacroBar label="Клетчатка" value={dayTotals.fiber} target={targets?.fiberTarget ?? null} unit="г" macro="fiber" />
-        {/* Жирам и углеводам цели не назначаем — полоса без дорожки честно
-            показывает съеденное, не выдумывая «из скольки». */}
-        <MacroBar label="Жиры" value={dayTotals.fat} target={null} unit="г" macro="fat" />
-        <MacroBar label="Углеводы" value={dayTotals.carbs} target={null} unit="г" macro="carbs" />
+        {/* Жиры и углеводы — с целями, как и всё остальное.
+            Раньше они шли без цели и потому без полосы: строка с одним числом
+            рядом с двумя полосатыми читалась как незаполненная. Причина была в
+            том, что `computeTargets` их не считает — отдельной сущности в базе
+            они не заслуживают. Но Mini App показывает их с целями с самого
+            начала, выводя граммы из уже известных калорий и белка
+            (`lib/macro-split.ts`), и один и тот же день в двух местах выглядел
+            по-разному. Берём тот же расчёт. */}
+        <MacroBar label="Жиры" value={dayTotals.fat} target={macros?.fatTarget ?? null} unit="г" macro="fat" />
+        <MacroBar label="Углеводы" value={dayTotals.carbs} target={macros?.carbsTarget ?? null} unit="г" macro="carbs" />
       </div>
     </section>}
 
