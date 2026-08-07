@@ -12,6 +12,7 @@ import Telegram from "../content/dnevnik-pitaniya-v-telegram";
 import Diapazon from "../content/pochemu-diapazon-chestnee-tochnogo-chisla";
 import Norma from "../content/norma-kalorij-kotoraya-uchitsya";
 import Disciplina from "../content/myagkaya-disciplina-dlya-tela";
+import Sahar from "../content/kak-umenshit-skachki-sahara-posle-edy";
 import RazniyeCifry from "../content/pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor";
 import Grechka from "../content/grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods";
 import TriKilogramma from "../content/tri-kilogramma-kotorye-ne-zhir-chto-pokazyvayut-vesy-na-samo";
@@ -29,6 +30,7 @@ const CONTENT: Record<string, () => React.ReactElement> = {
   "pochemu-diapazon-chestnee-tochnogo-chisla": Diapazon,
   "norma-kalorij-kotoraya-uchitsya": Norma,
   "myagkaya-disciplina-dlya-tela": Disciplina,
+  "kak-umenshit-skachki-sahara-posle-edy": Sahar,
   "pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor": RazniyeCifry,
   "grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods": Grechka,
   "tri-kilogramma-kotorye-ne-zhir-chto-pokazyvayut-vesy-na-samo": TriKilogramma,

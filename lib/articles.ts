@@ -55,6 +55,50 @@ export type Article = {
 
 export const ARTICLES: Article[] = [
   {
+    slug: "kak-umenshit-skachki-sahara-posle-edy",
+    kicker: "Питание",
+    title: "После обеда вырубает. Разбираемся, при чём тут сахар",
+    titleShort: "После обеда вырубает",
+    description:
+      "Порядок еды, остывший рис, ложка уксуса — что из этого работает и насколько. С честными размерами исследований: в главных из них было по пятнадцать человек.",
+    lead:
+      "Три часа дня, обед позади — и как будто выключили свет. Причин может быть десяток, " +
+      "и одна из них — то, как повёл себя сахар крови. Разбираем, что на это влияет и что " +
+      "из популярных приёмов выдерживает проверку.",
+    published: "2026-08-07",
+    minutes: 7,
+    updated: "2026-08-07",
+    sources: [
+      {
+        title: "Atkinson F. S. et al. International tables of glycemic index and glycemic load values 2021",
+        url: "https://pubmed.ncbi.nlm.nih.gov/34258626/",
+      },
+      {
+        title: "Shukla A. P. et al. The impact of food order on postprandial glycaemic excursions in prediabetes (2019)",
+        url: "https://dom-pubs.onlinelibrary.wiley.com/doi/abs/10.1111/dom.13503",
+      },
+      {
+        title: "Kuwata H. et al. Postprandial responses differ by meal macronutrient ingestion sequence — PATTERN study (2019)",
+        url: "https://pubmed.ncbi.nlm.nih.gov/31053510/",
+      },
+      {
+        title: "Shishehbor F. et al. Vinegar consumption can attenuate postprandial glucose and insulin responses (2017)",
+        url: "https://pubmed.ncbi.nlm.nih.gov/28292654/",
+      },
+      {
+        title: "Sonia S. et al. Effect of cooling of cooked white rice on resistant starch content and glycemic response (2015)",
+        url: "https://pubmed.ncbi.nlm.nih.gov/26693746/",
+      },
+      {
+        title: "Patterson M. A. et al. Chilled potatoes decrease postprandial glucose, insulin and GIP (2019)",
+        url: "https://pubmed.ncbi.nlm.nih.gov/31484331/",
+      },
+    ],
+    heroImage: "/blog/hero-kak-umenshit-skachki-sahara-posle-edy.webp",
+    heroAlt:
+      "Человек за обеденным столом собирается есть: тарелка с рыбой, нутом, киноа и овощами, рядом стакан воды",
+  },
+  {
     slug: "myagkaya-disciplina-dlya-tela",
     kicker: "Привычки",
     title: "Мотивация кончается на третий день. Что работает вместо неё",
