@@ -33,12 +33,12 @@ jobs:
       - name: Забрать код
         # Полная история: агенту нужно видеть, что слито за неделю, — по
         # мелкой копии этого не понять.
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm

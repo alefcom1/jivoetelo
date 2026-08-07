@@ -50,10 +50,10 @@ jobs:
       empty: ${{ steps.pick.outputs.empty }}
     steps:
       - name: Забрать код
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
 
@@ -99,10 +99,10 @@ jobs:
         item: ${{ fromJSON(needs.pick.outputs.items) }}
     steps:
       - name: Забрать код
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
