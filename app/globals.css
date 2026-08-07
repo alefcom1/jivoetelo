@@ -508,19 +508,24 @@ label.consent input{margin:0;padding:0;border:0;flex:0 0 auto}
 .invite-shots figure{margin:0}
 .invite-shots img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:var(--white)}
 .invite-shots figcaption{margin-top:12px;font-size:12px;line-height:1.5;color:#66675f}
-.invite-enter{display:flex;flex-direction:column;align-items:flex-start;gap:16px}
-.invite-qr{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
-.invite-qr img{display:block;width:180px;height:180px;border:1px solid var(--line);border-radius:8px}
-.invite-qr p{max-width:200px;margin:0;font-size:13px;line-height:1.5;color:#5c5e57}
+/* Вход в бота (AppEntry). Правила общие: он стоит и здесь, и в шапке блока
+   «как это выглядит» на главной, и оба места должны переключаться на кнопку
+   в одной точке — иначе на одной ширине экрана человек видит QR в одном
+   блоке и кнопку в другом. */
+.app-entry{display:flex;flex-direction:column;align-items:flex-start;gap:16px}
+.app-entry-qr{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+.app-entry-qr img{display:block;width:180px;height:180px;border:1px solid var(--line);border-radius:8px;background:var(--white)}
+.app-entry-qr p{max-width:200px;margin:0;font-size:13px;line-height:1.5;color:#5c5e57}
+.app-entry-note{color:var(--muted)}
 /* Кнопка — запасной вход для широкого экрана: там ведущий способ QR. */
-.invite-enter .invite-button{display:none}
+.app-entry-button{display:none}
 /* На узком экране всё наоборот: свой экран камерой не отсканируешь. */
-@media(max-width:850px){
+@media(max-width:900px){
   .invite{padding:48px 20px}
   .invite-body{grid-template-columns:1fr;gap:28px}.invite-shots{grid-template-columns:1fr 1fr;gap:14px}
   .invite-shots figure:nth-child(3){display:none}
-  .invite-qr{display:none}
-  .invite-enter .invite-button{display:inline-flex;align-items:center;gap:14px;width:100%;justify-content:center}
+  .app-entry-qr{display:none}
+  .app-entry-button{display:inline-flex;align-items:center;gap:14px;width:100%;justify-content:center}
 }
 
 /* Расшифровка голосового в черновике разбора. Цитатой, а не абзацем: это
@@ -787,9 +792,20 @@ footer>.footer-app:first-child{margin-top:0}
    Телефоны стоят справа лесенкой и заходят на кадр кабинета: так видно, что
    это один продукт в двух местах, а не два разных снимка рядом. */
 .showcase{padding:120px max(32px,calc((100% - 1280px)/2));background:var(--white)}
-.showcase-intro{max-width:640px}
-.showcase-intro h2{margin:22px 0 18px;font:500 clamp(34px,3.8vw,52px)/.95 var(--serif);letter-spacing:-.055em}
-.showcase-intro p{margin:0;max-width:560px;color:#5c5e57;font-size:14px;line-height:1.75}
+/* Шапка блока: слева заголовок с пояснением, справа вход в бота. Выровнены
+   по нижнему краю, под ними волосяная линия — так это читается разворотом, а
+   не колонкой текста со случайной картинкой сбоку. */
+/* Выравнивание по верху, а не по низу. По нижнему краю бока смотрелись
+   аккуратнее, но карточка входа выше колонки с текстом, и заголовок уезжал
+   от верха секции на сотню точек — оставляя над собой пустую полосу во всю
+   ширину. */
+.showcase-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:64px;align-items:start;padding-bottom:44px;border-bottom:1px solid var(--line)}
+.showcase-said{max-width:640px}
+.showcase-said h2{margin:22px 0 18px;font:500 clamp(34px,3.8vw,52px)/.95 var(--serif);letter-spacing:-.055em}
+.showcase-said p{margin:0;max-width:560px;color:#5c5e57;font-size:14px;line-height:1.75}
+/* Карточка, а не голый QR на фоне: у входа должны быть границы, иначе он
+   выглядит забытым в пустом поле — ровно так и было в прежнем блоке. */
+.showcase-enter{padding:26px 28px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
 /* Телефоны выровнены по нижнему краю кабинета и не наезжают на него.
    Наезд был: минус семьдесят точек прятали правую колонку с цифрами —
    ровно то, ради чего снимок и показывают. Слой, закрывающий данные, это
@@ -831,14 +847,24 @@ footer>.footer-app:first-child{margin-top:0}
    неаккуратно; сорок точек читаются как выбор. */
 .showcase-phones figure:last-child{margin-top:-40px}
 .showcase-phones img{display:block;width:100%;height:auto}
+/* Отступ сверху больше обычного: телефоны свисают под кадр кабинета на
+   семьдесят точек, и линия, поставленная «сразу после» снимков, прошла бы
+   прямо по ним. */
+.showcase-notes{display:grid;grid-template-columns:repeat(3,1fr);gap:44px;margin-top:150px;padding-top:30px;border-top:1px solid var(--line)}
+.showcase-notes span{display:block;margin-bottom:10px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.showcase-notes p{margin:0;max-width:340px;color:#5c5e57;font-size:13px;line-height:1.65}
 
 @media(max-width:900px){
   .showcase{padding:72px 20px}
+  .showcase-head{grid-template-columns:1fr;gap:32px;padding-bottom:0;border-bottom:0}
+  /* На узком экране вход — кнопка во всю ширину, и рамка вокруг неё лишняя. */
+  .showcase-enter{padding:0;border:0;background:none}
   .showcase-shots{grid-template-columns:1fr;gap:24px;margin-top:36px}
   .showcase-desk{width:100%}
   .showcase-phones{margin:0;justify-content:center}
   .showcase-phones figure{flex:0 1 46%}
   .showcase-phones figure:first-child,.showcase-phones figure:last-child{margin:0}
+  .showcase-notes{grid-template-columns:1fr;gap:22px;margin-top:44px}
   .showcase{overflow:hidden}
 }
 
