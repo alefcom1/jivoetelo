@@ -5,7 +5,7 @@
 import { eq, isNull, and } from "drizzle-orm";
 import { getDb } from "@/db";
 import { pendingInvites, users } from "@/db/schema";
-import { isReferralCode, makeReferralCode } from "./referral.ts";
+import { isReferralCode, makeReferralCode, REFERRAL_REWARD_AFTER_DAYS, REFERRAL_REWARD_DAYS } from "./referral.ts";
 
 /**
  * Код приглашения человека. Заводится при первом обращении.
@@ -98,18 +98,11 @@ export async function invitedCount(userId: number): Promise<number> {
   return rows.length;
 }
 
-/**
- * Сколько дней дневника должен провести приглашённый, чтобы награда
- * начислилась обоим.
- *
- * Семь, а не ноль: награда в день регистрации — это способ накрутить доступ
- * ботами, а не привести живого человека. Семь дней с записями отличает
- * пришедшего от заведённого.
- */
-export const REFERRAL_REWARD_AFTER_DAYS = 7;
-
-/** Сколько дней доступа получает каждый. */
-export const REFERRAL_REWARD_DAYS = 30;
+// Числа награды переехали в lib/referral.ts — к правилам, а не к базе: их
+// печатает оферта (app/legal/tarify), а тянуть в страницу модуль с getDb
+// ради двух констант незачем. Реэкспорт оставлен, чтобы не переписывать
+// девять мест вызова разом.
+export { REFERRAL_REWARD_AFTER_DAYS, REFERRAL_REWARD_DAYS } from "./referral.ts";
 
 export type ReferralReward = { rewarded: true; days: number } | { rewarded: false };
 

@@ -295,26 +295,29 @@ function AwardsSection({ profile, onInvite }: { profile: ProfileResponse; onInvi
  * Ссылки приходят с сервера готовыми: в каждой подписанная метка человека,
  * иначе оплату не к кому отнести (lib/payments/tribute.ts). Если оплата не
  * настроена или выключена, `links` приходит пустым — блок тогда честно
- * говорит про бесплатный тариф и не показывает кнопок, ведущих в никуда.
+ * говорит, чем доступ открыт, и не показывает кнопок, ведущих в никуда.
  */
 function AccessSection({ profile }: { profile: ProfileResponse }) {
   const { access } = profile;
-  const paid = access.plan === "premium";
+  const open = access.plan === "premium";
+  // Три состояния, а не два. «Платный доступ открыт» человеку, который идёт
+  // по пробному месяцу, — обещание списания, которого не было.
+  const line = !open
+    ? "Пробный месяц закончился. Дневник, план, вес, обзоры и каталог остались — еду можно записывать руками. Разбор открывается оплатой или приглашением: за каждого друга месяц вам и ему."
+    : access.trial
+      ? `Идёт пробный месяц: разбор по фото, по описанию и голосом открыт ещё ${access.daysLeft} дн.`
+      : `Доступ открыт ещё ${access.daysLeft} дн. Разбор по фото, по описанию и голосом работает полностью.`;
   return <section className="tg-section">
-    <h2>Тариф</h2>
+    <h2>Доступ</h2>
     <div className="tg-card tg-access">
-      <p className="tg-hint">
-        {paid
-          ? `Платный доступ открыт ещё ${access.daysLeft} дн. Дневные лимиты распознавания выше обычных.`
-          : "Бесплатный тариф. Дневник, план, вес и обзоры без ограничений; лимиты касаются только распознавания."}
-      </p>
+      <p className="tg-hint">{line}</p>
       {access.links?.map((link) => (
         <button
           key={link.key}
           className="tg-button tg-button-block"
           onClick={() => { haptic("tap"); openExternal(link.url); }}
         >
-          {paid ? "Продлить" : "Оплатить"} — {link.label.toLowerCase()}, {link.priceRub} ₽
+          {open ? "Продлить" : "Оплатить"} — {link.label.toLowerCase()}, {link.priceRub} ₽
         </button>
       ))}
       {access.links && <p className="tg-hint">

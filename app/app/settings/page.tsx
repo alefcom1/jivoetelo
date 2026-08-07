@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { reportPreferences, userConsents, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { daysLeft, TARIFFS } from "@/lib/paid";
+import { accessEndsAt, daysLeft, hasPaidAccess, inTrial, TARIFFS } from "@/lib/paid";
 import { getTributeConfig, paymentLink } from "@/lib/payments/tribute";
 import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
 import { PhotoConsent } from "./photo-consent";
@@ -21,6 +21,7 @@ import { ReportSettings } from "./report-settings";
 import { TelegramLink } from "./telegram-link";
 import { UsagePanel } from "./usage-panel";
 import { AccessPanel } from "./access-panel";
+import { InvitePanel } from "./invite-panel";
 
 const consentDate = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" });
 const accessDate = consentDate;
@@ -40,6 +41,10 @@ export default async function SettingsPage() {
         url: paymentLink(tribute, tariff.key, user.id),
       }))
     : null;
+
+  // Дата окончания — общая на пробный месяц и оплату: человеку важно, до
+  // какого числа работает разбор, а не по какой из двух причин он открыт.
+  const accessEnds = accessEndsAt(user.accessUntil, user.createdAt, new Date());
 
   const db = getDb();
   // Норма и разбор — из того же места, что кормит Mini App: правило одно,
@@ -98,10 +103,17 @@ export default async function SettingsPage() {
     <section className="settings-block">
       <p className="settings-label">Доступ</p>
       <AccessPanel
-        daysLeft={daysLeft(user.accessUntil, new Date())}
-        until={user.accessUntil ? accessDate.format(user.accessUntil) : null}
+        daysLeft={daysLeft(user.accessUntil, user.createdAt, new Date())}
+        until={accessEnds ? accessDate.format(accessEnds) : null}
+        trial={!hasPaidAccess(user.accessUntil, new Date()) && inTrial(user.createdAt, new Date())}
         payLinks={payLinks}
       />
+    </section>
+    {/* Сразу за «Доступом», а не в конце настроек: это второй способ его
+        продлить, и отказ в разборе отправляет человека именно сюда. */}
+    <section className="settings-block">
+      <p className="settings-label">Позвать друзей</p>
+      <InvitePanel />
     </section>
     {/* Шпаргалка стоит вторым блоком, а не в подвале настроек: подсказки на
         «Сегодня» показываются один раз и не возвращаются, и это единственное

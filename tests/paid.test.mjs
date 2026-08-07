@@ -22,6 +22,13 @@ import {
 const NOW = new Date("2026-08-05T12:00:00Z");
 const at = (iso) => new Date(iso);
 
+/**
+ * Дата регистрации для проверок про оплату: заведомо старая, чтобы пробный
+ * месяц был давно позади и не примешивался к ответу. Проверки самого
+ * пробного периода стоят отдельно и берут свои даты.
+ */
+const OLD = at("2026-01-01T00:00:00Z");
+
 /* ===== Срок доступа ===== */
 
 test("доступ открыт, пока срок не вышел", () => {
@@ -34,32 +41,55 @@ test("тариф вычисляется из срока, а не хранитс�
   // Ради этого поле и одно: рассогласовать нечего. Флаг «premium: да»
   // пришлось бы снимать по расписанию, и упавший cron оставил бы доступ
   // тем, кто за него не платил.
-  assert.equal(effectivePlan(at("2026-09-01T00:00:00Z"), NOW), "premium");
-  assert.equal(effectivePlan(at("2026-07-01T00:00:00Z"), NOW), "free");
-  assert.equal(effectivePlan(null, NOW), "free");
+  assert.equal(effectivePlan(at("2026-09-01T00:00:00Z"), OLD, NOW), "premium");
+  assert.equal(effectivePlan(at("2026-07-01T00:00:00Z"), OLD, NOW), "free");
+  assert.equal(effectivePlan(null, OLD, NOW), "free");
+});
+
+test("пробный месяц открывает доступ сам по себе, оплатой не считаясь", () => {
+  // Первый месяц открыт всем и считается от даты регистрации, а не выдаётся
+  // записью в access_until: тогда о нём обязан помнить каждый путь заведения
+  // аккаунта, и первый забывший отдал бы человека без пробного периода.
+  const justRegistered = at("2026-07-20T00:00:00Z"); // 16 дней назад
+  assert.equal(effectivePlan(null, justRegistered, NOW), "premium", "идёт пробный месяц");
+  assert.equal(hasPaidAccess(null, NOW), false, "но денег за него не платили");
+  assert.equal(daysLeft(null, justRegistered, NOW), 14, "и он кончается");
+
+  const longAgo = at("2026-05-01T00:00:00Z");
+  assert.equal(effectivePlan(null, longAgo, NOW), "free", "через месяц доступ закрыт");
+  assert.equal(daysLeft(null, longAgo, NOW), 0);
 });
 
 test("продление заранее не сжигает остаток", () => {
   // «Продлил за неделю до конца и потерял неделю» читается как обман, и
   // человек начинает тянуть до последнего дня.
   const until = at("2026-08-12T12:00:00Z"); // ещё 7 дней
-  const extended = extendAccess(until, 30, NOW);
-  assert.equal(daysLeft(extended, NOW), 37, "остаток не прибавился к новому сроку");
+  const extended = extendAccess(until, OLD, 30, NOW);
+  assert.equal(daysLeft(extended, OLD, NOW), 37, "остаток не прибавился к новому сроку");
 });
 
 test("продление после окончания считается от сегодня, а не от старого срока", () => {
   const expired = at("2026-06-01T00:00:00Z");
-  const extended = extendAccess(expired, 30, NOW);
-  assert.equal(daysLeft(extended, NOW), 30, "просроченный доступ не должен съедать новый");
+  const extended = extendAccess(expired, OLD, 30, NOW);
+  assert.equal(daysLeft(extended, OLD, NOW), 30, "просроченный доступ не должен съедать новый");
 });
 
 test("первое продление — от сегодня", () => {
-  assert.equal(daysLeft(extendAccess(null, 30, NOW), NOW), 30);
+  assert.equal(daysLeft(extendAccess(null, OLD, 30, NOW), OLD, NOW), 30);
+});
+
+test("продление внутри пробного месяца прибавляется к нему, а не заменяет его", () => {
+  // Иначе оплата (или месяц за приглашение) в первую неделю списывала бы
+  // остаток пробного периода: заплатил за месяц — получил месяц минус то,
+  // что уже было. Подарок, который отнимает.
+  const registered = at("2026-07-20T00:00:00Z"); // пробный до 19 августа
+  const extended = extendAccess(null, registered, 30, NOW);
+  assert.equal(daysLeft(extended, registered, NOW), 44, "остаток пробного месяца потерян");
 });
 
 test("остаток округляется вверх: доступ до вечера — это ещё день", () => {
-  assert.equal(daysLeft(at("2026-08-05T23:00:00Z"), NOW), 1);
-  assert.equal(daysLeft(at("2026-08-04T23:00:00Z"), NOW), 0, "истёкший доступ — ноль, а не отрицательное");
+  assert.equal(daysLeft(at("2026-08-05T23:00:00Z"), OLD, NOW), 1);
+  assert.equal(daysLeft(at("2026-08-04T23:00:00Z"), OLD, NOW), 0, "истёкший доступ — ноль, а не отрицательное");
 });
 
 /* ===== Тарифы ===== */

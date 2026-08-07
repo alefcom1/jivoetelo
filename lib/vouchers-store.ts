@@ -99,11 +99,13 @@ export async function redeemVoucher(userId: number, raw: string, now = new Date(
   }
 
   const current = await db
-    .select({ accessUntil: users.accessUntil })
+    .select({ accessUntil: users.accessUntil, createdAt: users.createdAt })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  const accessUntil = extendAccess(current[0]?.accessUntil ?? null, voucher.days, now);
+  const row = current[0];
+  if (!row) return { ok: false, message: "Не нашли ваш аккаунт." };
+  const accessUntil = extendAccess(row.accessUntil, row.createdAt, voucher.days, now);
   await db.update(users).set({ accessUntil }).where(eq(users.id, userId));
 
   return { ok: true, days: voucher.days, accessUntil };
@@ -118,12 +120,18 @@ export async function redeemVoucher(userId: number, raw: string, now = new Date(
  */
 export async function grantAccessDays(userId: number, days: number, now = new Date()): Promise<Date> {
   const db = getDb();
+  // `createdAt` читается вместе со сроком, потому что продлевать надо от
+  // конца пробного месяца, если он ещё идёт. Иначе месяц за приглашение,
+  // начисленный на седьмой день, съедал бы остаток пробного периода —
+  // см. extendAccess в lib/paid.ts.
   const current = await db
-    .select({ accessUntil: users.accessUntil })
+    .select({ accessUntil: users.accessUntil, createdAt: users.createdAt })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  const accessUntil = extendAccess(current[0]?.accessUntil ?? null, days, now);
+  const row = current[0];
+  if (!row) throw new Error(`Нет пользователя ${userId}`);
+  const accessUntil = extendAccess(row.accessUntil, row.createdAt, days, now);
   await db.update(users).set({ accessUntil }).where(eq(users.id, userId));
   return accessUntil;
 }

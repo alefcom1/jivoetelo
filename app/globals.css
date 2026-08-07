@@ -932,3 +932,8 @@ footer>.footer-app:first-child{margin-top:0}
 .about-art{margin:12px 0 44px}
 .about-art img{display:block;width:100%;height:auto;border-radius:4px}
 .about-art figcaption{margin-top:12px;color:var(--muted);font-size:12.5px;line-height:1.6}
+
+/* Ссылка-приглашение в настройках. Моноширинный набор и перенос по любому
+   символу: адрес длинный, а на телефоне колонка узкая — без break-all он
+   вылезал за карточку. */
+.invite-link{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:600;word-break:break-all;line-height:1.5}

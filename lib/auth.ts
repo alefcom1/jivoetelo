@@ -19,8 +19,14 @@ export type CurrentUser = {
    * хранится рядом с ним (lib/paid.ts).
    */
   plan: Plan;
-  /** До какого момента открыт платный доступ. `null` — не открывался. */
+  /** До какого момента открыт **оплаченный** доступ. `null` — не открывался. */
   accessUntil: Date | null;
+  /**
+   * Когда заведён аккаунт. Лежит здесь не для показа: от него отсчитывается
+   * пробный месяц — второй источник доступа наравне с оплатой (lib/paid.ts).
+   * Без него `plan` посчитать нельзя.
+   */
+  createdAt: Date;
   /**
    * Привязан ли Telegram. Именно флаг, а не сам идентификатор: он нужен
    * интерфейсу и аналитике, а таскать по коду чужой числовой идентификатор
@@ -76,6 +82,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       firstRunHints: users.firstRunHints,
       telegramUserId: users.telegramUserId,
       accessUntil: users.accessUntil,
+      createdAt: users.createdAt,
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
@@ -89,7 +96,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   // один и рассогласовать его нечем (lib/paid.ts).
   return {
     ...user,
-    plan: effectivePlan(row.accessUntil, new Date()),
+    plan: effectivePlan(row.accessUntil, row.createdAt, new Date()),
     telegramLinked: telegramUserId !== null,
   };
 }

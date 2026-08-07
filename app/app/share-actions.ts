@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { awardByKey } from "@/lib/awards";
 import { getCurrentUser } from "@/lib/auth";
-import { ensureReferralCode } from "@/lib/referral-store";
+import { referralLink } from "@/lib/referral";
+import { ensureReferralCode, invitedCount } from "@/lib/referral-store";
 import { awardText, inviteText } from "@/lib/share-text";
 
 /**
@@ -24,4 +25,27 @@ export async function shareAward(awardKey?: string): Promise<string> {
   const code = await ensureReferralCode(user.id);
   const award = awardKey ? awardByKey(awardKey) : null;
   return award ? awardText(award.share, code) : inviteText(code);
+}
+
+/**
+ * Ссылка-приглашение и счётчик пришедших — для блока в настройках.
+ *
+ * Отдельно от `shareAward`, потому что там собирается готовый текст для
+ * пересылки, а здесь нужна сама ссылка: в вебе её копируют в буфер, а не
+ * отдают клиенту Telegram.
+ *
+ * Действием, а не данными страницы, сознательно. `ensureReferralCode` пишет
+ * в базу при первом обращении, и вызвать её при отрисовке настроек значило бы
+ * завести код каждому, кто просто зашёл посмотреть, что там. Код появляется,
+ * когда человек нажал «Получить ссылку», — то есть когда он ему нужен.
+ */
+export async function inviteLink(): Promise<{ link: string; invited: number }> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const [code, invited] = await Promise.all([
+    ensureReferralCode(user.id),
+    invitedCount(user.id),
+  ]);
+  return { link: referralLink(code), invited };
 }

@@ -138,8 +138,8 @@ export default async function AdminUsersPage({
               <div className="adm-tile"><strong>{card.streak.current}</strong><span>серия сейчас</span></div>
               <div className="adm-tile"><strong>{card.streak.bestStreak}</strong><span>лучшая серия</span></div>
               <div className="adm-tile">
-                <strong>{card.plan === "premium" ? `${daysLeft(card.accessUntil, new Date())} дн.` : "нет"}</strong>
-                <span>платный доступ</span>
+                <strong>{card.plan === "premium" ? `${daysLeft(card.accessUntil, card.createdAt, new Date())} дн.` : "нет"}</strong>
+                <span>доступ, дней</span>
               </div>
               <div className="adm-tile"><strong>{card.invitedCount}</strong><span>привёл друзей</span></div>
             </div>
@@ -153,11 +153,12 @@ export default async function AdminUsersPage({
           </section>
 
           <section className="adm-section">
-            <h2>Тариф</h2>
+            <h2>Доступ</h2>
             <p className="adm-section-lead">
-              Сейчас {card.plan === "premium" ? "платный доступ" : "бесплатный тариф"}. Выдача идёт напрямую,
+              Сейчас {card.plan === "premium" ? "доступ открыт" : "доступа нет"}. Выдача идёт напрямую,
               без оплаты и без кода — для компенсации за сбой или для своих; отсчёт от текущего срока, если он
-              ещё не вышел. Перевод на бесплатный снимает срок целиком.
+              ещё не вышел, и от конца пробного месяца, если он ещё идёт. Отзыв снимает оплаченный срок
+              целиком; пробный месяц он не трогает — тот считается от даты регистрации и не хранится.
             </p>
             <GrantAccess personId={card.id} hasAccess={card.plan === "premium"} />
           </section>
@@ -270,8 +271,8 @@ export default async function AdminUsersPage({
                       <td>{dateFormat.format(person.createdAt)}</td>
                       <td>{person.loggedDays}</td>
                       <td>{person.lastMealOn ?? "—"}</td>
-                      <td>{daysLeft(person.accessUntil, new Date()) > 0
-                        ? `${daysLeft(person.accessUntil, new Date())} дн.`
+                      <td>{daysLeft(person.accessUntil, person.createdAt, new Date()) > 0
+                        ? `${daysLeft(person.accessUntil, person.createdAt, new Date())} дн.`
                         : "—"}</td>
                     </tr>)}
                   </tbody>

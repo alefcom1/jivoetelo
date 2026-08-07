@@ -10,6 +10,19 @@ export async function UsagePanel({ userId, plan }: { userId: number; plan: Plan 
   const used = await getUsageToday(userId);
   const limits = PLAN_LIMITS[plan];
 
+  // Доступа нет — таблицы расхода тоже нет. Показывать «0 из 0» пятью
+  // строками с пустыми полосками значило бы отчитываться о том, чего не
+  // происходит, да и деление на ноль дало бы NaN в ширине полосы.
+  if (limits.analyze_photo <= 0) {
+    return <div className="usage-panel">
+      <p className="usage-lead">
+        Пробный месяц закончился, поэтому обращения к распознаванию сейчас не расходуются.
+        Дневник, план, вес, обзоры и каталог работают как раньше — еду можно записывать руками.
+        Открыть разбор снова можно в блоке «Доступ» выше.
+      </p>
+    </div>;
+  }
+
   return <div className="usage-panel">
     <p className="usage-lead">
       Дневник, план, вес и обзоры доступны без ограничений. Дневные лимиты

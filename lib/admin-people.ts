@@ -148,7 +148,7 @@ export async function personCard(adminId: number, personId: number): Promise<Per
     telegramLinked: row.telegramUserId !== null,
     createdAt: row.createdAt,
     accessUntil: row.accessUntil,
-    plan: effectivePlan(row.accessUntil, new Date()),
+    plan: effectivePlan(row.accessUntil, row.createdAt, new Date()),
     invitedByEmail: inviter[0]?.email ?? null,
     invitedCount: invited.length,
     referralCode: row.referralCode,
