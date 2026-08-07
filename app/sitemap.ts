@@ -68,6 +68,7 @@ const STATIC_PAGES: StaticPage[] = [
   { path: "/raschet/porcii-recepta", priority: 0.7, changeFrequency: "monthly" },
   { path: "/raschet/menyu", priority: 0.9, changeFrequency: "monthly" },
   { path: "/o-nas", priority: 0.7, changeFrequency: "monthly" },
+  { path: "/tarify", priority: 0.8, changeFrequency: "monthly" },
   { path: "/kak-schitaem", priority: 0.8, changeFrequency: "monthly" },
   { path: "/slovar", priority: 0.7, changeFrequency: "monthly" },
   { path: "/skolko-kalorij", priority: 0.8, changeFrequency: "monthly" },

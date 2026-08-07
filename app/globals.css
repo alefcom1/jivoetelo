@@ -733,6 +733,17 @@ footer>.footer-app:first-child{margin-top:0}
 
 /* Доступ и код в настройках. Поле кода шире прочих: в него вставляют из
    буфера, и обрезанный посередине код выглядит как чужой. */
+/* Страница цены. Раскладка та же, что у расчётов (.raschet-page), поэтому
+   своего почти ничего: только ритм между разделами и отступ под якорь —
+   на «Тарифы» ведут ссылки вида /tarify#dostup. */
+.tarify-block{margin:0 0 40px;scroll-margin-top:88px}
+.tarify-block h2{font:600 26px/1.15 var(--serif);letter-spacing:-.02em;margin:0 0 12px}
+.tarify-block p{margin:0 0 14px;max-width:62ch}
+.tarify-block .price-limits,.tarify-block .price-tariffs{margin-bottom:14px}
+
+/* Отступ под якорь: ссылки вида /app/settings#dostup иначе ставят заголовок
+   раздела вплотную к верху окна, а на узком экране — под шапку кабинета. */
+.settings-block[id]{scroll-margin-top:88px}
 .access-panel{display:flex;flex-direction:column;gap:12px}
 .voucher-form{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
 .voucher-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
@@ -756,6 +767,15 @@ footer>.footer-app:first-child{margin-top:0}
 .pay-links{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 0}
 .pay-links .black-button{flex:1 1 220px;text-align:center}
 .access-note{flex:1 1 100%;margin:4px 0 0;font-size:13px;color:var(--muted,#6b6560)}
+
+/* Отказ «пробный месяц закончился» — с выходом, а не строкой в пустоту.
+   Кнопка на всю ширину: это единственное действие на экране, где человек
+   только что упёрся, и делить её место не с чем. */
+.access-error{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+.access-error .form-error{margin:0}
+.access-error .black-button{text-align:center}
+.access-error .field-note{margin:0}
+.access-error .field-note a{text-decoration:underline;text-underline-offset:3px}
 
 /* ── Первый экран ─────────────────────────────────────────────────────────
    Фото еды больше не лежит под текстом.

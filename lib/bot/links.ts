@@ -20,6 +20,7 @@
  * — удобство, приветствие — то, ради чего человек написал боту.
  */
 
+import { ACCESS_ANCHOR } from "../payments/access-links.ts";
 import { absoluteUrl } from "../site.ts";
 import type { InlineKeyboardButton } from "../telegram-api.ts";
 import { reportBotProblem } from "./health.ts";
@@ -74,7 +75,9 @@ export function botLinks(): BotLinks {
     inboxUrl: absoluteUrl("/app/inbox"),
     miniAppUrl: miniAppUrl(),
     planUrl: absoluteUrl("/raschet/plan"),
-    premiumUrl: absoluteUrl("/app/settings"),
+    // С якорем: без него кнопка «Открыть тариф» приводила на верх страницы
+    // из шестнадцати разделов, где «Доступ» четвёртый.
+    premiumUrl: absoluteUrl(`/app/settings#${ACCESS_ANCHOR}`),
     dishUrl: (slug: string) => absoluteUrl(`/skolko-kalorij/${slug}`),
   };
 }
@@ -117,7 +120,14 @@ export function planButton(links: BotLinks): InlineKeyboardButton {
  * найдёт, кому его засчитать.
  */
 export function premiumButton(links: BotLinks): InlineKeyboardButton {
+  /**
+   * В Mini App — сразу на вкладку профиля, где живёт «Доступ».
+   *
+   * Раньше кнопка открывала Mini App как есть, то есть вкладку «Сегодня»: от
+   * оплаты человека отделяли ещё два тапа и ни одного указателя. Метку читает
+   * app/tg/page.tsx и открывает нужную вкладку сразу.
+   */
   return links.miniAppUrl
-    ? { text: "Открыть тариф", web_app: { url: links.miniAppUrl } }
+    ? { text: "Открыть тариф", web_app: { url: `${links.miniAppUrl}#${ACCESS_ANCHOR}` } }
     : { text: "Открыть тариф", url: links.premiumUrl };
 }

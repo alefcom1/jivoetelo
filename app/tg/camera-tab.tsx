@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   analyzeMeal,
+  ApiError,
   fetchFrequentMeals,
   saveMeal,
   type AnalysisItemDto,
@@ -10,6 +11,8 @@ import {
   type FrequentMealDto,
   type InboxItemDto,
 } from "./api";
+import type { AccessOffer } from "@/lib/paid";
+import { TgAccessError } from "./access-error";
 import { applyClarification as applyClarify } from "@/lib/clarify";
 import { CONFIDENCE_LABELS, confidenceRange, overallConfidence, type Confidence } from "@/lib/confidence";
 import { formatDayAgoRu, formatDayRu } from "@/lib/dates";
@@ -101,6 +104,7 @@ export function CameraTab({
   inbox,
   onCancelInbox,
   onDraft,
+  onOpenAccess,
   forDay,
 }: {
   showCalories: boolean;
@@ -122,6 +126,12 @@ export function CameraTab({
    * компонент (app/tg/page.tsx), иначе два эффекта затирают друг друга.
    */
   onDraft?: (discard: (() => void) | null) => void;
+  /**
+   * Открыть раздел «Доступ» — им заканчивается отказ «пробный месяц
+   * закончился». Переключение вкладки принадлежит оболочке, поэтому
+   * сюда оно приходит обработчиком, а не делается на месте.
+   */
+  onOpenAccess?: () => void;
   /**
    * День, за который делается запись (ГГГГ-ММ-ДД). Приходит из «Дневника»,
    * когда там открыт не сегодняшний день: раньше запись всё равно ложилась
@@ -152,6 +162,9 @@ export function CameraTab({
   const [lastPhoto, setLastPhoto] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Кнопка оплаты приезжает вместе с отказом «доступа нет»: см.
+  // lib/payments/access-links.ts. undefined — отказ не про доступ.
+  const [access, setAccess] = useState<AccessOffer | undefined>(undefined);
   const [items, setItems] = useState<DraftItem[] | null>(null);
   const [clarifications, setClarifications] = useState<ClarificationDto[]>([]);
   const [analysis, setAnalysis] = useState<unknown>(null);
@@ -204,6 +217,7 @@ export function CameraTab({
     } catch (err) {
       haptic("error");
       setError(err instanceof Error && err.message !== "error" ? err.message : "Не получилось разобрать. Попробуйте ещё раз.");
+      setAccess(err instanceof ApiError ? err.failure.access : undefined);
     } finally {
       setBusy(false);
     }
@@ -502,7 +516,7 @@ export function CameraTab({
         : <blockquote className="tg-transcript">«{inbox.note}»</blockquote>}
 
       {error
-        ? <><p className="tg-error">{error}</p><MascotSay event={{ kind: "analysisFailed" }} compact /></>
+        ? <><TgAccessError error={error} access={access} onOpenAccess={onOpenAccess} /><MascotSay event={{ kind: "analysisFailed" }} compact /></>
         : <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
 
       {/* Кнопка нужна только для повтора после ошибки — при первом заходе разбор уже запущен сам. */}
@@ -527,7 +541,7 @@ export function CameraTab({
       {forDay && <p className="tg-kicker">Запись за {formatDayRu(forDay)}</p>}
       <h1 className="tg-camera-title">Что вы ели?</h1>
       <PlateInput showCalories={showCalories} busy={busy} onSave={(plate) => void saveSimple(plate)} />
-      {error && <p className="tg-error">{error}</p>}
+      {error && <TgAccessError error={error} access={access} onOpenAccess={onOpenAccess} />}
       <div className="tg-ways">
         <button className="tg-way" onClick={() => { haptic("tap"); setDetailed(true); switchMode("camera"); }}>Снять камерой</button>
         <button className="tg-way" onClick={() => { haptic("tap"); setDetailed(true); switchMode("text"); }}>Записать точнее</button>
@@ -661,7 +675,7 @@ export function CameraTab({
         }])} />
       </div>}
 
-      {error && <p className="tg-error">{error}</p>}
+      {error && <TgAccessError error={error} access={access} onOpenAccess={onOpenAccess} />}
       {busy && <p className="tg-hint">Разбираем… обычно это несколько секунд.</p>}
       {/* Повтор для снимка — только после ошибки: сам он уходит на разбор
           сразу, отдельного подтверждения не требуя. В текстовом режиме своя
@@ -866,7 +880,7 @@ export function CameraTab({
         onClick={() => { haptic("tap"); setMealType(value); }}>{label}</button>)}
     </div>
 
-    {error && <p className="tg-error">{error}</p>}
+    {error && <TgAccessError error={error} access={access} onOpenAccess={onOpenAccess} />}
     {/* Как и «Разобрать»: внутри Telegram сохраняет нативная кнопка. */}
     {!insideTelegram && <button className="tg-button tg-button-block"
       onClick={() => void handleSave()} disabled={busy || items.length === 0}>

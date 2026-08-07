@@ -25,12 +25,15 @@ import { unsubscribePostUrl, unsubscribeUrl } from "./email-subscribe.ts";
 import { countPendingOnDay } from "./inbox.ts";
 import { listLoggedDays } from "./meals.ts";
 import { getMailer } from "./mailer.ts";
+import { accessEndsAt, daysLeft, hasPaidAccess } from "./paid.ts";
 import {
   planReminder,
+  planTrialWarning,
   planWeighReminder,
   QUIET_HOURS_END,
   QUIET_HOURS_START,
   WEIGH_REMINDER_EVERY_DAYS,
+  TRIAL_WARNING_HOUR,
   WEIGH_REMINDER_HOUR,
 } from "./reminders.ts";
 import { computeStreak } from "./streak.ts";
@@ -38,7 +41,7 @@ import { dispatchDueReports, enqueueDueReports } from "./report-dispatch.ts";
 import { siteUrl } from "./site.ts";
 import { botToken, createTelegramClient, trySend } from "./telegram-api.ts";
 import { digestKeyboard } from "./bot/handle-update.ts";
-import { botLinks } from "./bot/links.ts";
+import { botLinks, premiumButton } from "./bot/links.ts";
 
 const TICK_MS = 60_000;
 const EMAIL_BATCH = 20;
@@ -329,6 +332,108 @@ export async function dispatchDueWeighReminders(now: Date, limit = REMINDER_BATC
   return { sent, failed };
 }
 
+
+/**
+ * Предупреждение о конце пробного месяца — один раз, за три дня.
+ *
+ * Кандидатов ищем по дате регистрации, а не по `access_until`: пробный месяц
+ * отсчитывается от неё (lib/paid.ts), и у человека, который ни разу не платил,
+ * `access_until` пуст вовсе. Заплативших отсекаем тем же `hasPaidAccess`, что
+ * и весь остальной продукт: два места, считающих доступ по-своему, однажды
+ * разойдутся — и разойдутся молча.
+ */
+export async function dispatchDueTrialWarnings(now: Date, limit = REMINDER_BATCH): Promise<DispatchResult> {
+  const token = botToken();
+  if (!token) return { sent: 0, failed: 0 };
+
+  const moment = localMoment(now);
+  if (moment.hour < TRIAL_WARNING_HOUR || moment.hour >= TRIAL_WARNING_HOUR + 3) return { sent: 0, failed: 0 };
+
+  const db = getDb();
+  const candidates = (await db.execute(sql`
+    SELECT u.id, u.telegram_user_id, u.created_at, u.access_until,
+           COALESCE(p.reminders_enabled, TRUE) AS reminders_enabled,
+           p.trial_warning_on
+      FROM users u
+      LEFT JOIN bot_preferences p ON p.user_id = u.id
+     WHERE u.telegram_user_id IS NOT NULL
+       AND COALESCE(p.reminders_enabled, TRUE)
+       AND p.trial_warning_on IS NULL
+     ORDER BY u.id
+     LIMIT ${limit}
+  `)) as unknown as Rows<{
+    id: number;
+    telegram_user_id: string;
+    created_at: string | Date;
+    access_until: string | Date | null;
+    reminders_enabled: boolean;
+    trial_warning_on: string | Date | null;
+  }>;
+
+  const rows = candidates.rows ?? [];
+  if (rows.length === 0) return { sent: 0, failed: 0 };
+
+  const client = createTelegramClient(token);
+  const links = botLinks();
+  let sent = 0;
+  let failed = 0;
+
+  for (const row of rows) {
+    try {
+      const createdAt = asDate(row.created_at);
+      const accessUntil = row.access_until ? asDate(row.access_until) : null;
+      const ends = accessEndsAt(accessUntil, createdAt, now);
+      if (!ends) continue;
+
+      const plan = planTrialWarning({
+        localHour: moment.hour,
+        enabled: row.reminders_enabled,
+        daysLeft: daysLeft(accessUntil, createdAt, now),
+        paid: hasPaidAccess(accessUntil, now),
+        warned: row.trial_warning_on !== null,
+        until: TRIAL_DATE.format(ends),
+      });
+      if (!plan) continue;
+
+      // Захват права на отправку — тем же приёмом, что у напоминаний: дата
+      // пишется ДО отправки, и второй процесс уходит ни с чем.
+      const claimed = (await db.execute(sql`
+        INSERT INTO bot_preferences (user_id, trial_warning_on)
+        VALUES (${row.id}, ${moment.day})
+        ON CONFLICT (user_id) DO UPDATE
+           SET trial_warning_on = ${moment.day}, updated_at = ${now}
+         WHERE bot_preferences.trial_warning_on IS NULL
+        RETURNING user_id
+      `)) as unknown as Rows<{ user_id: number }>;
+      if ((claimed.rows ?? []).length === 0) continue;
+
+      const ok = await trySend(client, row.telegram_user_id, plan.text, {
+        disablePreview: true,
+        parseMode: "HTML",
+        replyMarkup: { inline_keyboard: [[premiumButton(links)]] },
+      });
+      if (ok) sent += 1;
+      else failed += 1;
+    } catch (error) {
+      console.error("trial warning dispatch failed", error);
+      failed += 1;
+    }
+  }
+
+  return { sent, failed };
+}
+
+/** Дата словами для текста предупреждения: «5 сентября». */
+const TRIAL_DATE = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" });
+
+/**
+ * `timestamptz` приходит то строкой, то объектом Date — как и `date` у соседа
+ * ниже. Разница в том, что здесь нужен момент времени целиком, а не сутки.
+ */
+function asDate(value: string | Date): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
 /**
  * `date` из PostgreSQL приходит то строкой, то объектом Date — зависит от
  * драйвера и от того, шёл ли запрос через `execute`. Правила напоминаний
@@ -358,6 +463,7 @@ export async function tick(now: Date = new Date()): Promise<void> {
     await dispatchDueEmails(now);
     await dispatchDueReminders(now);
     await dispatchDueWeighReminders(now);
+    await dispatchDueTrialWarnings(now);
     // Отчёты: сначала ставим в очередь то, у чего кончился период, потом
     // отправляем очередь. Порядок именно такой — поставленное в этот же заход
     // уходит сразу, а не ждёт следующей минуты.

@@ -434,6 +434,13 @@ export const botPreferences = pgTable("bot_preferences", {
   weighRemindersEnabled: boolean("weigh_reminders_enabled").notNull().default(true),
   /** Дата последнего напоминания о весе — не чаще раза в неделю. */
   lastWeighReminderOn: date("last_weigh_reminder_on"),
+  /**
+   * Когда предупредили о конце пробного месяца. Сообщение одноразовое, и
+   * «отправляли ли уже» неоткуда узнать, кроме как записав. Дата, а не флаг:
+   * по ней видно, когда именно, а это первый вопрос, если человек говорит
+   * «мне ничего не приходило».
+   */
+  trialWarningOn: date("trial_warning_on"),
   // «Напомнить позже»: до этого момента бот молчит.
   snoozedUntil: timestamp("snoozed_until", { withTimezone: true }),
   // Дата последнего отправленного напоминания — не больше одного в день.

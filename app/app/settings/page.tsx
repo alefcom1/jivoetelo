@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { reportPreferences, userConsents, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { accessEndsAt, daysLeft, hasPaidAccess, inTrial, TARIFFS } from "@/lib/paid";
-import { getTributeConfig, paymentLink } from "@/lib/payments/tribute";
+import { accessEndsAt, daysLeft, hasPaidAccess, inTrial } from "@/lib/paid";
+import { ACCESS_ANCHOR, payLinksFor } from "@/lib/payments/access-links";
 import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
 import { PhotoConsent } from "./photo-consent";
 import { getBotPreferences } from "@/lib/bot/store";
@@ -32,15 +32,7 @@ export default async function SettingsPage() {
 
   // Ссылки собираются на сервере: в них подписанная метка человека, и
   // подпись ставится там, где живёт секрет (lib/payments/tribute.ts).
-  const tribute = getTributeConfig();
-  const payLinks = tribute?.enabled
-    ? TARIFFS.map((tariff) => ({
-        key: tariff.key,
-        label: tariff.label,
-        priceRub: tariff.priceRub,
-        url: paymentLink(tribute, tariff.key, user.id),
-      }))
-    : null;
+  const payLinks = payLinksFor(user.id);
 
   // Дата окончания — общая на пробный месяц и оплату: человеку важно, до
   // какого числа работает разбор, а не по какой из двух причин он открыт.
@@ -100,7 +92,12 @@ export default async function SettingsPage() {
       <p className="settings-label">Аккаунт</p>
       <p>{user.email ?? "Вход через Telegram — почта не указана"}</p>
     </section>
-    <section className="settings-block">
+    {/* Якорь: сюда ведут кнопка «Открыть тариф» в боте, отказ в разборе и
+        страница тарифа. Без него все три приводили на верх страницы из
+        шестнадцати разделов, где «Доступ» четвёртый, — то есть заставляли
+        искать глазами то, за чем человек и нажал кнопку.
+        scroll-margin-top в CSS: без него якорь уводит заголовок под шапку. */}
+    <section className="settings-block" id={ACCESS_ANCHOR}>
       <p className="settings-label">Доступ</p>
       <AccessPanel
         daysLeft={daysLeft(user.accessUntil, user.createdAt, new Date())}

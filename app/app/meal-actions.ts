@@ -10,6 +10,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { getPendingItem, markProcessed } from "@/lib/inbox";
 import { normalizeMealItems, replaceMealItemsForUser, withDishKeys } from "@/lib/meals";
 import { clampPer100 } from "@/lib/nutrition";
+import type { AccessOffer } from "@/lib/paid";
+import { accessOffer } from "@/lib/payments/access-links";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import {
   ALLOWED_PHOTO_TYPES,
@@ -23,7 +25,13 @@ import {
 
 export type AnalyzeResult =
   | { ok: true; analysis: MealAnalysis; photoKey: string | null; sourceText: string | null }
-  | { ok: false; error: string };
+  /**
+   * `access` появляется только у отказа «доступа нет»: там, где человек
+   * упёрся в закрытый разбор, кнопка оплаты и нужна. Необязательное поле, а
+   * не отдельная ветка типа, чтобы всякий, кто читает `error`, продолжил
+   * работать как раньше.
+   */
+  | { ok: false; error: string; access?: AccessOffer };
 
 export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
   const user = await getCurrentUser();
@@ -37,7 +45,9 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
   // этому же файлу квоту не спрашивает вовсе, и это правило, а не случайность.
   const operation = mode === "text" ? "analyze_text" : "analyze_photo";
   const decision = await checkQuota(user.id, user.plan, operation);
-  if (!decision.allowed) return { ok: false, error: quotaMessage(decision) };
+  if (!decision.allowed) {
+    return { ok: false, error: quotaMessage(decision), access: accessOffer(decision, user.id) };
+  }
   let photoKey: string | null = null;
   let sourceText: string | null = null;
 

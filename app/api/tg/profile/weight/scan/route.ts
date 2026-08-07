@@ -1,5 +1,6 @@
 import { MealAnalysisError, SCALE_ERRORS } from "@/lib/ai";
 import { getScaleProvider } from "@/lib/ai/scale";
+import { accessOffer } from "@/lib/payments/access-links";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import { judgeReading } from "@/lib/scale-reading";
 import { ALLOWED_PHOTO_TYPES, MAX_PHOTO_BYTES } from "@/lib/storage";
@@ -23,7 +24,14 @@ export async function POST(request: Request) {
   if ("response" in auth) return auth.response;
 
   const decision = await checkQuota(auth.user.id, auth.user.plan, "read_scale");
-  if (!decision.allowed) return Response.json({ error: quotaMessage(decision) }, { status: 429 });
+  if (!decision.allowed) {
+    // Кнопка оплаты едет вместе с текстом: экран, показавший отказ, —
+    // единственное место, где человек прямо сейчас готов заплатить.
+    return Response.json(
+      { error: quotaMessage(decision), access: accessOffer(decision, auth.user.id) },
+      { status: 429 },
+    );
+  }
 
   const formData = await request.formData();
   const file = formData.get("photo");

@@ -84,6 +84,11 @@
 .tg-hint { margin: 0; color: var(--tg-hint); font-size: 13px; line-height: 1.6; }
 .tg-error { margin: 0; color: #b95353; font-size: 13px; line-height: 1.5; }
 
+/* Отказ «пробный месяц закончился» — с выходом, а не строкой в пустоту.
+   Кнопка на всю ширину: это единственное действие на экране, где человек
+   только что упёрся. */
+.tg-access-error { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+
 /* Кольцо энергии — главный объект экрана «Сегодня», поэтому единственное
    место, где мы позволяем себе градиент и свечение. */
 .tg-ring { position: relative; display: grid; place-items: center; padding: 10px 0 12px; }

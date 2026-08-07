@@ -53,6 +53,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/skolko-kalorij", label: "Калорийность блюд" },
       { href: "/produkty", label: "Калорийность продуктов" },
       { href: "/kak-schitaem", label: "Как мы считаем" },
+      { href: "/tarify", label: "Цена" },
       { href: "/blog", label: "Журнал" },
       { href: "/pro", label: "Для специалистов" },
     ],

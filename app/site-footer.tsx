@@ -69,6 +69,7 @@ export function SiteFooter({ children, authed = false }: { children?: React.Reac
         <p>Сервис</p>
         <Link href="/">Главная</Link>
         <Link href="/pro">Для специалистов</Link>
+        <Link href="/tarify">Цена</Link>
         {/* Журнал уехал с главной: витрина из трёх статей занимала целый
             экран, а вела туда же, куда одна ссылка. Без неё в подвале
             раздел остался бы без единого входа с сайта. */}

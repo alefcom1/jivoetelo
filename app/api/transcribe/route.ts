@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { accessOffer } from "@/lib/payments/access-links";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import { getSpeechProvider, isAllowedAudioMime, MAX_AUDIO_BYTES, SPEECH_ERRORS, SpeechError } from "@/lib/speech";
 
@@ -16,7 +17,14 @@ export async function POST(request: Request) {
   if (!user) return Response.json({ error: "Нужно войти." }, { status: 401 });
 
   const decision = await checkQuota(user.id, user.plan, "transcribe");
-  if (!decision.allowed) return Response.json({ error: quotaMessage(decision) }, { status: 429 });
+  if (!decision.allowed) {
+    // Кнопка оплаты едет вместе с текстом: экран, показавший отказ, —
+    // единственное место, где человек прямо сейчас готов заплатить.
+    return Response.json(
+      { error: quotaMessage(decision), access: accessOffer(decision, user.id) },
+      { status: 429 },
+    );
+  }
 
   let file: FormDataEntryValue | null;
   try {

@@ -11,6 +11,8 @@ import { AddFoodItem } from "../add-food-item";
 import { VoiceInput } from "../voice-input";
 import { PlateInput } from "../../plate-input";
 import { CameraCapture } from "./camera-capture";
+import { AccessError } from "../access-error";
+import type { AccessOffer } from "@/lib/paid";
 
 type DraftItem = {
   name: string;
@@ -113,6 +115,9 @@ export function AddMealFlow({
   const [photo, setPhoto] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Отдельно от текста: отказ «доступа нет» несёт кнопку оплаты, и
+  // сбрасывать её надо вместе с ошибкой, а не жить ей до конца сессии.
+  const [access, setAccess] = useState<AccessOffer | undefined>(undefined);
   const [draft, setDraft] = useState<Draft | null>(null);
   // Для снимка из инбокса дата и время берутся из момента съёмки, а не из
   // момента разбора: фото, снятое в обед и разобранное вечером, — это всё
@@ -149,7 +154,7 @@ export function AddMealFlow({
     setBusy(true);
     try {
       const result = await analyzeMeal(formData);
-      if (!result.ok) { setError(result.error); return; }
+      if (!result.ok) { setError(result.error); setAccess(result.access); return; }
       setDraft({
         items: result.analysis.items.map(toDraftItem),
         clarifications: result.analysis.clarifications,
@@ -289,7 +294,7 @@ export function AddMealFlow({
       return <main className="addflow">
         <h1>Что вы ели?</h1>
         <PlateInput showCalories={showCalories} busy={busy} onSave={(items) => void saveSimple(items)} />
-        {error && <p className="form-error">{error}</p>}
+        {error && <AccessError error={error} access={access} />}
         {/* Выход в подробный режим на один раз: упрощённый — не запрет, а
             умолчание. Иногда человек хочет записать точно, и заставлять его
             лезть в настройки ради одной записи незачем. */}
@@ -313,7 +318,7 @@ export function AddMealFlow({
               <img src={`/api/photos/${inbox.photoKey}`} alt="Снимок еды из инбокса" />
               {inbox.note && <p className="addflow-hint">Ваша подпись: «{inbox.note}»</p>}
             </div>}
-        {error && <p className="form-error">{error}</p>}
+        {error && <AccessError error={error} access={access} />}
         <div className="addflow-actions">
           <button className="black-button" onClick={handleAnalyze} disabled={busy}>{busy ? "Разбираем…" : "Разобрать"}</button>
           <a className="link-button" href="/app/inbox">← В инбокс</a>
@@ -370,7 +375,7 @@ export function AddMealFlow({
             <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Комментарий к фото (необязательно)" />
           </div>}
 
-      {error && <p className="form-error">{error}</p>}
+      {error && <AccessError error={error} access={access} />}
       <div className="addflow-actions">
         <button className="black-button" onClick={handleAnalyze} disabled={busy}>{busy ? "Разбираем…" : "Разобрать"}</button>
         <button className="link-button" onClick={startManual} disabled={busy}>Заполнить вручную</button>
@@ -456,10 +461,10 @@ export function AddMealFlow({
       <label>Время<input type="time" value={time} onChange={(e) => setTime(e.target.value)} /></label>
     </div>
 
-    {error && <p className="form-error">{error}</p>}
+    {error && <AccessError error={error} access={access} />}
     <div className="addflow-actions">
       <button className="black-button" onClick={handleSave} disabled={busy}>{busy ? "Сохраняем…" : "Сохранить"}</button>
-      <button className="link-button" onClick={() => { setDraft(null); setError(null); }} disabled={busy}>← Назад</button>
+      <button className="link-button" onClick={() => { setDraft(null); setError(null); setAccess(undefined); }} disabled={busy}>← Назад</button>
     </div>
   </main>;
 }

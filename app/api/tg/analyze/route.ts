@@ -1,5 +1,6 @@
 import { ANALYSIS_ERRORS, getMealProvider, MealAnalysisError } from "@/lib/ai";
 import { getPendingItem } from "@/lib/inbox";
+import { accessOffer } from "@/lib/payments/access-links";
 import { checkQuota, quotaMessage, recordUsage } from "@/lib/quota";
 import {
   ALLOWED_PHOTO_TYPES,
@@ -22,7 +23,14 @@ export async function POST(request: Request) {
   // месяц или оплата) и не исчерпан ли дневной лимит у того, у кого открыт.
   const operation = mode === "text" ? "analyze_text" : "analyze_photo";
   const decision = await checkQuota(auth.user.id, auth.user.plan, operation);
-  if (!decision.allowed) return Response.json({ error: quotaMessage(decision) }, { status: 429 });
+  if (!decision.allowed) {
+    // Кнопка оплаты едет вместе с текстом: экран, показавший отказ, —
+    // единственное место, где человек прямо сейчас готов заплатить.
+    return Response.json(
+      { error: quotaMessage(decision), access: accessOffer(decision, auth.user.id) },
+      { status: 429 },
+    );
+  }
 
   let photoKey: string | null = null;
 

@@ -1,5 +1,6 @@
 "use client";
 
+import type { AccessOffer } from "@/lib/paid";
 import type { StreakResult } from "@/lib/streak";
 import { getWebApp } from "./telegram.ts";
 
@@ -84,7 +85,16 @@ export async function markHints(hints: string[]): Promise<void> {
   }
 }
 
-export type ApiFailure = { reason: "not_linked" | "invalid_signature" | "not_configured" | "error"; message?: string };
+export type ApiFailure = {
+  reason: "not_linked" | "invalid_signature" | "not_configured" | "error";
+  message?: string;
+  /**
+   * Предложение оплаты, если отказ был про закрытый доступ. Приходит с
+   * сервера готовым: в ссылке подписанная метка человека, а подпись ставится
+   * там, где живёт секрет (lib/payments/tribute.ts).
+   */
+  access?: AccessOffer;
+};
 
 export class ApiError extends Error {
   readonly failure: ApiFailure;
@@ -165,7 +175,14 @@ async function handle<T>(response: Response): Promise<T> {
   if (reason === "not_linked" || reason === "invalid_signature" || reason === "not_configured") {
     throw new ApiError({ reason });
   }
-  throw new ApiError({ reason: "error", message: typeof payload.error === "string" ? payload.error : undefined });
+  throw new ApiError({
+    reason: "error",
+    message: typeof payload.error === "string" ? payload.error : undefined,
+    // Отказ «пробный месяц закончился» несёт с собой кнопку оплаты. Без неё
+    // экран показывал бы текст, отправляющий человека искать раздел
+    // настроек, — ровно в тот момент, когда он готов заплатить.
+    access: (payload.access ?? undefined) as AccessOffer | undefined,
+  });
 }
 
 export async function fetchToday(): Promise<TodayResponse> {

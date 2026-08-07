@@ -17,6 +17,7 @@ import { MealEditor } from "./meal-editor";
 import { PlanTab } from "./plan-tab";
 import { ProfileTab } from "./profile-tab";
 import { TodayTab } from "./today-tab";
+import { ACCESS_ANCHOR } from "@/lib/paid";
 import { applyTheme, getWebApp, haptic, useBackButton } from "./telegram";
 
 // Пять вкладок раздела «Пять вкладок» спецификации Mini App v2 (docs/miniapp-v2.md).
@@ -34,7 +35,19 @@ const TABS: Array<{ key: Tab; label: string; Icon: (props: { active?: boolean })
 
 export default function MiniApp() {
   const [status, setStatus] = useState<Status>("loading");
-  const [tab, setTab] = useState<Tab>("today");
+  /**
+   * Стартовая вкладка — «Сегодня», кроме одного случая: бот прислал ссылку с
+   * якорем `#dostup`, то есть человек нажал «Открыть тариф».
+   *
+   * Без этого кнопка про оплату открывала Mini App как есть — на «Сегодня», —
+   * и до раздела «Доступ» оставалось ещё два тапа и ни одного указателя.
+   * Читаем в инициализаторе, а не эффектом: лишний проход рендера здесь виден
+   * глазом, вкладка успевает мигнуть.
+   */
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "today";
+    return window.location.hash === `#${ACCESS_ANCHOR}` ? "profile" : "today";
+  });
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [firstName, setFirstName] = useState<string | null>(null);
   // Инбокс в v2 — не вкладка, а экран, на который можно перейти строкой с
@@ -106,6 +119,19 @@ export default function MiniApp() {
    */
   const handleDraft = useCallback((discard: (() => void) | null) => {
     setDiscardDraft(() => discard);
+  }, []);
+
+  /**
+   * Уйти в «Доступ» с экрана, где отказали в разборе.
+   *
+   * Раздел живёт на вкладке профиля, а переключение вкладок принадлежит
+   * оболочке: отдать это самой «Камере» значило бы завести второе место,
+   * знающее про устройство навигации.
+   */
+  const openAccess = useCallback(() => {
+    setInboxOpen(false);
+    setInboxItem(null);
+    setTab("profile");
   }, []);
 
   /**
@@ -385,6 +411,7 @@ export default function MiniApp() {
             onCancelInbox={() => { setInboxItem(null); setInboxOpen(true); }}
             onSaved={handleCameraSaved}
             onDraft={handleDraft}
+            onOpenAccess={openAccess}
           />
         : inboxOpen
         ? <InboxTab onPick={(item) => { haptic("tap"); setInboxItem(item); }} onBack={() => setInboxOpen(false)} />
@@ -439,6 +466,7 @@ export default function MiniApp() {
               forDay={cameraFrom.day}
               onSaved={handleCameraSaved}
               onDraft={handleDraft}
+              onOpenAccess={openAccess}
             />}
             {tab === "plan" && <PlanTab showCalories={today.showCalories} />}
             {tab === "profile" && <ProfileTab onInvite={() => { haptic("tap"); setSharing(""); }} />}
