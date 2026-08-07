@@ -42,24 +42,54 @@ const MAP = [
   { file: "ChatGPT Image 4 авг. 2026 г., 08_49_44 (5).png", slug: "dnevnik-pitaniya-v-telegram" },
   { file: "ChatGPT Image 4 авг. 2026 г., 08_49_44 (2).png", slug: "pochemu-diapazon-chestnee-tochnogo-chisla" },
   { file: "ChatGPT Image 4 авг. 2026 г., 08_49_44 (1).png", slug: "norma-kalorij-kotoraya-uchitsya" },
+  { file: "ChatGPT Image 7 авг. 2026 г., 07_02_42.png", slug: "myagkaya-disciplina-dlya-tela" },
 ];
 
+/**
+ * Иллюстрации внутри статей. Отдельно от обложек, потому что размер другой:
+ * фигура в тексте шире 760 px не показывается никогда (колонка статьи), и
+ * полуторатысячный файл здесь — чистый вес страницы.
+ *
+ * Имя задаётся руками: у фигуры нет слага, зато есть смысл, и `sreda`
+ * читается в разметке лучше, чем `figure-3`.
+ */
+const FIGURES = [
+  { file: "ChatGPT Image 7 авг. 2026 г., 07_01_47.png", name: "privychka-shagi" },
+  { file: "ChatGPT Image 7 авг. 2026 г., 07_04_49.png", name: "sreda-ugolok" },
+  { file: "ChatGPT Image 7 авг. 2026 г., 07_05_23.png", name: "nedelya-tochki" },
+];
+
+/**
+ * Обложки кадрируются в 16:9, а не масштабируются как есть.
+ *
+ * Генератор отдаёт что 16:9, что 4:3 — и статья с обложкой 4:3 занимала
+ * первым экраном на 140 px больше соседних. На одной странице это незаметно,
+ * в хабе рядом — сразу видно, что сетка «дышит». Кадрирование по центру
+ * дешевле, чем просить перерисовать.
+ */
 const SIZES = [
-  { suffix: "", width: 1600, quality: 80 },
-  { suffix: "-card", width: 800, quality: 78 },
+  { suffix: "", width: 1600, height: 900, quality: 80 },
+  { suffix: "-card", width: 800, height: 450, quality: 78 },
 ];
 
 await mkdir(out, { recursive: true });
 
+async function convert(source, name, resize, quality) {
+  const file = resolve(out, name);
+  await sharp(resolve(from, source)).resize(resize).webp({ quality }).toFile(file);
+  const meta = await sharp(file).metadata();
+  console.log(`  ok   public/blog/${name} — ${meta.width}×${meta.height}, ${Math.round((meta.size ?? 0) / 1024)} КБ`);
+}
+
 for (const item of MAP) {
   for (const size of SIZES) {
-    const name = `hero-${item.slug}${size.suffix}.webp`;
-    const file = resolve(out, name);
-    await sharp(resolve(from, item.file))
-      .resize({ width: size.width })
-      .webp({ quality: size.quality })
-      .toFile(file);
-    const { width, height, size: bytes } = await sharp(file).metadata();
-    console.log(`  ok   public/blog/${name} — ${width}×${height}, ${Math.round((bytes ?? 0) / 1024)} КБ`);
+    const resize = { width: size.width, height: size.height, fit: "cover", position: "centre" };
+    await convert(item.file, `hero-${item.slug}${size.suffix}.webp`, resize, size.quality);
   }
+}
+
+// Фигуры внутри статьи кадрировать нельзя: у схемы обрезка съест стрелку, у
+// снимка — половину сюжета. Здесь только ширина, пропорции родные.
+for (const figure of FIGURES) {
+  await convert(figure.file, `${figure.name}.webp`, { width: 1400 }, 80);
 }

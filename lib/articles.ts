@@ -55,6 +55,38 @@ export type Article = {
 
 export const ARTICLES: Article[] = [
   {
+    slug: "myagkaya-disciplina-dlya-tela",
+    kicker: "Привычки",
+    title: "Мотивация кончается на третий день. Что работает вместо неё",
+    titleShort: "Мотивация кончается на третий день",
+    description:
+      "Сила воли зависит от сна, погоды и настроения — фундамент так себе. Откуда взялся миф про 21 день, что делать после сорванного дня и с чего начать сегодня.",
+    lead:
+      "Абонемент куплен, коврик развёрнут, в заметках план на месяц. К среде всё это лежит " +
+      "под кроватью, и появляется знакомая мысль: «у меня просто нет силы воли». Мысль " +
+      "неверная — неудачно выбран фундамент.",
+    published: "2026-08-07",
+    minutes: 7,
+    updated: "2026-08-07",
+    sources: [
+      {
+        title: "Lally P. et al. How are habits formed: Modelling habit formation in the real world (2010)",
+        url: "https://onlinelibrary.wiley.com/doi/10.1002/ejsp.674",
+      },
+      {
+        title: "Gardner B., Lally P., Wardle J. Making health habitual (BJGP, 2012)",
+        url: "https://bjgp.org/content/62/605/664",
+      },
+      {
+        title: "Lin H. et al. Making Specific Plan Improves Physical Activity and Healthy Eating (2022)",
+        url: "https://pubmed.ncbi.nlm.nih.gov/35664117/",
+      },
+    ],
+    heroImage: "/blog/hero-myagkaya-disciplina-dlya-tela.webp",
+    heroAlt:
+      "Вид сверху на стол: свёрнутый плед, кроссовки, коврик, стакан воды, тарелка с крупой и овощами, блокнот, а баночка добавок стоит сбоку",
+  },
+  {
     slug: "kak-ustroen-dnevnik-po-foto",
     kicker: "Продукт",
     title: "Как устроен дневник по фото: от снимка тарелки до состава",

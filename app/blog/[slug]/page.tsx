@@ -11,6 +11,7 @@ import Sravnenie from "../content/sravnenie-prilozhenij-dlya-podscheta-kalorij";
 import Telegram from "../content/dnevnik-pitaniya-v-telegram";
 import Diapazon from "../content/pochemu-diapazon-chestnee-tochnogo-chisla";
 import Norma from "../content/norma-kalorij-kotoraya-uchitsya";
+import Disciplina from "../content/myagkaya-disciplina-dlya-tela";
 
 /**
  * Тексты статей — компоненты, а не markdown: им нужны скриншоты с
@@ -24,6 +25,7 @@ const CONTENT: Record<string, () => React.ReactElement> = {
   "dnevnik-pitaniya-v-telegram": Telegram,
   "pochemu-diapazon-chestnee-tochnogo-chisla": Diapazon,
   "norma-kalorij-kotoraya-uchitsya": Norma,
+  "myagkaya-disciplina-dlya-tela": Disciplina,
 };
 
 type Params = { params: Promise<{ slug: string }> };
@@ -80,11 +82,17 @@ export default async function ArticlePage({ params }: Params) {
         отдельной страницей, числа взяты из кода, источники названы. */}
     <section className="blog-byline">
       <h2>Кто это написал</h2>
+      {/* Формулировка была «все числа в статье взяты из работающего кода» —
+          верная, пока журнал состоял из текстов про нашу же механику. Первая
+          статья не про продукт (про привычки) сделала её неправдой: числа там
+          из чужих работ. Утверждение теперь ровно такое, каким может быть для
+          любой статьи, а внешнее подпирается списком источников ниже. */}
       <p>
         Текст подготовила редакция «Живого Тела» — команда, которая делает сам сервис.
-        Все числа в статье взяты из работающего кода, а не из общих соображений: методика
-        расчётов открыта целиком на странице <Link href="/kak-schitaem">«Как мы считаем»</Link>,
-        и любую цифру отсюда можно сверить с ней.
+        Числа нашего сервиса берутся в статьях из работающего кода, а не из общих
+        соображений: методика расчётов открыта целиком на странице{" "}
+        <Link href="/kak-schitaem">«Как мы считаем»</Link>, и любую такую цифру можно сверить
+        с ней.{article.sources.length > 0 && " Всё, что взято извне, названо в источниках."}
       </p>
       <p className="blog-byline-dates">
         Опубликовано {formatArticleDate(article.published)}
