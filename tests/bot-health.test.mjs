@@ -65,3 +65,38 @@ test("опрос без единого удачного запроса — не 
   assert.equal(verdict.ok, false);
   assert.match(verdict.text, /ни один запрос/);
 });
+
+// ===== Взгляд со стороны Telegram =====
+//
+// Добавлено после того, как страница дважды соврала о собственном процессе:
+// сначала читая память из чужого бандла, потом читая process.env, вшитый при
+// сборке. Очередь на стороне Telegram обмануть эти два дефекта не могут.
+
+test("копящаяся очередь без вебхука — поломка, что бы мы о себе ни думали", () => {
+  // Ровно то, что показала админка на боевом: вебхука нет, сообщение висит,
+  // а наше состояние пустое, потому что писать его было некому.
+  const verdict = botVerdict(NOW, state({ transport: null, lastPollAt: null }), {
+    webhookUrl: null,
+    pending: 1,
+  });
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.text, /getUpdates никто не вызывает/);
+  // И отдельно — что канал до Telegram при этом рабочий: сам факт ответа
+  // getWebhookInfo это доказывает, и вывод обязан это назвать.
+  assert.match(verdict.text, /Токен и канал до Bot API при этом рабочие/);
+});
+
+test("очередь при живом опросе поломкой не считается", () => {
+  // Сообщения могли прийти секунду назад и ещё не быть забранными.
+  const verdict = botVerdict(NOW, state(), { webhookUrl: null, pending: 3 });
+  assert.equal(verdict.ok, true);
+});
+
+test("очередь при зарегистрированном вебхуке — не наш случай", () => {
+  // Тут забирать должен Telegram, и вывод про getUpdates был бы неверным.
+  const verdict = botVerdict(NOW, state({ transport: "webhook", lastPollAt: null }), {
+    webhookUrl: "https://jivoetelo.ru/api/tg/webhook",
+    pending: 5,
+  });
+  assert.doesNotMatch(verdict.text, /getUpdates никто не вызывает/);
+});

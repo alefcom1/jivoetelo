@@ -25,8 +25,13 @@ import { botToken, createTelegramClient } from "@/lib/telegram-api";
  *
  * Из трёх мест, и это не усложнение, а необходимость.
  *
- * `process.env` — прямо здесь: переменные общие на весь процесс, и «задан ли
- * токен» страница знает точно.
+ * Переменные окружения — **через функции из lib**, а не чтением `process.env`
+ * прямо здесь. Первая версия читала здесь, и страница печатала «токен ПУСТ»
+ * при рабочем токене: Next вшивает `process.env.X` из кода страницы на этапе
+ * сборки, а сборка в Docker идёт без .env. В собранном чанке страницы имени
+ * переменной не остаётся вовсе — это видно грепом по .next/server. Функции из
+ * lib (`botToken`, `botTransport`) читают окружение в рантайме, и берут они
+ * ровно то же, что берёт сам бот.
  *
  * `getWebhookInfo` — живым запросом через тот же клиент и тот же прокси, что и
  * весь бот: если канал до Telegram лежит, это видно тут же, отдельной проверки
@@ -81,20 +86,23 @@ export default async function AdminBotPage() {
   const { info, error } = webhook;
   const configured = botTransport();
 
-  // Переменные окружения читаем здесь, а не берём из записи: они общие на весь
-  // процесс и всегда актуальны, тогда как строка в базе — снимок на момент
-  // старта. Если .env правили после запуска, расхождение и есть ответ.
+  // Окружение читаем сейчас, а транспорт — из записи о старте. Расхождение
+  // между ними и есть ответ: значит .env правили после запуска контейнера.
   const state: BotState = {
     transport: stored?.transport ?? null,
-    hasToken: Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim()),
-    hasApiBase: Boolean(process.env.TELEGRAM_API_BASE?.trim()),
+    // Через те же функции, что зовёт бот: собственное чтение process.env в
+    // коде страницы Next вшивает при сборке и оно всегда пустое.
+    hasToken: botToken() !== null,
+    // TELEGRAM_API_BASE ровно тем и управляет, какой транспорт выберется:
+    // «опрос» означает «прокси задан», и отдельно щупать переменную незачем.
+    hasApiBase: configured === "polling",
     startedAt: stored?.startedAt ?? null,
     lastPollAt: stored?.lastPollAt ?? null,
     lastUpdateAt: stored?.lastUpdateAt ?? null,
     lastError: stored?.lastError ?? null,
     notStartedReason: stored?.notStartedReason ?? null,
   };
-  const verdict = botVerdict(now, state);
+  const verdict = botVerdict(now, state, info ? { webhookUrl: info.url || null, pending: info.pending_update_count ?? 0 } : null);
 
   return <div className="adm-page">
     <h1 className="adm-title">Бот</h1>

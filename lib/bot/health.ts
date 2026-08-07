@@ -100,7 +100,39 @@ export function botState(): BotState {
  * сбоя — минута (MAX_BACKOFF_MS). Три минуты без ответа означают, что цикл
  * не просто ждёт, а действительно застрял.
  */
-export function botVerdict(now: Date, current: BotState = botState()): { ok: boolean; text: string } {
+export function botVerdict(
+  now: Date,
+  current: BotState = botState(),
+  /**
+   * То, что видит сам Telegram. Приоритетнее нашего состояния, и это не
+   * педантизм.
+   *
+   * Первая версия судила только по памяти процесса — и ошиблась дважды подряд:
+   * модуль состояния попал в два бандла (см. health-store.ts), а `process.env`
+   * в коде страницы Next вшил на этапе сборки, из-за чего «токен ПУСТ»
+   * печаталось при работающем токене. Оба раза страница уверенно говорила
+   * неправду о собственном процессе.
+   *
+   * А вот очередь на стороне Telegram соврать не может: если там лежат
+   * сообщения и вебхука нет, значит `getUpdates` никто не зовёт. Этот вывод
+   * не зависит ни от бандлов, ни от того, что мы о себе помним.
+   */
+  telegram?: { webhookUrl: string | null; pending: number } | null,
+): { ok: boolean; text: string } {
+  // Очередь копится, а забирать её некому — самый надёжный признак поломки.
+  if (telegram && !telegram.webhookUrl && telegram.pending > 0) {
+    const stale = !current.lastPollAt || now.getTime() - current.lastPollAt.getTime() > 3 * 60_000;
+    if (stale) {
+      return {
+        ok: false,
+        text:
+          `Telegram держит ${telegram.pending} непрочитанных сообщений, вебхук не зарегистрирован — `
+          + "значит getUpdates никто не вызывает. Токен и канал до Bot API при этом рабочие: "
+          + "этот самый запрос через них и прошёл. Остаётся приложение: цикл опроса не поднялся.",
+      };
+    }
+  }
+
   if (current.notStartedReason) return { ok: false, text: current.notStartedReason };
   if (!current.transport) {
     return {
