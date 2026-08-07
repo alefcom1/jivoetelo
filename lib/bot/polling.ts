@@ -24,6 +24,7 @@
 import { networkDetail } from "../ai/failure.ts";
 import { handleUpdate } from "./handle-update.ts";
 import { botLinks } from "./links.ts";
+import { registerBotUi } from "./register-ui.ts";
 import { botStore, botTranscriber } from "./store.ts";
 import { noteBotError, noteBotNotStarted, noteBotStart, notePollOk, setBotProblemSink } from "./health.ts";
 import { recordBotError, recordBotNotStarted, recordBotStart, recordPoll } from "./health-store.ts";
@@ -90,6 +91,8 @@ export function startPolling(): void {
     } catch (error) {
       console.error("[bot] не удалось снять вебхук перед опросом:", error);
     }
+
+    await registerBotUi(client, botLinks(), paymentsEnabled());
 
     for (;;) {
       try {

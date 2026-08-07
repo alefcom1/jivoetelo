@@ -52,15 +52,16 @@ if (command === "set") {
   });
   console.log(`  ok   вебхук зарегистрирован: ${webhookUrl}`);
 
-  await call("setMyCommands", {
-    commands: [
-      { command: "start", description: "Как всё устроено" },
-      { command: "app", description: "Открыть дневник" },
-      { command: "help", description: "Что я умею" },
-      { command: "stop", description: "Выключить напоминания" },
-    ],
-  });
-  console.log("  ok   команды бота заданы.");
+  // Список берём из lib/bot/menu.ts, а не переписываем здесь. Своя копия у
+  // этого скрипта уже была, и она отстала: бот отвечал на семь команд, а по
+  // косой черте показывались четыре — те, что записали при первой настройке.
+  //
+  // Приём оплаты здесь считаем выключенным: скрипт не читает конфигурацию
+  // платежей, а приложение при запуске всё равно перезапишет список тем,
+  // что видит само (lib/bot/register-ui.ts).
+  const { botCommands } = await import("../lib/bot/menu.ts");
+  await call("setMyCommands", { commands: botCommands(false) });
+  console.log(`  ok   команды бота заданы: ${botCommands(false).length} шт.`);
 
   // Синяя кнопка «Открыть приложение» рядом со строкой ввода. Без неё Mini
   // App попросту неоткуда запустить: бот отвечает на сообщения, но входа в

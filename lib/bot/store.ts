@@ -150,6 +150,35 @@ export const botStore: BotStore = {
       .limit(1);
     return effectivePlan(rows[0]?.accessUntil ?? null, new Date());
   },
+
+  /**
+   * Состояние для экрана настроек — одним запросом с левым соединением.
+   *
+   * Строки настроек может не быть вовсе: она заводится лениво, при первой
+   * правке. Отсутствие строки означает умолчания, а не «выключено», —
+   * поэтому COALESCE с теми же значениями, что стоят в схеме
+   * (db/schema.ts, bot_preferences). Вернуть здесь false значило бы показать
+   * «напоминания выключены» человеку, которому они приходят.
+   */
+  async settings(userId) {
+    const rows = await getDb()
+      .select({
+        accessUntil: users.accessUntil,
+        reminders: sql<boolean>`coalesce(${botPreferences.remindersEnabled}, true)`,
+        weighReminders: sql<boolean>`coalesce(${botPreferences.weighRemindersEnabled}, true)`,
+      })
+      .from(users)
+      .leftJoin(botPreferences, eq(botPreferences.userId, users.id))
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const row = rows[0];
+    return {
+      reminders: row?.reminders ?? true,
+      weighReminders: row?.weighReminders ?? true,
+      plan: effectivePlan(row?.accessUntil ?? null, new Date()),
+    };
+  },
 };
 
 /** Режим «скрыть калории»: итог дня обязан его уважать так же, как экраны. */

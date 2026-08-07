@@ -86,8 +86,26 @@ export type InlineKeyboardButton =
   | { text: string; url: string }
   | { text: string; web_app: { url: string } };
 
+/**
+ * Постоянная клавиатура под строкой ввода — не путать с кнопками под
+ * сообщением. Нажатие приходит обычным сообщением с текстом надписи, а не
+ * `callback_query`, поэтому разбирается там же, где остальной текст
+ * (lib/bot/menu.ts). Ссылок такие кнопки не умеют: только текст, `web_app` и
+ * запросы контакта.
+ */
+export type ReplyKeyboardMarkup = {
+  keyboard: Array<Array<{ text: string } | { text: string; web_app: { url: string } }>>;
+  resize_keyboard?: boolean;
+  is_persistent?: boolean;
+  input_field_placeholder?: string;
+};
+
 export type SendMessageOptions = {
-  replyMarkup?: { inline_keyboard: InlineKeyboardButton[][] };
+  /**
+   * Либо кнопки под сообщением, либо постоянная клавиатура: у сообщения одно
+   * поле `reply_markup`, и передать оба Telegram не даст.
+   */
+  replyMarkup?: { inline_keyboard: InlineKeyboardButton[][] } | ReplyKeyboardMarkup;
   /** Telegram по умолчанию разворачивает ссылки — в напоминаниях это лишний шум. */
   disablePreview?: boolean;
   /**

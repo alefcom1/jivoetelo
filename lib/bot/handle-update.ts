@@ -21,6 +21,7 @@ import { daySummaryText, weightSavedText, type DaySummaryInput } from "./day-sum
 import { inlineResults } from "./inline.ts";
 import { inboxButton, openAppButton, planButton, premiumButton, type BotLinks } from "./links.ts";
 import { sendWelcome } from "./media.ts";
+import { commandFromLabel, mainKeyboard } from "./menu.ts";
 import { parseWeightMessage, MAX_WEIGHT_KG, MIN_WEIGHT_KG } from "./weight-message.ts";
 import {
   ANSWERS,
@@ -31,6 +32,8 @@ import {
   photoSavedText,
   PHOTO,
   PREMIUM,
+  SETTINGS,
+  settingsText,
   TEXT_LOOKS_LIKE_FOOD,
   UNSUPPORTED,
   VOICE,
@@ -146,6 +149,19 @@ export type BotStore = {
   plan(userId: number): Promise<"free" | "premium">;
   /** Выключить утренние напоминания о весе — отдельно от вечерних. */
   setWeighRemindersEnabled(userId: number, enabled: boolean): Promise<void>;
+  /**
+   * Что показывать на экране настроек.
+   *
+   * Необязательный по той же причине, что и rememberInvite: сценарии бота
+   * проверяются на поддельном хранилище, и требовать этот метод от каждой
+   * заглушки значило бы ломать проверки, к настройкам отношения не имеющие.
+   * Без него /settings честно отвечает, что состояние сейчас не прочитать.
+   */
+  settings?(userId: number): Promise<{
+    reminders: boolean;
+    weighReminders: boolean;
+    plan: "free" | "premium";
+  }>;
 };
 
 export type BotDeps = {
@@ -203,6 +219,11 @@ export { photoSavedText } from "./texts.ts";
 
 function inboxKeyboard(links: BotLinks): { inline_keyboard: InlineKeyboardButton[][] } {
   return { inline_keyboard: [[inboxButton(links)]] };
+}
+
+/** Постоянная клавиатура под строкой ввода — состав зависит от приёма оплаты. */
+function menu(deps: BotDeps) {
+  return mainKeyboard(deps.links, Boolean(deps.paymentsEnabled));
 }
 
 /** Клавиатура вечернего дайджеста: разобрать или замолчать на несколько дней. */
@@ -265,11 +286,42 @@ async function handleCallback(update: TelegramUpdate, deps: BotDeps): Promise<vo
     return;
   }
 
+  const chatId = query.message?.chat?.id ?? telegramUserId;
+
   if (query.data === "snooze") {
     await deps.store.snoozeReminders(user.id, snoozeUntil(deps.now));
     await deps.client.answerCallbackQuery(query.id).catch(() => {});
-    const chatId = query.message?.chat?.id ?? telegramUserId;
     await say(deps.client, chatId, TEXTS.snoozed);
+    return;
+  }
+
+  // Переключатели с экрана настроек. Отвечаем подтверждением и присылаем
+  // экран заново: без него человек видит прежние надписи на кнопках и не
+  // понимает, применилось ли нажатие.
+  const toggles: Record<string, { apply: () => Promise<void>; text: string }> = {
+    "rem:on": {
+      apply: () => deps.store.setRemindersEnabled(user.id, true),
+      text: SETTINGS.savedRemindersOn,
+    },
+    "rem:off": {
+      apply: () => deps.store.setRemindersEnabled(user.id, false),
+      text: SETTINGS.savedRemindersOff,
+    },
+    "weigh:on": {
+      apply: () => deps.store.setWeighRemindersEnabled(user.id, true),
+      text: SETTINGS.savedWeighOn,
+    },
+    "weigh:off": {
+      apply: () => deps.store.setWeighRemindersEnabled(user.id, false),
+      text: SETTINGS.savedWeighOff,
+    },
+  };
+
+  const toggle = query.data ? toggles[query.data] : undefined;
+  if (toggle) {
+    await toggle.apply();
+    await deps.client.answerCallbackQuery(query.id, toggle.text).catch(() => {});
+    await sendSettings(String(telegramUserId), chatId, deps);
     return;
   }
 
@@ -283,7 +335,12 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
   if (!message || !telegramUserId || !chatId) return;
 
   const tgId = String(telegramUserId);
-  const text = (message.text ?? "").trim();
+  // Нажатие на кнопку постоянной клавиатуры приходит обычным сообщением с
+  // текстом надписи — отдельного признака у него нет. Переводим в команду
+  // здесь, одной строкой, и дальше всё идёт прежними ветками: заводить второй
+  // набор обработчиков для тех же действий значило бы, что кнопка и команда
+  // однажды станут отвечать по-разному.
+  const text = commandFromLabel((message.text ?? "").trim());
 
   // Фото — основной сценарий, поэтому проверяется первым.
   const photo = pickPhotoSize(message.photo, MAX_BOT_PHOTO_BYTES);
@@ -369,8 +426,11 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     return;
   }
 
+  // Справка — единственное место, где клавиатура приходит гарантированно:
+  // приветствие занято своей кнопкой, а «Помощь» человек нажимает как раз
+  // тогда, когда не понимает, что делать. Пусть после неё появляются кнопки.
   if (text === "/help") {
-    await say(deps.client, chatId, ANSWERS.help);
+    await say(deps.client, chatId, ANSWERS.help, { replyMarkup: menu(deps) });
     return;
   }
 
@@ -379,6 +439,15 @@ async function handleMessage(update: TelegramUpdate, deps: BotDeps): Promise<voi
     return;
   }
 
+  // Кнопка «Записать вес» ничего не записывает — она объясняет как. Диалог с
+  // ожиданием следующего сообщения потребовал бы помнить состояние между
+  // апдейтами ради действия, которое и так делается одним числом.
+  if (text === "/weight") {
+    await say(deps.client, chatId, ANSWERS.weightHow);
+    return;
+  }
+
+  if (text === "/settings") return await sendSettings(tgId, chatId, deps);
   if (text === "/day") return await sendDaySummary(tgId, chatId, deps);
   if (text === "/invite") return await sendInvite(tgId, chatId, deps);
   if (text === "/premium") return await sendPremium(tgId, chatId, deps);
@@ -524,6 +593,59 @@ async function saveWeight(
     replyMarkup: { inline_keyboard: [[openAppButton(deps.links)]] },
     disablePreview: true,
   });
+}
+
+/**
+ * Настройки в чате.
+ *
+ * Показываем состояние, а не голые кнопки «выключить»: человек открывает этот
+ * экран, когда бот написал не вовремя, и первое, что ему нужно, — понять, что
+ * вообще включено. Кнопка «Выключить напоминания» при уже выключенных
+ * напоминаниях — это ответ на вопрос, которого не задавали.
+ */
+async function sendSettings(tgId: string, chatId: number, deps: BotDeps): Promise<void> {
+  const user = await deps.store.findUserByTelegram(tgId);
+  if (!user) {
+    await say(deps.client, chatId, SETTINGS.needAccount, { replyMarkup: menu(deps) });
+    return;
+  }
+
+  // Без чтения состояния экран настроек соврал бы про переключатели, а
+  // молчаливо соврать хуже, чем честно отправить в приложение.
+  if (!deps.store.settings) {
+    await say(deps.client, chatId, ANSWERS.reminders, {
+      replyMarkup: { inline_keyboard: [[openAppButton(deps.links)]] },
+    });
+    return;
+  }
+
+  const state = await deps.store.settings(user.id);
+  await say(deps.client, chatId, settingsText(state), {
+    replyMarkup: { inline_keyboard: settingsButtons(state, deps.links) },
+    disablePreview: true,
+  });
+}
+
+/**
+ * Кнопки настроек. Надпись называет действие, а не состояние: «Выключить
+ * напоминания» однозначно, а «Напоминания» рядом с галочкой каждый читает
+ * по-своему — одни как «включено», другие как «нажми, чтобы включить».
+ */
+function settingsButtons(
+  state: { reminders: boolean; weighReminders: boolean },
+  links: BotLinks,
+): InlineKeyboardButton[][] {
+  return [
+    [{
+      text: state.reminders ? "🔕 Выключить напоминания" : "🔔 Включить напоминания",
+      callback_data: state.reminders ? "rem:off" : "rem:on",
+    }],
+    [{
+      text: state.weighReminders ? "🔕 Не напоминать про весы" : "⚖️ Напоминать про весы",
+      callback_data: state.weighReminders ? "weigh:off" : "weigh:on",
+    }],
+    [openAppButton(links)],
+  ];
 }
 
 /** Личная ссылка приглашения. Без аккаунта её неоткуда взять. */
