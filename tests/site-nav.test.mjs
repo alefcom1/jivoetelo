@@ -137,9 +137,16 @@ async function publicPages(dir = new URL("../app/", import.meta.url), prefix = "
 test("каждая публичная страница доступна из меню — иначе она есть только в поиске", async () => {
   // Ровно эта проверка нашла три расчёта (калории, белок, темп), которые в
   // меню не попали: люди приходили на них из поиска и не могли уйти дальше.
-  const reachable = new Set(
-    NAV_SECTIONS.filter(hasLinks).flatMap((s) => s.links.map((l) => l.href.split("#")[0])),
-  );
+  // Считаем оба вида входа: ссылки внутри панелей и пункты-ссылки рядом с
+  // ними. Раньше учитывались только панели, и страница, доступная прямым
+  // пунктом меню, считалась недоступной. `/blog` это не поймал случайно —
+  // он продублирован и в панели «Продукт»; у «О проекте» дубля не было, и
+  // тест потребовал бы занести живую ссылку в список исключений, то есть
+  // ровно наоборот тому, ради чего он написан.
+  const reachable = new Set([
+    ...NAV_SECTIONS.filter(hasLinks).flatMap((s) => s.links.map((l) => l.href.split("#")[0])),
+    ...NAV_SECTIONS.filter(isDirectLink).map((s) => s.href.split("#")[0]),
+  ]);
   const missing = (await publicPages())
     .filter((page) => page !== "/")
     .filter((page) => !reachable.has(page))
