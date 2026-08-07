@@ -16,7 +16,9 @@ const KEY = "70e2f956-c19c-4f6a-b6d8-d7f9e0d3";
 const CONFIG = {
   enabled: true,
   apiKey: KEY,
-  links: { month: "https://t.me/tribute/app?startapp=hBv5", year: "https://t.me/tribute/app?startapp=hBv7" },
+  // Настоящие ссылки веб-оплаты из кабинета — не входы в Mini App: к ним
+  // пришивается метка человека отдельным параметром запроса.
+  links: { month: "https://web.tribute.tg/p/Bw2", year: "https://web.tribute.tg/p/Bw4" },
   refSecret: KEY,
 };
 
