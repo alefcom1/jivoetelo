@@ -31,9 +31,10 @@ export async function analyzeMeal(formData: FormData): Promise<AnalyzeResult> {
 
   const mode = String(formData.get("mode") ?? "text");
 
-  // Лимит зависит от тарифа (PLAN_LIMITS): на бесплатном он проходит по
-  // обычному дню, на платном — заметно выше. Отказ не закрывает запись еды:
-  // ручной ввод ниже по этому же файлу квоту не спрашивает вовсе.
+  // Проверка решает два вопроса сразу: открыт ли доступ вообще — пробным
+  // месяцем или оплатой — и не исчерпан ли дневной лимит у того, у кого он
+  // открыт (PLAN_LIMITS). Отказ не закрывает запись еды: ручной ввод ниже по
+  // этому же файлу квоту не спрашивает вовсе, и это правило, а не случайность.
   const operation = mode === "text" ? "analyze_text" : "analyze_photo";
   const decision = await checkQuota(user.id, user.plan, operation);
   if (!decision.allowed) return { ok: false, error: quotaMessage(decision) };

@@ -40,7 +40,7 @@ export function GrantAccess({ personId, hasAccess }: { personId: number; hasAcce
       // Разные тексты на «сняли» и «нечего было снимать»: одинаковый ответ на
       // оба случая заставлял бы каждый раз перепроверять карточку глазами.
       setNote(result.ok
-        ? (result.had ? "Платный доступ закрыт, человек на бесплатном тарифе." : "Доступ и так был бесплатным.")
+        ? (result.had ? "Оплаченный срок снят." : "Оплаченного срока и не было.")
         : result.message);
     });
   }
@@ -55,9 +55,9 @@ export function GrantAccess({ personId, hasAccess }: { personId: number; hasAcce
       className="adm-revoke"
       disabled={busy || !hasAccess}
       onClick={revoke}
-      title={hasAccess ? undefined : "Платного доступа сейчас нет"}
+      title={hasAccess ? undefined : "Оплаченного срока сейчас нет"}
     >
-      Перевести на бесплатный
+      Снять оплаченный срок
     </button>
     {note && <span className="adm-muted">{note}</span>}
   </div>;

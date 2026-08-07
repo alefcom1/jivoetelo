@@ -68,6 +68,12 @@ export async function spentTodayUsd(): Promise<number> {
 export async function checkQuota(userId: number, plan: Plan, operation: AiOperation): Promise<QuotaDecision> {
   const limit = PLAN_LIMITS[plan][operation];
 
+  // Доступа нет — отвечаем сразу, до трёх запросов в базу. Не только ради
+  // скорости: у закрытого доступа лимит нулевой, и без этой ветки отказ
+  // пришёл бы с причиной «дневной лимит исчерпан, обновится завтра» — то
+  // есть с обещанием, которого никто не выполнит.
+  if (limit <= 0) return { allowed: false, reason: "no_access", operation };
+
   const recent = await getDb()
     .select({ id: aiUsage.id })
     .from(aiUsage)

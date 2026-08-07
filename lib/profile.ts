@@ -7,7 +7,7 @@ import { getDb } from "@/db";
 import { profiles, users, weightEntries } from "@/db/schema";
 import { listAwards, type EarnedAward } from "./awards-store.ts";
 import { getBotPreferences } from "./bot/store.ts";
-import { daysLeft, effectivePlan, TARIFFS, type TariffKey } from "./paid.ts";
+import { accessEndsAt, daysLeft, effectivePlan, hasPaidAccess, inTrial, TARIFFS, type TariffKey } from "./paid.ts";
 import { computePace, PACE_OPTIONS, type PaceKey, type PaceResult } from "./pace.ts";
 import { getTributeConfig, paymentLink } from "./payments/tribute.ts";
 import type { Plan } from "./quota-policy.ts";
@@ -85,8 +85,16 @@ export type ProfileData = {
   access: {
     plan: Plan;
     daysLeft: number;
-    /** ISO-дата окончания или null. */
+    /** ISO-дата окончания доступа — пробного или оплаченного. `null` — закрыт. */
     until: string | null;
+    /**
+     * Доступ открыт пробным месяцем, а не оплатой.
+     *
+     * Экрану это нужно, чтобы не сказать «у вас платный доступ» тому, кто
+     * ещё ничего не платил: он ждёт списания, которого не было, и первое же
+     * «доступ закончился» через месяц читается как обман.
+     */
+    trial: boolean;
     links: Array<{ key: TariffKey; label: string; priceRub: number; url: string }> | null;
   };
 };
@@ -99,13 +107,17 @@ export type ProfileData = {
  * этой функции сырые ссылки без метки было бы хуже, чем не возвращать ничего:
  * оплата прошла бы, а к кому её отнести — неизвестно.
  */
-function accessFor(userId: number, accessUntil: Date | null): ProfileData["access"] {
+function accessFor(userId: number, accessUntil: Date | null, createdAt: Date): ProfileData["access"] {
   const now = new Date();
   const config = getTributeConfig();
+  const until = accessEndsAt(accessUntil, createdAt, now);
   return {
-    plan: effectivePlan(accessUntil, now),
-    daysLeft: daysLeft(accessUntil, now),
-    until: accessUntil ? accessUntil.toISOString() : null,
+    plan: effectivePlan(accessUntil, createdAt, now),
+    daysLeft: daysLeft(accessUntil, createdAt, now),
+    // Дата окончания — общая, а не оплаченный срок: человеку важно, до
+    // какого числа работает разбор, а не по какой из двух причин.
+    until: until ? until.toISOString() : null,
+    trial: !hasPaidAccess(accessUntil, now) && inTrial(createdAt, now),
     links: config?.enabled
       ? TARIFFS.map((tariff) => ({
           key: tariff.key,
@@ -125,7 +137,7 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
   const db = getDb();
   const [userRows, profileRows, weightRows, preferences] = await Promise.all([
     db
-      .select({ email: users.email, telegramUserId: users.telegramUserId, accessUntil: users.accessUntil })
+      .select({ email: users.email, telegramUserId: users.telegramUserId, accessUntil: users.accessUntil, createdAt: users.createdAt })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1),
@@ -193,7 +205,7 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
     // человек ждёт увидеть почту.
     email: user?.email ?? null,
     telegramLinked: !!user?.telegramUserId,
-    access: accessFor(userId, user?.accessUntil ?? null),
+    access: accessFor(userId, user?.accessUntil ?? null, user?.createdAt ?? new Date()),
     goals,
     latestWeightKg,
     recentWeights: weightRows,

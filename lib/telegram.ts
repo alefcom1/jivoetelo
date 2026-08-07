@@ -25,7 +25,7 @@ const LINK_CODE_TTL_MINUTES = 15;
 /** Находит пользователя сервиса по привязанному Telegram-аккаунту. */
 export async function findUserByTelegram(telegramUserId: string): Promise<CurrentUser | null> {
   const rows = await getDb()
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories, simpleMode: users.simpleMode, firstRunHints: users.firstRunHints, accessUntil: users.accessUntil })
+    .select({ id: users.id, email: users.email, showCalories: users.showCalories, simpleMode: users.simpleMode, firstRunHints: users.firstRunHints, accessUntil: users.accessUntil, createdAt: users.createdAt })
     .from(users)
     .where(eq(users.telegramUserId, telegramUserId))
     .limit(1);
@@ -33,7 +33,7 @@ export async function findUserByTelegram(telegramUserId: string): Promise<Curren
   // Пользователь найден по самой привязке — она заведомо есть.
   // Тариф вычисляется из срока — как в lib/auth.ts, одним способом на обе
   // точки входа.
-  return row ? { ...row, plan: effectivePlan(row.accessUntil, new Date()), telegramLinked: true } : null;
+  return row ? { ...row, plan: effectivePlan(row.accessUntil, row.createdAt, new Date()), telegramLinked: true } : null;
 }
 
 /** Разбирает initData и возвращает пользователя; бросает not_linked, если привязки нет. */
@@ -89,13 +89,13 @@ export async function consumeLinkCode(code: string, telegramUserId: string): Pro
   await db.update(telegramLinkCodes).set({ usedAt: new Date() }).where(eq(telegramLinkCodes.code, normalized));
 
   const linked = await db
-    .select({ id: users.id, email: users.email, showCalories: users.showCalories, simpleMode: users.simpleMode, firstRunHints: users.firstRunHints, accessUntil: users.accessUntil })
+    .select({ id: users.id, email: users.email, showCalories: users.showCalories, simpleMode: users.simpleMode, firstRunHints: users.firstRunHints, accessUntil: users.accessUntil, createdAt: users.createdAt })
     .from(users)
     .where(eq(users.id, row.userId))
     .limit(1);
   const linkedRow = linked[0];
   // Код привязки только что применён к этому аккаунту — привязка есть.
   return linkedRow
-    ? { ...linkedRow, plan: effectivePlan(linkedRow.accessUntil, new Date()), telegramLinked: true }
+    ? { ...linkedRow, plan: effectivePlan(linkedRow.accessUntil, linkedRow.createdAt, new Date()), telegramLinked: true }
     : null;
 }

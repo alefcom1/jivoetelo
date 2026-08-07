@@ -144,11 +144,17 @@ export const botStore: BotStore = {
    */
   async plan(userId) {
     const rows = await getDb()
-      .select({ accessUntil: users.accessUntil })
+      .select({ accessUntil: users.accessUntil, createdAt: users.createdAt })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
-    return effectivePlan(rows[0]?.accessUntil ?? null, new Date());
+    const row = rows[0];
+    // Нет строки — нет и доступа. Раньше здесь подставлялся `null` вместо
+    // срока и получался бесплатный тариф; теперь у отсутствующего человека
+    // не из чего взять и дату регистрации, а выдавать пробный месяц «от
+    // сейчас» тому, кого нет в базе, — способ открыть доступ по опечатке.
+    if (!row) return "free";
+    return effectivePlan(row.accessUntil, row.createdAt, new Date());
   },
 
   /**

@@ -18,7 +18,8 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const mode = String(formData.get("mode") ?? "text");
 
-  // Все функции бесплатны; лимит защищает от неумеренного расхода токенов.
+  // Проверка решает сразу два вопроса: открыт ли доступ вообще (пробный
+  // месяц или оплата) и не исчерпан ли дневной лимит у того, у кого открыт.
   const operation = mode === "text" ? "analyze_text" : "analyze_photo";
   const decision = await checkQuota(auth.user.id, auth.user.plan, operation);
   if (!decision.allowed) return Response.json({ error: quotaMessage(decision) }, { status: 429 });
