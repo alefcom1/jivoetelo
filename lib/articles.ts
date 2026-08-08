@@ -78,9 +78,9 @@ export const ARTICLES: Article[] = [
     published: "2026-08-08",
     minutes: 8,
     updated: "2026-08-08",
-    heroImage: null,
+    heroImage: "/blog/hero-kak-schitat-kalorii.webp",
     heroAlt:
-      "Женщина у кухонного стола смотрит на небольшие весы: на них ложка масла, орехи и ломтик сыра, а рядом стоит большая миска салата, которую никто не взвешивает",
+      "Женщина в льняной рубашке стоит у деревянного кухонного стола и смотрит на небольшие весы: на них ложка масла, горстка грецких орехов и кубик сыра, а рядом — большая деревянная миска салата с помидорами и огурцом",
     sources: [
       {
         title: "Lichtman S. W. et al. Discrepancy between self-reported and actual caloric intake in obese subjects (NEJM, 1992)",
@@ -157,9 +157,9 @@ export const ARTICLES: Article[] = [
     published: "2026-08-08",
     minutes: 8,
     updated: "2026-08-08",
-    heroImage: null,
+    heroImage: "/blog/hero-ii-podschet-kalorij-po-foto.webp",
     heroAlt:
-      "Тарелка с курицей, гречкой и салатом на столе, рядом телефон с камерой; над тарелкой полупрозрачные подписи с диапазонами калорий",
+      "Женщина за столиком у окна в кафе снимает на телефон тарелку с мясом на гриле, кускусом и печёными овощами; за окном зелень, на столе стакан воды",
     sources: [
       {
         title: "Lichtman S. W. et al. Discrepancy between self-reported and actual caloric intake in obese subjects (NEJM, 1992)",
@@ -420,9 +420,9 @@ export const ARTICLES: Article[] = [
       { title: "FAO. Food energy — methods of analysis and conversion factors (коэффициенты Этуотера)", url: "https://www.fao.org/4/y5022e/y5022e00.htm" },
       { title: "USDA FoodData Central — открытая база пищевой ценности продуктов", url: "https://fdc.nal.usda.gov/" },
     ],
-    heroImage: null,
+    heroImage: "/blog/hero-pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor.webp",
     heroAlt:
-      "Три одинаковые тарелки в ряд, над каждой — своя лента с числами разной длины, ленты не совпадают",
+      "Женщина за кухонным столом озадаченно смотрит на тарелку гречки с курицей; вокруг тарелки веером висят три пустые светящиеся панели — три разных ответа об одном блюде",
   },
   {
     slug: "grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods",
@@ -441,9 +441,9 @@ export const ARTICLES: Article[] = [
     minutes: 4,
     updated: "2026-08-05",
     sources: [],
-    heroImage: null,
+    heroImage: "/blog/hero-grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods.webp",
     heroAlt:
-      "Маленький плотный кружок крупы соединён стрелкой с большим бледным кругом каши того же цвета",
+      "Руки женщины у двух керамических мисок на деревянном столе: в маленькой — горстка сухой гречневой крупы, в большой втрое объёмнее — сваренная гречка, от которой идёт пар",
   },
   {
     slug: "tri-kilogramma-kotorye-ne-zhir-chto-pokazyvayut-vesy-na-samo",
@@ -461,9 +461,9 @@ export const ARTICLES: Article[] = [
     minutes: 4,
     updated: "2026-08-07",
     sources: [],
-    heroImage: null,
+    heroImage: "/blog/hero-tri-kilogramma-kotorye-ne-zhir-chto-pokazyvayut-vesy-na-samo.webp",
     heroAlt:
-      "Напольные весы с двумя разными числами на дисплее, между ними — прозрачные капли воды вместо гирь",
+      "Женщина у окна на светлой кухне наливает воду из стеклянного графина в высокий стакан; рядом на доске половинка лимона и веточка мяты, на подоконнике зелень",
   },
 ];
 
