@@ -56,7 +56,10 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/tarify", label: "Цена" },
       { href: "/blog", label: "Журнал" },
       { href: "/pro", label: "Для специалистов" },
+      { href: "/pro/kak-rabotaet", label: "Как проходит работа в Pro" },
       { href: "/pro/dannye", label: "Данные клиента в Pro" },
+      { href: "/pro/voprosy", label: "Вопросы о Pro" },
+      { href: "/pro/pamyatka", label: "Памятка для клиента" },
     ],
     art: {
       src: "/site/menu-product.webp",
@@ -119,6 +122,10 @@ export const NAV_EXEMPT = [
   "/login", "/register", "/reset",   // справа в шапке
   "/legal", "/pochta/otpiska",       // подвал и письма
   "/pro/clients",                    // кабинет специалиста, за авторизацией
+  // Заведение кабинета: страница за входом и закрыта от индексации
+  // (`robots: { index: false }`). В меню ей делать нечего — на неё ведут
+  // кнопка в шапке раздела, витрина и сам кабинет.
+  "/pro/registraciya",
   // Раздел расчётов вырос до двадцати трёх страниц — в выпадающую панель они
   // не влезают и не должны. В панели восемь самых спрашиваемых плюс ссылка
   // «Все калькуляторы»; остальные доступны из хаба /raschet, где разложены по

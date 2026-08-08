@@ -61,6 +61,7 @@ export function InviteForm({ defaultOpen }: { defaultOpen: boolean }) {
         key={checkState.code}
         code={checkState.code as string}
         specialistName={checkState.specialistName as string}
+        specialistVerified={checkState.specialistVerified === true}
         grantAction={grantAction}
         grantPending={grantPending}
         error={GRANT_ERRORS[grantState.status]}
@@ -100,6 +101,7 @@ export function InviteForm({ defaultOpen }: { defaultOpen: boolean }) {
 function ConsentStep({
   code,
   specialistName,
+  specialistVerified,
   grantAction,
   grantPending,
   error,
@@ -107,6 +109,8 @@ function ConsentStep({
 }: {
   code: string;
   specialistName: string;
+  /** Проверял ли профиль человек из сервиса. */
+  specialistVerified: boolean;
   grantAction: (formData: FormData) => void;
   grantPending: boolean;
   error?: string;
@@ -126,6 +130,16 @@ function ConsentStep({
 
       <p className="spec-consent-lead">
         <b>{specialistName}</b> просит доступ к вашему дневнику.
+      </p>
+      {/* Откуда взялось имя — важнее самого имени. Специалисты заводят
+          кабинет сами, и человек, увидевший «Марина Соколова, нутрициолог»,
+          по умолчанию решит, что сервис её знает. Пока это не так, так и
+          написано: открывать дневник он должен тому, кого узнал сам, а не
+          тому, за кого мы молча поручились. */}
+      <p className={specialistVerified ? "spec-consent-verified" : "spec-consent-unverified"}>
+        {specialistVerified
+          ? "Профиль проверен сервисом: мы убедились, что за этим именем стоит практика."
+          : "Имя специалист указал сам — мы его не проверяли. Открывайте доступ, только если узнали человека и сами дали ему код."}
       </p>
 
       <fieldset className="spec-scope-fieldset">

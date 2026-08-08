@@ -35,7 +35,19 @@ export type CatalogPhoto = {
   createdAt: Date;
 };
 
-export const PHOTO_STATUSES = ["pending", "approved", "rejected"] as const;
+/**
+ * Состояния снимка в каталоге.
+ *
+ * `offered` появился вместе с банком кандидатов и стоит **до** `pending`:
+ * модератор посмотрел снимок в дневнике, счёл подходящим и предложил автору
+ * опубликовать его. Согласия на этой стадии ещё нет, поэтому снимок не виден
+ * никому, кроме модератора и самого автора.
+ *
+ * Порядок такой: `offered` → автор согласился → `pending` (второй взгляд
+ * модератора уже с подписью) → `approved`. Автор отказался → `rejected`, и
+ * этот кадр больше не предлагается.
+ */
+export const PHOTO_STATUSES = ["offered", "pending", "approved", "rejected"] as const;
 export type PhotoStatus = (typeof PHOTO_STATUSES)[number];
 
 /**

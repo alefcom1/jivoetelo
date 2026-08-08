@@ -1026,3 +1026,13 @@ footer>.footer-app:first-child{margin-top:0}
    символу: адрес длинный, а на телефоне колонка узкая — без break-all он
    вылезал за карточку. */
 .invite-link{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:600;word-break:break-all;line-height:1.5}
+
+/* Фотографии в каталоге: объяснение, предложения и выключатель. */
+.photo-offers p{margin:0 0 12px;font-size:14px;line-height:1.7;color:#3d3f3a}
+.photo-offers .field-note{margin:0 0 16px}
+.photo-offer-list{display:flex;flex-direction:column;gap:14px;margin:4px 0 20px}
+.photo-offer{padding:16px 18px;background:var(--paper);border-left:2px solid var(--coral)}
+.photo-offer p{margin:0 0 12px}
+.photo-offer-actions{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.photo-offers-toggle{margin:0}
+.photo-offers-toggle .field-note{margin:6px 0 0}

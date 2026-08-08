@@ -8,6 +8,7 @@ import { accessEndsAt, daysLeft, hasPaidAccess, inTrial } from "@/lib/paid";
 import { ACCESS_ANCHOR, payLinksFor } from "@/lib/payments/access-links";
 import { CONSENT_LABELS, isConsentKind } from "@/lib/legal";
 import { PhotoConsent } from "./photo-consent";
+import { PhotoOffers } from "./photo-offers";
 import { getBotPreferences } from "@/lib/bot/store";
 import { getProfileData } from "@/lib/profile";
 import { DEFAULT_DIGEST_HOUR } from "@/lib/reminders";
@@ -188,6 +189,10 @@ export default async function SettingsPage() {
       <p className="settings-label">Камера</p>
       <p>Настройки этого устройства: на телефоне и на ноутбуке они свои.</p>
       <CameraSettings />
+    </section>
+    <section className="settings-block">
+      <p className="settings-label">Фотографии в каталоге</p>
+      <PhotoOffers userId={user.id} />
     </section>
     <section className="settings-block">
       <p className="settings-label">Ваши данные</p>

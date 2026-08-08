@@ -19,7 +19,7 @@ export default function ProLayout({ children }: { children: React.ReactNode }) {
     {/* Шапка общая с сайтом, призыв к действию — свой: специалист пришёл
         не заводить дневник, а посмотреть на кабинет. Раньше здесь стоял
         огрызок из логотипа и кнопки, и попасть в меню сайта было некуда. */}
-    <SiteHeader cta={{ href: "/pro#apply", label: "Подключить кабинет" }} />
+    <SiteHeader cta={{ href: "/pro/registraciya", label: "Открыть кабинет" }} />
     {children}
     <SiteFooter />
   </div>;

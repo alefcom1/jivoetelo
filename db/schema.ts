@@ -108,6 +108,17 @@ export const users = pgTable("users", {
    * сколько друзей. Условие `IS NULL` в WHERE делает начисление однократным.
    */
   referralRewardedAt: timestamp("referral_rewarded_at", { withTimezone: true }),
+  /**
+   * «Не предлагать публиковать мои фотографии».
+   *
+   * По умолчанию `false`: снимок можно **предложить**. Сама публикация
+   * по-прежнему требует ответа «да» на конкретный кадр — молчание согласием
+   * на распространение не считается (152-ФЗ, ст. 10.1 ч. 8). Этот флаг
+   * выключает сам вопрос: человек, который его поставил, не увидит
+   * предложений, а его снимки не попадут даже в очередь кандидатов у
+   * модератора.
+   */
+  photoOffersOptOut: boolean("photo_offers_opt_out").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -569,8 +580,28 @@ export const specialists = pgTable("specialists", {
   specialization: text("specialization"),
   city: text("city"),
   about: text("about"),
-  // pending | approved | rejected | suspended
+  /**
+   * pending | approved | rejected | suspended.
+   *
+   * Отвечает на один вопрос: может ли этот человек работать в кабинете.
+   * `approved` теперь значит «может», а не «мы его одобрили»: при
+   * самостоятельной регистрации строка сразу создаётся с ним, потому что
+   * кабинет сам по себе не открывает ни одного байта чужих данных — он
+   * позволяет выдать код, а что откроется, решает клиент.
+   *
+   * `pending` остаётся у строк прежнего, ручного пути и означает «заведён,
+   * но работать ещё не пускали».
+   */
   status: text("status").notNull().default("pending"),
+  /**
+   * Когда специалиста подтвердил человек. `null` — зарегистрировался сам.
+   *
+   * Отдельно от `status` сознательно: «может работать» и «мы проверили, что
+   * за именем стоит практика» — разные вопросы, и склеивать их значит либо
+   * держать людей в очереди без нужды, либо выдавать непроверенного за
+   * проверенного. Клиент видит эту разницу на экране согласия.
+   */
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
 });
@@ -872,12 +903,23 @@ export const catalogPhotos = pgTable(
      * `user_consents`: через год надо уметь показать, на что именно человек
      * соглашался, а не на что соглашаются сегодня.
      */
-    consentVersion: text("consent_version").notNull(),
+    /**
+     * `null` до ответа автора: у предложенного снимка согласия ещё нет.
+     * Пустая строка была бы враньём в поле, по которому через год отвечают,
+     * на какую редакцию человек соглашался.
+     */
+    consentVersion: text("consent_version"),
+    /** Кто из модераторов предложил снимок. `null` — автор отправил сам. */
+    offeredBy: integer("offered_by").references(() => users.id, { onDelete: "set null" }),
+    offeredAt: timestamp("offered_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   },
   (table) => [
     index("catalog_photos_slug_status").on(table.productSlug, table.status),
     index("catalog_photos_user").on(table.userId),
+    // Очередь кандидатов обходит снимки дневника и обязана отсеивать те,
+    // что уже предлагали, — вопрос «этот ключ уже здесь?» задаётся часто.
+    index("catalog_photos_key").on(table.photoKey),
   ],
 );

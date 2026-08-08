@@ -435,3 +435,10 @@
   margin: 10px 0 0; padding: 10px; border-radius: 6px; background: #f6f4f0;
   font-size: 12px; line-height: 1.45; overflow-x: auto; white-space: pre;
 }
+
+/* Банк кандидатов: те же карточки, что в очереди модерации, плюс выбор
+   продукта. Заголовок раздела отделён линией — на странице теперь два
+   списка, и без неё они читались одним. */
+.admin-section-head{margin:56px 0 8px;padding-top:28px;border-top:1px solid var(--line);font:500 28px var(--serif);letter-spacing:-.04em}
+.admin-photo-candidates select,.admin-photo-candidates input[type=number]{width:100%;padding:9px 10px;border:1px solid var(--line);background:var(--white);font:inherit;font-size:14px}
+.admin-photo-candidates h3{margin:0 0 4px;font:500 19px var(--serif);letter-spacing:-.03em}

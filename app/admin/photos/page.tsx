@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { PHOTO_CREDIT } from "@/lib/catalog-photos";
-import { pendingPhotos } from "@/lib/catalog-photos-store";
+import { pendingPhotos, photoCandidates } from "@/lib/catalog-photos-store";
+import { PRODUCTS } from "@/lib/products";
 import { findProduct } from "@/lib/products";
-import { reviewCatalogPhotoAction } from "../actions";
+import { offerCatalogPhotoAction, reviewCatalogPhotoAction } from "../actions";
 
 /**
  * Очередь модерации снимков каталога.
@@ -25,7 +26,7 @@ const dateTimeFormat = new Intl.DateTimeFormat("ru-RU", {
 });
 
 export default async function AdminPhotosPage() {
-  const queue = await pendingPhotos();
+  const [queue, candidates] = await Promise.all([pendingPhotos(), photoCandidates()]);
 
   return <main className="admin-page">
     <p className="kicker"><Link href="/admin">Админка</Link></p>
@@ -107,6 +108,54 @@ export default async function AdminPhotosPage() {
               </div>
             </li>;
           })}
+        </ul>}
+
+    {/* ── Банк кандидатов ──────────────────────────────────────────────────
+        Очередь выше была пуста не из-за ошибки: единственный путь в неё вёл
+        из карточки приёма пищи руками автора — найти запись, выбрать
+        продукт, поставить галочку, отправить. Четыре шага, и их не делал
+        никто. Здесь разговор начинает модератор.
+
+        Предложение не публикует снимок. Оно спрашивает автора, и до его
+        «да» кадр не виден никому: молчание согласием на распространение не
+        считается (152-ФЗ, ст. 10.1 ч. 8). */}
+    <h2 className="admin-section-head">Кандидаты из дневников</h2>
+    <p className="field-note">
+      Снимки, которые ещё никому не предлагали. Выберите продукт — автору уйдёт вопрос, можно ли
+      поставить этот кадр на его страницу. Люди, запретившие предложения в настройках, сюда не
+      попадают. Отказ автора помечает кадр отвеченным: второй раз он не появится.
+    </p>
+
+    {candidates.length === 0
+      ? <p className="admin-empty">Новых снимков нет.</p>
+      : <ul className="admin-photo-queue admin-photo-candidates">
+          {candidates.map((candidate) => (
+            <li key={candidate.photoKey}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/admin/candidate/${encodeURIComponent(candidate.photoKey)}`}
+                alt={candidate.items.join(", ") || "Снимок из дневника"}
+              />
+              <div className="admin-photo-body">
+                <h3>{candidate.items.join(", ") || "Без разбора"}</h3>
+                <p className="field-note">Запись от {candidate.eatenOn}</p>
+                <form action={offerCatalogPhotoAction} className="admin-photo-actions">
+                  <input type="hidden" name="userId" value={candidate.userId} />
+                  <input type="hidden" name="photoKey" value={candidate.photoKey} />
+                  <select name="productSlug" required defaultValue="">
+                    <option value="" disabled>Какой продукт на снимке</option>
+                    {PRODUCTS.map((product) => (
+                      <option key={product.slug} value={product.slug}>{product.name}</option>
+                    ))}
+                  </select>
+                  <input type="number" name="grams" min={1} max={3000} placeholder="Граммы, если видно" />
+                  <div className="button-row">
+                    <button className="black-button" type="submit">Предложить автору</button>
+                  </div>
+                </form>
+              </div>
+            </li>
+          ))}
         </ul>}
   </main>;
 }
