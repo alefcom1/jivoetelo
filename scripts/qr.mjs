@@ -31,11 +31,20 @@ const outDir = resolve(root, "public/qr");
 /** Цвета фирменные: чернильный по бумажному, а не чёрный по белому. */
 const COLORS = { dark: "#171917ff", light: "#f4f1eaff" };
 
+/**
+ * Список собирается перебором меток, а не перечислением файлов.
+ *
+ * Перечисление уже подвело: метка `pro` появилась в lib/bot-public.ts, а её
+ * QR — нет, и блок на странице показал бы код от другой метки. Тест
+ * tests/qr.test.mjs ходит ровно по `START_PAYLOADS`, поэтому и скрипт должен
+ * ходить по ним же: два независимых списка расходятся молча.
+ */
 const TARGETS = [
   { file: "bot.svg", url: botLink() },
-  { file: "bot-plan.svg", url: botLink(START_PAYLOADS.plan) },
-  { file: "bot-web.svg", url: botLink(START_PAYLOADS.web) },
-  { file: "bot-site.svg", url: botLink(START_PAYLOADS.site) },
+  ...Object.values(START_PAYLOADS).map((payload) => ({
+    file: `bot-${payload}.svg`,
+    url: botLink(payload),
+  })),
 ];
 
 await mkdir(outDir, { recursive: true });

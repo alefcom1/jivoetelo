@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { TRIAL_DAYS, priceRub, tariffByKey } from "@/lib/paid";
 import { SPECIALIST_PRICE_RUB } from "@/lib/pro/pricing";
+import { proFaq } from "@/lib/pro/faq";
 import { REFERRAL_REWARD_DAYS } from "@/lib/referral";
 import { breadcrumbsJsonLd, jsonLdScript } from "@/lib/schema-org";
 import { ProApplyForm } from "./apply-form";
@@ -42,6 +43,10 @@ export const metadata: Metadata = {
  */
 export default function ProPage() {
   const month = tariffByKey("month")!;
+  // Четыре вопроса из общего списка — те, что задают до чтения. Остальные
+  // живут на /pro/voprosy: гармошка из двенадцати строк на витрине читается
+  // как «мы не смогли объяснить это выше».
+  const faq = proFaq(priceRub(month.priceRub), TRIAL_DAYS).filter((item) => item.onLanding);
 
   return (
     <article className="pro-page">
@@ -70,7 +75,7 @@ export default function ProPage() {
         </p>
         <div className="pro-hero-actions">
           <Link className="black-button" href="#apply">Подключить кабинет <b>↗</b></Link>
-          <Link className="pro-textlink" href="/pro/dannye">Как устроены данные клиента →</Link>
+          <Link className="pro-textlink" href="/pro/kak-rabotaet">Как проходит работа →</Link>
         </div>
       </section>
 
@@ -277,35 +282,24 @@ export default function ProPage() {
       <section className="pro-faq">
         <h2>Частые вопросы</h2>
         <div className="pro-faq-list">
-          <details>
-            <summary>Сколько это стоит специалисту?</summary>
-            <p>Нисколько. Кабинет бесплатен без срока и без ограничения по числу клиентов. Платит клиент — за свой дневник, по обычному тарифу {priceRub(month.priceRub)} в месяц после бесплатного первого месяца, и только за разбор еды моделью. Сам дневник, история, план и вес открыты ему всегда.</p>
-          </details>
-          <details>
-            <summary>Что видит клиент во время консультации, если я открыл его дневник?</summary>
-            <p>В момент просмотра — ничего: вы работаете в своём кабинете. Но в журнале доступа у себя он увидит строку с датой, временем и тем, что именно было открыто.</p>
-          </details>
-          <details>
-            <summary>Клиент может вводить данные в веб-версию, не в Telegram?</summary>
-            <p>Да, весь дневник есть и в веб-версии. Telegram — самый простой путь для большинства, но не единственный.</p>
-          </details>
-          <details>
-            <summary>Если я закончил работу с клиентом, его данные удаляются?</summary>
-            <p>Нет. После отзыва вы перестаёте видеть дневник, а записи остаются у клиента: это его история. Удалить их может только он сам.</p>
-          </details>
-          <details>
-            <summary>Может ли клиент дать доступ одновременно нескольким специалистам?</summary>
-            <p>Да. Связь заводится отдельно с каждым, и объём у каждой свой. Клиент видит список всех, кому открыл доступ, и отзывает любого по отдельности.</p>
-          </details>
-          <details>
-            <summary>Зачем нужно подтверждение, если кабинет бесплатный?</summary>
-            <p>Кабинет открывает записи о питании других людей. Раздавать такой доступ по нажатию кнопки нельзя: код, который вы называете клиенту, должен принадлежать человеку, за которым стоит практика. Мы смотрим заявку руками и отвечаем в течение рабочего дня.</p>
-          </details>
-          <details>
-            <summary>Чем это отличается от обычной выписки, которую клиент может сделать сам?</summary>
-            <p>Выписку человек собирает вручную и один раз — обычно к самому приёму, задним числом и по памяти. В кабинете видны все дни подряд, включая те, где записей не было; а именно пропуски чаще всего и есть предмет разговора.</p>
-          </details>
+          {faq.map((item) => (
+            <details key={item.question}>
+              <summary>{item.question}</summary>
+              <p>{item.answer}</p>
+            </details>
+          ))}
         </div>
+        <p className="pro-more"><Link href="/pro/voprosy">Все вопросы и ответы →</Link></p>
+      </section>
+
+      {/* Раздел вырос, и с витрины на него не вело ничего, кроме одной
+          ссылки в шапке. Полоса перед анкетой — единственное место, где
+          человек, дочитавший до конца, ещё готов уйти читать дальше. */}
+      <section className="pro-links">
+        <Link href="/pro/kak-rabotaet"><b>Как проходит работа</b><span>От первой консультации до завершения, по шагам</span></Link>
+        <Link href="/pro/dannye"><b>Данные клиента</b><span>Кто оператор, что видно и что остаётся после отзыва</span></Link>
+        <Link href="/pro/pamyatka"><b>Памятка для клиента</b><span>Одна страница, которую можно переслать сообщением</span></Link>
+        <Link href="/pro/voprosy"><b>Вопросы</b><span>Двенадцать ответов, включая неудобные</span></Link>
       </section>
 
       <section className="pro-apply" id="apply">

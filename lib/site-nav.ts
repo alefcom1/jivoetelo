@@ -56,7 +56,10 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/tarify", label: "Цена" },
       { href: "/blog", label: "Журнал" },
       { href: "/pro", label: "Для специалистов" },
+      { href: "/pro/kak-rabotaet", label: "Как проходит работа в Pro" },
       { href: "/pro/dannye", label: "Данные клиента в Pro" },
+      { href: "/pro/voprosy", label: "Вопросы о Pro" },
+      { href: "/pro/pamyatka", label: "Памятка для клиента" },
     ],
     art: {
       src: "/site/menu-product.webp",
