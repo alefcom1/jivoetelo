@@ -13,6 +13,7 @@ import { StreakCard } from "./streak-card";
 import { SuggestCard } from "./suggest-card";
 import { TgAccessStrip } from "./access-strip";
 import { haptic } from "./telegram";
+import { WaterCard } from "./water-card";
 import { WeightTrend } from "./weight-trend";
 
 function greeting(): string {
@@ -216,6 +217,13 @@ export function TodayTab({
       <Bar macro="carbs" label="Углеводы" value={totals.carbs} target={targets?.carbsTarget ?? null} unit="г" />
       <Bar macro="fiber" label="Клетчатка" value={totals.fiber} target={targets?.fiberTarget ?? null} unit="г" />
     </section>
+
+    {/* Жидкость — своей карточкой, а не шестой полосой среди макронутриентов:
+        у тех общий источник (разбор еды) и общая цель из плана, а здесь и
+        ориентир свой, и запись делается кнопкой. Показывается и в режиме
+        «скрыть калории»: воде нечего скрывать, а человеку, убравшему числа
+        еды, это единственная карточка, с которой можно что-то делать руками. */}
+    <WaterCard initial={data.water} />
 
     {!targets && <section className="tg-card tg-hint-card">
       <p>Настройте стартовый план в веб-версии — и здесь появятся цели по энергии и белку.</p>

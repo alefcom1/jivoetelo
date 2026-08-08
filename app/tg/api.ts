@@ -83,7 +83,38 @@ export type TodayResponse = {
     loggedDays: number;
     botEverUsed: boolean;
   };
+  /** Жидкость за сегодня — карточка счётчика на первом экране. */
+  water: TgWaterDay;
 };
+
+export type TgWaterDay = {
+  day: string;
+  drunkMl: number;
+  /** null, пока нет плана: ориентир зависит от пола, веса и расхода энергии. */
+  goalMl: number | null;
+  foodMl: number;
+  canUndo: boolean;
+};
+
+/**
+ * Записать выпитое и отменить последнее. Обе ручки возвращают день целиком —
+ * карточке после нажатия нужны свежие сумма, полоса и подпись, и отдельного
+ * перечитывания экрана ради этого не делаем.
+ */
+export async function addWater(ml: number, day: string): Promise<TgWaterDay> {
+  return handle<TgWaterDay>(await request("/api/tg/water", {
+    method: "POST",
+    headers: { ...initDataHeader(), "Content-Type": "application/json" },
+    body: JSON.stringify({ ml, day }),
+  }));
+}
+
+export async function undoWater(day: string): Promise<TgWaterDay> {
+  return handle<TgWaterDay>(await request(`/api/tg/water?day=${encodeURIComponent(day)}`, {
+    method: "DELETE",
+    headers: initDataHeader(),
+  }));
+}
 
 /** Отметить объяснения пройденными. Ошибку глушим: подсказка — не данные. */
 export async function markHints(hints: string[]): Promise<void> {

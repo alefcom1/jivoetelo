@@ -9,6 +9,7 @@ import {
   userConsents,
   users,
   waitlistSubscribers,
+  waterEntries,
   weightEntries,
 } from "@/db/schema";
 import { deletePhoto } from "@/lib/storage";
@@ -60,7 +61,7 @@ export async function exportAccount(userId: number): Promise<AccountExport> {
         .where(inArray(mealItems.mealId, mealRows.map((meal) => meal.id)))
     : [];
 
-  const [weights, consents, usage, waitlist, inbox] = await Promise.all([
+  const [weights, consents, usage, waitlist, inbox, water] = await Promise.all([
     db.select().from(weightEntries).where(eq(weightEntries.userId, userId)).orderBy(asc(weightEntries.onDate)),
     db.select().from(userConsents).where(eq(userConsents.userId, userId)).orderBy(asc(userConsents.acceptedAt)),
     db.select().from(aiUsage).where(eq(aiUsage.userId, userId)).orderBy(asc(aiUsage.createdAt)),
@@ -70,6 +71,7 @@ export async function exportAccount(userId: number): Promise<AccountExport> {
       ? db.select().from(waitlistSubscribers).where(eq(waitlistSubscribers.email, account.email))
       : Promise.resolve([]),
     db.select().from(photoInbox).where(eq(photoInbox.userId, userId)).orderBy(asc(photoInbox.createdAt)),
+    db.select().from(waterEntries).where(eq(waterEntries.userId, userId)).orderBy(asc(waterEntries.onDate)),
   ]);
 
   return {
@@ -85,6 +87,7 @@ export async function exportAccount(userId: number): Promise<AccountExport> {
       состав: itemRows.filter((item) => item.mealId === meal.id),
     })),
     вес: weights,
+    жидкость: water,
     фото_инбокс: inbox.map((item) => ({
       ...item,
       фото: item.dismissedAt ? null : `/api/photos/${item.photoKey}`,
@@ -101,8 +104,8 @@ export async function exportAccount(userId: number): Promise<AccountExport> {
  * если упадём на середине, останется мусор в базе, а не осиротевшие фото
  * без владельца — так проще доубрать вручную и меньше риск отдать чужой файл.
  *
- * Всё остальное (приёмы пищи, состав, вес, согласия, сессии, привязка
- * Telegram) уходит каскадом по внешним ключам. Платежи не удаляются: у них
+ * Всё остальное (приёмы пищи, состав, вес, жидкость, согласия, сессии,
+ * привязка Telegram) уходит каскадом по внешним ключам. Платежи не удаляются: у них
  * ON DELETE SET NULL, потому что документы о расчётах оператор обязан
  * хранить по закону, — но связь с человеком при этом рвётся.
  */

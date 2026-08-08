@@ -146,6 +146,10 @@ Facts, USDA FoodData Central (CC0), немецкий Bundeslebensmittelschlüsse
 
 ## 4. Счётчик жидкости: да, но не «норма»
 
+> **Сделано.** Расчёт нормы уже стоял в `lib/water.ts` и на `/raschet/voda`;
+> счётчик выпитого добавлен следом на обе поверхности —
+> [water-tracker.md](water-tracker.md). Раздел оставлен как обоснование.
+
 ### Почему делать
 
 1. **Обе платные у конкурентов.** Yazio — Pro, FatSecret — Premium. Функция

@@ -124,7 +124,7 @@ try {
   if (exportResponse.headers.get("cache-control") !== "no-store") throw new Error("Выгрузка кэшируется");
   const raw = await exportResponse.text();
   const data = JSON.parse(raw);
-  for (const key of ["аккаунт", "согласия", "приёмы_пищи", "вес", "обращения_к_ai", "лист_ожидания"]) {
+  for (const key of ["аккаунт", "согласия", "приёмы_пищи", "вес", "жидкость", "обращения_к_ai", "лист_ожидания"]) {
     if (!(key in data)) throw new Error(`В выгрузке нет раздела «${key}»`);
   }
   if (data.аккаунт.email !== email) throw new Error("В выгрузке чужой аккаунт");

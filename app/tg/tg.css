@@ -1289,3 +1289,57 @@
 /* Тариф в профиле: кнопки столбиком — на телефоне это единственный способ
    не сжать «Оплатить — год, 1900 ₽» до нечитаемого. */
 .tg-access{display:flex;flex-direction:column;gap:10px}
+
+/* Счётчик жидкости.
+   Холодный тон вместо тёплой коралловой шкалы макронутриентов: это другая
+   величина с другим источником, и одинаковая полоса читалась бы как ещё один
+   нутриент. Красного состояния нет намеренно — недобор жидкости не проступок,
+   и карточка о нём сообщает, а не судит. */
+.tg-water { display: flex; flex-direction: column; gap: 12px; }
+.tg-water-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.tg-water-head h2 { margin: 0; font: 600 17px var(--brand-serif); }
+.tg-water-head b { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.tg-water-head i { font-style: normal; font-weight: 400; color: var(--tg-hint); }
+
+.tg-water-track {
+  height: 7px; border-radius: 999px; overflow: hidden;
+  background: color-mix(in srgb, hsl(200 55% 50%) 18%, var(--tg-surface));
+}
+.tg-water-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, hsl(200 58% 62%), hsl(200 62% 48%));
+  transition: width .25s ease;
+}
+
+.tg-water-adds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.tg-water-adds button {
+  display: flex; flex-direction: column; gap: 2px; align-items: center;
+  padding: 10px 6px; border: 0; border-radius: var(--radius);
+  background: color-mix(in srgb, var(--tg-text) 7%, var(--tg-surface));
+  color: var(--tg-text); font-size: 13px; font-weight: 600;
+}
+.tg-water-adds button em { font-style: normal; font-size: 11px; font-weight: 400; color: var(--tg-hint); }
+.tg-water-adds button:disabled, .tg-water-own button:disabled, .tg-water-undo:disabled { opacity: .5; }
+
+.tg-water-own { display: flex; gap: 8px; }
+.tg-water-own input {
+  flex: 1; min-width: 0; padding: 10px 12px; border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--tg-text) 16%, transparent);
+  background: var(--tg-surface); color: var(--tg-text); font: inherit; font-size: 14px;
+}
+.tg-water-own button {
+  padding: 10px 16px; border: 0; border-radius: var(--radius);
+  background: var(--tg-button); color: var(--tg-button-text); font-size: 13px; font-weight: 600;
+}
+
+.tg-water-note { margin: 0; color: var(--tg-hint); font-size: 12px; line-height: 1.55; }
+.tg-water-failed { margin: 0; color: var(--brand-coral); font-size: 12px; }
+
+.tg-water-undo {
+  align-self: flex-start; padding: 0; border: 0; background: transparent;
+  color: var(--tg-hint); font-size: 12px; text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-water-fill { transition: none; }
+}

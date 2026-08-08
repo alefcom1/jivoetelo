@@ -19,7 +19,9 @@ import { everUsedInbox } from "@/lib/inbox";
 import { mascotSpeech } from "@/lib/mascot";
 import { computeStreak } from "@/lib/streak";
 import { getLatestWeightKg } from "@/lib/weight";
+import { getWaterDay } from "@/lib/water-store";
 import { AccessStrip } from "./access-strip";
+import { WaterCard } from "./water-card";
 import { AppInvite } from "../app-invite";
 import { MealIcon } from "../food-icon";
 import { EnergyRing, MacroBar } from "./day-visuals";
@@ -51,6 +53,8 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     itemsByMeal.set(item.mealId, list);
   }
   const dayTotals = sumTotals(items);
+  // Жидкость за тот же день, что и еда: карточка листается вместе с дневником.
+  const water = await getWaterDay(user.id, day);
 
   // Серия считается на сегодня, а не на просматриваемый день: листая вчера,
   // человек смотрит вчерашние записи, но серия у него одна и она про сейчас.
@@ -176,6 +180,14 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         <MacroBar label="Углеводы" value={dayTotals.carbs} target={macros?.carbsTarget ?? null} unit="г" macro="carbs" />
       </div>
     </section>}
+
+    {/* Жидкость — отдельной карточкой под итогами дня, а не полосой среди
+        макронутриентов: у тех есть цель из плана и общий источник (еда), а
+        здесь и ориентир свой, и записывается он кнопкой, а не разбором.
+        Показывается всегда, в том числе в режиме «скрыть калории»: воде
+        нечего скрывать, и человеку, убравшему числа еды, эта карточка
+        остаётся единственной, с которой можно что-то делать руками. */}
+    <WaterCard water={water} day={day} />
 
     {targets && <Link className="next-card" href="/app/next">
       <b>Что съесть дальше?</b>

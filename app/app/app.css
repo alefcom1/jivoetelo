@@ -17,3 +17,50 @@
 .share-photo-done { margin-top: 20px; }
 
 .photo-consent { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; margin-top: 12px; }
+
+/* Счётчик жидкости на «Сегодня».
+   Полоса заливается тем же холодным тоном, что и вода в иллюстрациях, и
+   намеренно не имеет «красного» состояния: недобор жидкости — не проступок,
+   а карточка не судья. */
+.water-card {
+  margin-bottom: 24px; padding: 20px 26px;
+  background: var(--white); border: 1px solid var(--line);
+}
+.water-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.water-head h2 { margin: 0; font: 500 20px var(--serif); letter-spacing: -.03em; }
+.water-head b { font-size: 15px; font-weight: 800; white-space: nowrap; }
+.water-head i { font-style: normal; font-weight: 400; color: var(--muted); }
+
+.water-track {
+  height: 6px; margin-top: 12px; border-radius: 3px;
+  background: hsl(200 42% 92%); overflow: hidden;
+}
+.water-fill { height: 100%; border-radius: 3px; background: hsl(200 58% 52%); }
+
+.water-adds { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.water-adds button {
+  display: flex; flex-direction: column; gap: 2px; align-items: center;
+  padding: 9px 16px; border: 1px solid var(--line); border-radius: 3px;
+  background: var(--paper); font-size: 13px; font-weight: 700;
+}
+.water-adds button em { font-style: normal; font-size: 11px; font-weight: 400; color: var(--muted); }
+.water-own { display: flex; gap: 6px; }
+.water-own input {
+  width: 92px; padding: 9px 10px; border: 1px solid var(--line);
+  border-radius: 3px; background: var(--white); font-size: 13px;
+}
+.water-own button { justify-content: center; }
+
+.water-note { margin: 14px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+.water-undo { margin-top: 10px; }
+.water-undo button {
+  padding: 0; border: 0; background: transparent;
+  color: var(--muted); font-size: 12px; text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  .water-card { padding: 18px 20px; }
+  .water-adds { gap: 6px; }
+  .water-own input { width: 78px; }
+}

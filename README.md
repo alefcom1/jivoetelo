@@ -10,6 +10,7 @@
 - Общая инфраструктура с techperevod: [docs/shared-infra.md](docs/shared-infra.md)
 - Исследование рынка и конкурентов: [docs/market-research.md](docs/market-research.md)
 - Разбор Yazio и FatSecret, вода и интервальные диеты: [docs/research-yazio-fatsecret.md](docs/research-yazio-fatsecret.md)
+- Счётчик жидкости: [docs/water-tracker.md](docs/water-tracker.md)
 - План публичного контента сайта: [docs/site-content-plan.md](docs/site-content-plan.md)
 - Юридический блок и чеклист 152-ФЗ: [docs/legal.md](docs/legal.md)
 - Telegram Mini App: [docs/telegram-mini-app.md](docs/telegram-mini-app.md)

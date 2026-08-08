@@ -11,6 +11,7 @@ import { isSpeechEnabled } from "@/lib/speech/mode";
 import { computeStreak } from "@/lib/streak";
 import { weeklyTrendChange, weightTrend } from "@/lib/trend";
 import { listRecentWeights } from "@/lib/weight";
+import { getWaterDay } from "@/lib/water-store";
 import { authorize } from "../_auth";
 
 export async function GET(request: Request) {
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   const now = new Date();
   // Независимые чтения — параллельно, а не одно за другим: ни одно не зависит
   // от результата другого.
-  const [summary, inboxPending, weights, loggedDays, botEverUsed, counters, storedAwards] = await Promise.all([
+  const [summary, inboxPending, weights, loggedDays, botEverUsed, counters, storedAwards, water] = await Promise.all([
     getDaySummary(auth.user.id, today),
     countPending(auth.user.id),
     listRecentWeights(auth.user.id, 30),
@@ -31,6 +32,9 @@ export async function GET(request: Request) {
     everUsedInbox(auth.user.id),
     awardCounters(auth.user.id),
     storedAwardKeys(auth.user.id),
+    // Жидкость приезжает вместе с экраном, а не отдельным запросом: карточка
+    // стоит на первом экране и без своих чисел ей нечего показать.
+    getWaterDay(auth.user.id, today),
   ]);
 
   const streak = computeStreak(loggedDays, today);
@@ -99,6 +103,8 @@ export async function GET(request: Request) {
       protein: meal.totals.protein,
     })),
     inboxPending,
+    /** Жидкость за сегодня: выпито, ориентир, оценка воды из еды. */
+    water,
     // null, если записей веса ещё нет: рисовать график не из чего.
     weight: trend.length > 0 ? { entries: trend, weeklyChangeKg: weeklyTrendChange(trend) } : null,
     // Числа серии считаются здесь, а текст — на клиенте (lib/mascot.ts):
