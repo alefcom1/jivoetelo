@@ -14,29 +14,27 @@
 .pro-lead{max-width:550px;color:#61635c;font-size:14px;line-height:1.7;margin:0}
 .pro-access,.pro-honest,.pro-fit,.pro-status,.pro-faq,.pro-apply{padding:130px max(32px,calc((100% - 1280px)/2));border-top:1px solid var(--line)}
 .pro-access h2,.pro-honest h2,.pro-fit h2,.pro-status h2,.pro-faq h2,.pro-apply h2{font:500 clamp(44px,5vw,72px)/.87 var(--serif);letter-spacing:-.075em;margin:0 0 45px}
-/* Иллюстрации раздела — app/pro/illustrations.tsx. Базовый класс задаёт
-   только гибкую ширину: у SVG нет пиксельных width/height, размер целиком
-   решает разметка вокруг (см. .pro-access-flow-wrap, .pro-access-art,
-   .pro-fit-art ниже). */
+/* Схема доступа — app/pro/illustrations.tsx. Базовый класс задаёт только
+   гибкую ширину: у SVG нет пиксельных width/height, размер решает разметка
+   вокруг (.pro-access-flow-wrap ниже).
+
+   Схем было четыре; три из них — согласие, журнал доступа и список клиентов —
+   заменены фотографиями и удалены вместе со своими правилами. Осталась одна,
+   и осталась намеренно: она объясняет механику доступа в четыре шага, а это
+   не то, что показывает снимок. */
 .pro-art{display:block;width:100%;height:auto}
 .pro-access-flow-wrap{margin:0 0 46px}
 @media(max-width:850px){.pro-access-flow-wrap{overflow-x:auto}.pro-art-flow{min-width:560px}}
 .pro-access-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:30px;margin-bottom:20px}
 .pro-step h3{margin:0 0 12px;font:500 21px var(--serif);letter-spacing:-.04em}
 .pro-step p{margin:0;font-size:14px;line-height:1.65;color:#5c5e57}
-/* Врезки со схемами внутри сетки шагов: полная ширина ряда, чтобы разбить
-   монотонность одинаковых карточек текста. */
-/* Врезка центрирует иллюстрацию, а не прижимает её к левому краю: схема
-   узкая, а блок во всю ширину сетки, и без центрирования половина рамки
-   оставалась пустой — это читалось как незаконченная вёрстка. */
-.pro-access-art{grid-column:1/-1;display:flex;justify-content:center;padding:26px;background:var(--paper);border:1px solid var(--line)}
-.pro-access-art .pro-art{max-width:330px}
 .pro-honest-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:26px}
 .pro-glyph{display:block;width:28px;height:28px;margin:0 0 14px}
 .pro-honest-item h3{margin:0 0 8px;font:500 20px var(--serif);letter-spacing:-.03em}
 .pro-honest-item p{margin:0;font-size:13px;line-height:1.6;color:#666860}
-.pro-fit{display:grid;grid-template-columns:1fr 200px 1fr;gap:50px;align-items:center}
-.pro-fit-art .pro-art{max-width:100%}
+/* Средняя колонка расширена с 200px: там стояла контурная схема, а теперь
+   стоит фотография, и в двухстах точках комната превращалась в марку. */
+.pro-fit{display:grid;grid-template-columns:1fr minmax(280px,360px) 1fr;gap:46px;align-items:center}
 .pro-fit-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
 .pro-fit-list li{font-size:14px;line-height:1.6;color:#3d3f3a;padding-left:20px;position:relative}
 .pro-fit-list li:before{content:"";position:absolute;left:0;top:6px;width:8px;height:8px;background:var(--coral);border-radius:50%}
@@ -63,10 +61,9 @@
   .pro-access,.pro-honest,.pro-fit,.pro-status,.pro-faq,.pro-apply{padding:80px 20px;border-top:1px solid var(--line)}
   .pro-access h2,.pro-honest h2,.pro-fit h2,.pro-status h2,.pro-faq h2,.pro-apply h2{font-size:clamp(32px,6vw,44px);margin-bottom:32px}
   .pro-access-steps{grid-template-columns:1fr;gap:20px}
-  .pro-access-art{padding:20px}
   .pro-fit{grid-template-columns:1fr;gap:50px}
   .pro-fit h2:not(:first-child){margin-top:30px}
-  .pro-fit-art .pro-art{max-width:220px;margin:0 auto}
+  .pro-shot-room{max-width:420px;margin:0 auto}
 }
 
 /* ===== Живой предпросмотр плана в онбординге =====
@@ -136,3 +133,96 @@
 .pro-done p{margin:0 0 10px;font-size:14px;line-height:1.6;color:#3d3f3a}
 .pro-done p:last-child{margin:0}
 @media(max-width:850px){.pro-form,.pro-done{max-width:none}.pro-header{padding:0 20px}}
+
+/* ===== Раздел для специалистов: съёмка, цена, подстраницы ===== */
+/* Фотографии появились здесь вместе с переработкой раздела: до неё вся
+   страница была собрана из контурных SVG и читалась технической
+   спецификацией рядом с плёночной съёмкой остального сайта. */
+.pro-shot{margin:0}
+.pro-shot img{display:block;width:100%;height:auto}
+.pro-shot figcaption{margin-top:14px;color:var(--muted);font-size:12.5px;line-height:1.6;max-width:640px}
+/* Кадр под шапкой: во всю ширину колонки, без рамки — он и есть переход от
+   заголовка к содержанию. */
+.pro-shot-hero{margin:0 0 6px}
+.pro-shot-hero img{border-radius:6px}
+.pro-shot-wide{grid-column:1/-1;margin:14px 0 8px}
+.pro-shot-wide img{border-radius:6px}
+.pro-shot-room img{border-radius:6px}
+/* Ряд тарелок — единственный кадр во всю ширину экрана, а не колонки:
+   пустая тарелка посередине должна читаться как пропущенный день, а в узкой
+   колонке она превращается в светлое пятно. */
+.pro-month{padding:130px 0 0;border-top:1px solid var(--line)}
+.pro-shot-full{width:100vw;margin-left:calc(50% - 50vw)}
+.pro-shot-full img{border-radius:0}
+.pro-month-text{padding:56px max(32px,calc((100% - 1280px)/2)) 130px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start}
+.pro-month-text h2{margin:0;font:500 clamp(38px,4.4vw,60px)/.9 var(--serif);letter-spacing:-.07em}
+.pro-month-text h2 em{font-style:italic;color:var(--coral-text);font-weight:400}
+.pro-month-text p{margin:0;max-width:520px;color:#5c5e57;font-size:14px;line-height:1.75}
+
+.pro-hero-actions{display:flex;gap:26px;align-items:center;flex-wrap:wrap;margin-top:32px}
+.pro-textlink{font-size:12px;font-weight:800}
+.pro-textlink:hover{color:var(--coral-text)}
+
+/* Цена. Две колонки как у .price на главной: слева заголовок, справа разбор.
+   Числа берутся из кода (lib/paid.ts, lib/pro/pricing.ts) — расхождение
+   страницы с тем, что сервис на самом деле берёт, это не опечатка. */
+.pro-price{display:grid;grid-template-columns:.85fr 1.15fr;gap:80px;padding:130px max(32px,calc((100% - 1280px)/2));border-top:1px solid var(--line)}
+.pro-price h2{margin:0;font:500 clamp(44px,5vw,72px)/.87 var(--serif);letter-spacing:-.075em}
+.pro-price h2 em{font-style:italic;color:var(--coral-text);font-weight:400}
+.pro-price p{max-width:560px;margin:0 0 18px;color:#5c5e57;font-size:14px;line-height:1.75}
+.pro-price strong{font-weight:800;color:var(--black)}
+.pro-price-grid{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:1px;margin:26px 0;padding:0;background:var(--line);border:1px solid var(--line)}
+.pro-price-grid li{display:flex;flex-direction:column;gap:6px;padding:22px;background:var(--white)}
+.pro-price-grid strong{font:500 40px var(--serif);letter-spacing:-.03em}
+.pro-price-grid span{color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.pro-price-note{color:var(--muted);font-size:12.5px;line-height:1.65}
+
+/* «Что вы видите»: текст и настоящий снимок кабинета рядом. */
+.pro-see{display:grid;grid-template-columns:1fr 1.15fr;gap:70px;align-items:center;padding:130px max(32px,calc((100% - 1280px)/2));border-top:1px solid var(--line)}
+.pro-see h2{margin:0 0 22px;font:500 clamp(38px,4.4vw,60px)/.9 var(--serif);letter-spacing:-.07em}
+.pro-see-text p{max-width:480px;margin:0 0 22px;color:#5c5e57;font-size:14px;line-height:1.75}
+.pro-see .pro-screen{margin:0}
+.pro-see .pro-screen img{box-shadow:17px 17px 0 var(--coral)}
+.pro-see .pro-screen img{display:block;width:100%;height:auto}
+.pro-see .pro-screen figcaption{margin-top:34px;color:var(--muted);font-size:12.5px;line-height:1.6}
+
+.pro-more{margin:40px 0 0;font-size:12px;font-weight:800}
+.pro-more a:hover{color:var(--coral-text)}
+
+/* Подстраницы раздела: одна колонка текста, как у методологии. */
+.pro-doc-body{max-width:720px;padding:0 0 130px}
+/* clear — из-за обтекаемого кадра выше: без него следующий заголовок встаёт
+   рядом с картинкой и читается подписью к ней. */
+.pro-doc-body h2{clear:both;margin:52px 0 18px;font:500 clamp(28px,3vw,38px)/1 var(--serif);letter-spacing:-.045em}
+.pro-doc-body h2:first-child{margin-top:0}
+.pro-doc-body p{margin:0 0 16px;color:#3d3f3a;font-size:15px;line-height:1.75}
+.pro-doc-note{padding:16px 18px;background:var(--paper);border-left:2px solid var(--coral);color:#5c5e57!important;font-size:14px!important}
+.pro-scopes{margin:0 0 20px;padding:0;border-top:1px solid var(--line)}
+.pro-scopes div{display:grid;grid-template-columns:200px 1fr;gap:24px;padding:16px 0;border-bottom:1px solid var(--line)}
+.pro-scopes dt{margin:0;font-size:14px;font-weight:800}
+.pro-scopes dd{margin:0;color:#5c5e57;font-size:14px;line-height:1.6}
+
+@media(max-width:850px){
+  .pro-price,.pro-see,.pro-month-text{grid-template-columns:1fr;gap:32px;padding-left:20px;padding-right:20px}
+  .pro-price,.pro-see{padding-top:80px;padding-bottom:80px}
+  .pro-month{padding-top:80px}
+  .pro-month-text{padding-top:36px;padding-bottom:80px}
+  .pro-price-grid{grid-template-columns:1fr}
+  .pro-see .pro-screen img{box-shadow:10px 10px 0 var(--coral)}
+  .pro-scopes div{grid-template-columns:1fr;gap:6px}
+  .pro-doc-body{padding-bottom:80px}
+}
+
+/* Заявка в две колонки: анкета слева, кадр справа. */
+.pro-apply{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:70px;align-items:start}
+.pro-apply-text{min-width:0}
+.pro-shot-apply img{border-radius:6px}
+/* Вертикальный кадр внутри колонки текста: обтекается справа, иначе он
+   разрывает чтение полосой во всю ширину. */
+.pro-shot-inset{float:right;width:340px;margin:6px 0 24px 36px}
+.pro-shot-inset img{border-radius:6px}
+@media(max-width:850px){
+  .pro-apply{grid-template-columns:1fr;gap:36px}
+  .pro-shot-apply{max-width:420px}
+  .pro-shot-inset{float:none;width:auto;margin:0 0 24px}
+}
