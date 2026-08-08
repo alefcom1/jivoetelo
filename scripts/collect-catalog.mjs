@@ -45,16 +45,39 @@
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import {
-  extractLinks,
-  extractVerticalRecord,
-  findNutritionTable,
-  probePage,
-  robotsAllows,
-  robotsDisallows,
-  tableToRows,
-} from "../lib/catalog-scrape.ts";
-import { CATALOG_SOURCES, isCatalogSource } from "../lib/catalog-sources.ts";
+
+/**
+ * Разбор и источники лежат в `.ts`, и грузим мы их **динамически**, а не
+ * обычным import сверху. Причина не в стиле: статические импорты
+ * поднимаются выше любого кода, и на старом Node падение случилось бы
+ * раньше, чем успела бы выполниться проверка версии. Человек получил бы
+ * MODULE_NOT_FOUND без единого намёка на настоящую причину — так уже
+ * случилось на боевом сервере с Node 20.
+ */
+let extractLinks, extractVerticalRecord, findNutritionTable, probePage;
+let robotsAllows, robotsDisallows, tableToRows, CATALOG_SOURCES, isCatalogSource;
+
+/** С этой версии Node исполняет TypeScript сам, без сборки. */
+const MIN_NODE_MAJOR = 22;
+const MIN_NODE_MINOR = 6;
+
+function checkNodeVersion() {
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  if (major > MIN_NODE_MAJOR || (major === MIN_NODE_MAJOR && minor >= MIN_NODE_MINOR)) return;
+  console.error(`Node ${process.versions.node} не умеет исполнять TypeScript, а скрипт импортирует .ts-модули.`);
+  console.error("");
+  console.error("Два пути:");
+  console.error("  1. Запустить через tsx:  npx tsx scripts/collect-catalog.mjs ...");
+  console.error(`  2. Обновить Node до ${MIN_NODE_MAJOR}.${MIN_NODE_MINOR}+ (проекту всё равно нужен >=22.13).`);
+  process.exit(1);
+}
+
+async function loadModules() {
+  const scrape = await import("../lib/catalog-scrape.ts");
+  const sources = await import("../lib/catalog-sources.ts");
+  ({ extractLinks, extractVerticalRecord, findNutritionTable, probePage, robotsAllows, robotsDisallows, tableToRows } = scrape);
+  ({ CATALOG_SOURCES, isCatalogSource } = sources);
+}
 
 /**
  * Представляемся честно. Владелец, увидев это в логах, должен понять, кто
@@ -339,6 +362,8 @@ async function runCollect(args) {
 }
 
 async function main() {
+  checkNodeVersion();
+  await loadModules();
   const args = parseArgs(process.argv.slice(2));
   if (typeof args.probe === "string") return runProbe(args.probe);
   return runCollect(args);

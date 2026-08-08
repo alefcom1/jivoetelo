@@ -34,9 +34,31 @@
  */
 
 import { readFileSync } from "node:fs";
-import { FOOD_REFERENCE } from "../lib/food-reference.ts";
-import { formatReport, guessColumns, missingColumns, normalizeSearchKey, parseAll } from "../lib/catalog-import.ts";
-import { CATALOG_SOURCES, isCatalogSource } from "../lib/catalog-sources.ts";
+
+// Динамически — по той же причине, что в scripts/collect-catalog.mjs:
+// статический импорт .ts упал бы раньше проверки версии Node.
+let FOOD_REFERENCE, formatReport, guessColumns, missingColumns, normalizeSearchKey, parseAll;
+let CATALOG_SOURCES, isCatalogSource;
+
+const MIN_NODE_MAJOR = 22;
+const MIN_NODE_MINOR = 6;
+
+function checkNodeVersion() {
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  if (major > MIN_NODE_MAJOR || (major === MIN_NODE_MAJOR && minor >= MIN_NODE_MINOR)) return;
+  console.error(`Node ${process.versions.node} не умеет исполнять TypeScript, а скрипт импортирует .ts-модули.`);
+  console.error("");
+  console.error("Два пути:");
+  console.error("  1. Запустить через tsx:  npx tsx scripts/import-catalog.mjs ...");
+  console.error(`  2. Обновить Node до ${MIN_NODE_MAJOR}.${MIN_NODE_MINOR}+ (проекту всё равно нужен >=22.13).`);
+  process.exit(1);
+}
+
+async function loadModules() {
+  ({ FOOD_REFERENCE } = await import("../lib/food-reference.ts"));
+  ({ formatReport, guessColumns, missingColumns, normalizeSearchKey, parseAll } = await import("../lib/catalog-import.ts"));
+  ({ CATALOG_SOURCES, isCatalogSource } = await import("../lib/catalog-sources.ts"));
+}
 
 function parseArgs(argv) {
   const args = {};
@@ -129,6 +151,8 @@ function manualColumns(args) {
 }
 
 async function main() {
+  checkNodeVersion();
+  await loadModules();
   const args = parseArgs(process.argv.slice(2));
   const source = args.source;
   const file = args.file;
