@@ -84,6 +84,20 @@
 .tg-hint { margin: 0; color: var(--tg-hint); font-size: 13px; line-height: 1.6; }
 .tg-error { margin: 0; color: #b95353; font-size: 13px; line-height: 1.5; }
 
+/* Аватар профиля: фото или монограмма, с короной у открытого доступа.
+   Обёртка нужна для наложения значка — сам круг может быть и картинкой,
+   и буквой. */
+.tg-profile-avatar-wrap { position: relative; display: inline-grid; place-items: center;
+  width: 56px; height: 56px; flex: none; }
+.tg-profile-avatar-photo { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.tg-profile-avatar-photo img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+/* Корона выступает за круг: внутри она сливается с фото, снаружи читается
+   значком. Двойная тень подложкой отделяет её от любой картинки под ней. */
+.tg-profile-crown { position: absolute; top: -20%; right: -16%; width: 46%; height: 46%;
+  display: grid; place-items: center; color: #e56d55;
+  filter: drop-shadow(0 0 1.5px var(--tg-surface)) drop-shadow(0 0 1.5px var(--tg-surface)); }
+.tg-profile-crown svg { width: 100%; height: 100%; display: block; }
+
 /* Полоса о доступе на «Сегодня». Стоит первой на экране и появляется редко —
    за неделю до конца, — поэтому оформлена карточкой, а не строкой. */
 .tg-access-strip { display: flex; flex-direction: column; gap: 8px; margin: 0 0 16px;

@@ -15,6 +15,13 @@ export type CurrentUser = {
   email: string | null;
   showCalories: boolean;
   /**
+   * Ключ фото профиля или null. Ключ, а не готовый адрес: картинку отдаёт
+   * маршрут с проверкой владельца (app/api/photos), и собирать путь должен
+   * тот, кто знает, из какого интерфейса он это делает, — в Mini App
+   * раздатчик другой.
+   */
+  avatarKey: string | null;
+  /**
    * Действующий тариф. Вычисляется из `accessUntil` при каждом чтении, а не
    * хранится рядом с ним (lib/paid.ts).
    */
@@ -78,6 +85,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       id: users.id,
       email: users.email,
       showCalories: users.showCalories,
+      avatarKey: users.avatarKey,
       simpleMode: users.simpleMode,
       firstRunHints: users.firstRunHints,
       telegramUserId: users.telegramUserId,

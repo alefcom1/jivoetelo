@@ -40,6 +40,12 @@ export type ProfileGoals = {
 export type ProfileData = {
   /** null у аккаунта из Mini App — почты там нет и не требуется. */
   email: string | null;
+  /**
+   * Ключ фото профиля или null. Ключ, а не адрес: картинку отдаёт маршрут с
+   * проверкой владельца, и в Mini App он свой (app/api/tg/photo) — собирать
+   * путь должен тот, кто знает, из какого интерфейса он это делает.
+   */
+  avatarKey: string | null;
   telegramLinked: boolean;
   goals: ProfileGoals | null;
   latestWeightKg: number | null;
@@ -137,7 +143,7 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
   const db = getDb();
   const [userRows, profileRows, weightRows, preferences] = await Promise.all([
     db
-      .select({ email: users.email, telegramUserId: users.telegramUserId, accessUntil: users.accessUntil, createdAt: users.createdAt })
+      .select({ email: users.email, avatarKey: users.avatarKey, telegramUserId: users.telegramUserId, accessUntil: users.accessUntil, createdAt: users.createdAt })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1),
@@ -204,6 +210,7 @@ export async function getProfileData(userId: number): Promise<ProfileData> {
     // сказать «вход через Telegram», а не показывать пустое место там, где
     // человек ждёт увидеть почту.
     email: user?.email ?? null,
+    avatarKey: user?.avatarKey ?? null,
     telegramLinked: !!user?.telegramUserId,
     access: accessFor(userId, user?.accessUntil ?? null, user?.createdAt ?? new Date()),
     goals,

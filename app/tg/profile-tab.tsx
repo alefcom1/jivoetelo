@@ -27,8 +27,10 @@ import {
   type ProfileResponse,
 } from "./plan-profile-api";
 import { ApiError } from "./api";
-import { haptic, openExternal } from "./telegram";
+import { getWebApp, haptic, openExternal } from "./telegram";
 import { CameraSettings } from "../camera-settings";
+import { Crown, monogramHue, monogramLetter } from "../avatar";
+import { TgPhoto } from "./photo";
 
 /** Число по-русски: десятые через запятую. В поля ввода не идёт — только в текст. */
 const ru = (value: number) => String(value).replace(".", ",");
@@ -36,21 +38,31 @@ const ru = (value: number) => String(value).replace(".", ",");
 const DIGEST_HOURS = Array.from({ length: MAX_DIGEST_HOUR - MIN_DIGEST_HOUR + 1 }, (_, i) => MIN_DIGEST_HOUR + i);
 
 /**
- * Монограмма вместо аватара. Аватар у Telegram есть (`initDataUnsafe.user.
- * photo_url`), но лежит он на его CDN — это внешний хост в интерфейсе,
- * который обязан открываться и без доступа к нему. Буква и тон, выведенные
- * из самого адреса почты, дают то же узнавание без единого запроса наружу и
- * при этом у каждого человека свои.
+ * Аватар: фото, если оно есть, иначе монограмма — буква и тон из адреса
+ * почты. Монограмма осталась не заглушкой: фото ставит меньшинство, а буква
+ * даёт узнавание без единого запроса и у каждого своя.
+ *
+ * Фото у Telegram тоже есть (`photo_url` в initData), но лежит оно на его
+ * CDN — внешний хост в интерфейсе, который обязан открываться и без доступа
+ * наружу. Поэтому его забирают один раз на сервере (app/api/tg/avatar), и
+ * дальше картинка идёт через наш раздатчик с проверкой владельца.
+ *
+ * Корона — при открытом доступе. Своей рисовкой, а не эмодзи: в Mini App
+ * эмодзи рисует Telegram, в вебе — операционная система, и один значок
+ * выглядел бы в двух интерфейсах по-разному.
  */
-function Monogram({ email }: { email: string | null }) {
-  const source = email ?? "";
-  const letter = (source.trim()[0] ?? "Ж").toUpperCase();
-  // Простая устойчивая свёртка: одна и та же почта — всегда один и тот же
-  // цвет, на любом устройстве и после любой перезагрузки.
-  let sum = 0;
-  for (const char of source) sum = (sum + char.charCodeAt(0) * 31) % 360;
-  return <span className="tg-profile-avatar" style={{ "--food-hue": sum } as React.CSSProperties} aria-hidden>
-    {letter}
+function Monogram({ email, avatarKey, premium }: { email: string | null; avatarKey: string | null; premium: boolean }) {
+  return <span className="tg-profile-avatar-wrap">
+    {avatarKey
+      ? <TgPhoto photoKey={avatarKey} alt="" className="tg-profile-avatar-photo" />
+      : <span
+          className="tg-profile-avatar"
+          style={{ "--food-hue": monogramHue(email) } as React.CSSProperties}
+          aria-hidden
+        >
+          {monogramLetter(email)}
+        </span>}
+    {premium && <span className="tg-profile-crown" title="Доступ открыт"><Crown className="" /></span>}
   </span>;
 }
 
@@ -540,6 +552,37 @@ export function ProfileTab({ onUnlinked, onInvite }: { onUnlinked?: () => void; 
   const [data, setData] = useState<ProfileResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [unlinking, setUnlinking] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  /**
+   * Забрать фото из Telegram. Скачивает его сервер (app/api/tg/avatar): в
+   * интерфейсе не должно быть внешнего хоста, а адрес на CDN Telegram —
+   * именно он.
+   *
+   * Отказ здесь — обычное дело: фото может быть закрыто настройками
+   * приватности, и Telegram тогда просто не кладёт его в initData. Поэтому
+   * сервер отвечает 200 с человеческим текстом, а не ошибкой.
+   */
+  async function takeTelegramPhoto() {
+    setAvatarBusy(true);
+    setAvatarError(null);
+    try {
+      const response = await fetch("/api/tg/avatar", {
+        method: "POST",
+        headers: { "x-telegram-init-data": getWebApp()?.initData ?? "" },
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (payload?.ok) { haptic("success"); await load(); return; }
+      haptic("error");
+      setAvatarError(typeof payload?.error === "string" ? payload.error : "Не получилось забрать фото.");
+    } catch {
+      haptic("error");
+      setAvatarError("Нет связи с сервером.");
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
 
   // Первая загрузка — эффект-локальная функция с флагом отмены (та же
   // форма, что в inbox-tab.tsx): setState вызывается прямо внутри эффекта,
@@ -594,12 +637,24 @@ export function ProfileTab({ onUnlinked, onInvite }: { onUnlinked?: () => void; 
 
   return <div className="tg-page">
     <section className="tg-card tg-profile-head">
-      <Monogram email={data.email} />
+      <Monogram email={data.email} avatarKey={data.avatarKey} premium={data.access.plan === "premium"} />
       <div className="tg-profile-head-body">
         <h1>Профиль</h1>
         {/* Аккаунт из Mini App живёт без почты. Показываем это прямо, а не
             пустой строкой: пустое место читается как ошибка загрузки. */}
         <p>{data.email ?? "Вход через Telegram"}</p>
+        {/* Кнопка одна и без обещаний: фото может быть закрыто настройками
+            приватности, и узнать об этом можно только попробовав. Отказ
+            приходит человеческим текстом, а не молчанием. */}
+        {!data.avatarKey && <button
+          className="tg-link-button"
+          type="button"
+          disabled={avatarBusy}
+          onClick={() => void takeTelegramPhoto()}
+        >
+          {avatarBusy ? "Забираем…" : "Взять фото из Telegram"}
+        </button>}
+        {avatarError && <p className="tg-error">{avatarError}</p>}
       </div>
     </section>
 

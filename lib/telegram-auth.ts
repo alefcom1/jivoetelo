@@ -19,6 +19,12 @@ const INIT_DATA_TTL_SECONDS = 3600;
 export type TelegramIdentity = {
   telegramUserId: string;
   firstName: string | null;
+  /**
+   * Аватар в Telegram — только у initData Mini App и только если человек не
+   * закрыл фото настройками приватности. У Login Widget его нет, поэтому
+   * поле необязательное.
+   */
+  photoUrl?: string | null;
 };
 
 export class TelegramAuthError extends Error {
@@ -43,7 +49,7 @@ export function verifyInitData(initData: string): TelegramIdentity {
 
   // Подлинность уже подтверждена validate(); поле user разбираем сами, чтобы
   // не зависеть от строгой схемы библиотеки (Telegram добавляет поля со временем).
-  let tgUser: { id?: number; first_name?: string };
+  let tgUser: { id?: number; first_name?: string; photo_url?: string };
   try {
     tgUser = JSON.parse(new URLSearchParams(initData).get("user") ?? "{}");
   } catch {
@@ -51,7 +57,15 @@ export function verifyInitData(initData: string): TelegramIdentity {
   }
   if (!tgUser?.id) throw new TelegramAuthError("invalid_signature");
 
-  return { telegramUserId: String(tgUser.id), firstName: tgUser.first_name ?? null };
+  return {
+    telegramUserId: String(tgUser.id),
+    firstName: tgUser.first_name ?? null,
+    // Адрес аватара в Telegram. Приходит не всегда — зависит от настроек
+    // приватности человека. Само по себе это поле в интерфейс не идёт: по
+    // нему картинку один раз скачивают на сервере и кладут своим файлом
+    // (app/api/tg/avatar), чтобы в интерфейсе не оказалось внешнего хоста.
+    photoUrl: typeof tgUser.photo_url === "string" ? tgUser.photo_url : null,
+  };
 }
 
 /**

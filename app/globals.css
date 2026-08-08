@@ -744,6 +744,40 @@ footer>.footer-app:first-child{margin-top:0}
 /* Отступ под якорь: ссылки вида /app/settings#dostup иначе ставят заголовок
    раздела вплотную к верху окна, а на узком экране — под шапку кабинета. */
 .settings-block[id]{scroll-margin-top:88px}
+/* Аватар: фото или монограмма, с короной у открытого доступа.
+   Размер задаётся в разметке (шапка — 36, настройки — 72), поэтому здесь
+   только форма и наложение значка. */
+.user-avatar{position:relative;display:inline-grid;place-items:center;flex:none;border-radius:50%}
+.user-avatar-photo{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.user-avatar-monogram{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;
+  font:600 45% var(--serif);
+  background:hsl(var(--food-hue) 55% 91%);color:hsl(var(--food-hue) 55% 34%)}
+/* Корона сидит на верхнем правом углу и слегка выступает за круг: внутри
+   круга она сливается с фото, снаружи читается как значок. Обводка цветом
+   подложки отделяет её от любой картинки под ней. */
+.user-avatar-crown{position:absolute;top:-22%;right:-18%;width:52%;height:52%;
+  display:grid;place-items:center;color:var(--coral);
+  filter:drop-shadow(0 0 1.5px var(--white)) drop-shadow(0 0 1.5px var(--white))}
+.user-avatar-crown svg{width:100%;height:100%;display:block}
+
+/* Фото профиля в настройках: круг слева, действия справа. */
+.avatar-panel{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;margin:0 0 14px}
+.avatar-panel-body{display:flex;flex-direction:column;align-items:flex-start;gap:10px;flex:1 1 240px}
+.avatar-panel-body form{margin:0}
+.avatar-panel-body .field-note{margin:0}
+/* Поле выбора файла спрятано, но остаётся доступным с клавиатуры и
+   скринридеру: display:none выключил бы и то и другое. */
+.visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* Аватар и «Выйти» в шапке кабинета — одной группой справа. */
+.shell-user{margin-left:auto;display:flex;align-items:center;gap:16px}
+.shell-avatar{display:flex;align-items:center}
+/* Правило .shell-header form{margin-left:auto} писалось, когда форма выхода
+   стояла в шапке одна. Теперь она внутри группы с аватаром, и авто-отступ
+   растащил бы их по краям. */
+.shell-user form{margin-left:0}
+
 .access-panel{display:flex;flex-direction:column;gap:12px}
 .voucher-form{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
 .voucher-form label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}

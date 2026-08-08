@@ -21,6 +21,7 @@ import { ReportSettings } from "./report-settings";
 import { TelegramLink } from "./telegram-link";
 import { UsagePanel } from "./usage-panel";
 import { AccessPanel } from "./access-panel";
+import { AvatarPanel } from "./avatar-panel";
 import { InvitePanel } from "./invite-panel";
 
 const consentDate = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric" });
@@ -90,6 +91,7 @@ export default async function SettingsPage() {
     <h1>Настройки</h1>
     <section className="settings-block">
       <p className="settings-label">Аккаунт</p>
+      <AvatarPanel avatarKey={user.avatarKey} email={user.email} premium={user.plan === "premium"} />
       <p>{user.email ?? "Вход через Telegram — почта не указана"}</p>
     </section>
     {/* Якорь: сюда ведут кнопка «Открыть тариф» в боте, отказ в разборе и

@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isAdminEmail } from "@/lib/admin";
 import { getCurrentUser } from "@/lib/auth";
+import { ACCESS_ANCHOR } from "@/lib/paid";
 import { Logo } from "../logo";
 import { SiteFooter } from "../site-footer";
 import { logout } from "../auth-actions";
+import { UserAvatar } from "./user-avatar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -32,7 +34,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             это прятать инструмент от того, для кого он сделан. */}
         {admin && <Link href="/admin">Админка</Link>}
       </nav>
-      <form action={logout}><button className="link-button" type="submit">Выйти</button></form>
+      {/* Аватар в шапке — то самое «видно, что доступ открыт», ради чего
+          корона и заводилась: она должна попадаться на глаза, а не лежать в
+          профиле. Ведёт в настройки: аватар в интерфейсах — привычная дверь
+          в свой аккаунт, и заводить рядом отдельную ссылку незачем. */}
+      <div className="shell-user">
+        <Link className="shell-avatar" href={`/app/settings#${ACCESS_ANCHOR}`} title="Настройки и доступ">
+          <UserAvatar avatarKey={user.avatarKey} email={user.email} premium={user.plan === "premium"} />
+        </Link>
+        <form action={logout}><button className="link-button" type="submit">Выйти</button></form>
+      </div>
     </header>
     <div className="shell-content">{children}</div>
     {/* Подвал — тот же, что на сайте.
