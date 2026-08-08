@@ -1,6 +1,7 @@
 import { botVerdict, type BotState } from "@/lib/bot/health";
 import { readBotHealth } from "@/lib/bot/health-store";
 import { botTransport } from "@/lib/bot/transport";
+import { hasSpeechCredentials, resolveSpeechMode } from "@/lib/speech/mode";
 import { botToken, createTelegramClient } from "@/lib/telegram-api";
 
 /**
@@ -115,6 +116,10 @@ async function renderBotPage() {
   const stored = storedResult.health;
   const { info, error } = webhook;
   const configured = botTransport();
+  // Через функции из lib, а не чтением process.env здесь: Next вшивает
+  // process.env из кода страницы на этапе сборки, и значение всегда пустое
+  // (см. комментарий к странице выше).
+  const speech = { mode: resolveSpeechMode(), hasUrl: hasSpeechCredentials() };
 
   // Окружение читаем сейчас, а транспорт — из записи о старте. Расхождение
   // между ними и есть ответ: значит .env правили после запуска контейнера.
@@ -195,6 +200,37 @@ async function renderBotPage() {
           </tr>
         </tbody>
       </table>
+    </section>
+
+    {/* Расшифровка голосовых. Стоит на странице бота, потому что вопрос
+        задают именно в его словах: «почему в Mini App нет кнопки записи».
+        Кнопку прячет клиент по флагу с сервера, и без этой строки состояние
+        не видно ниоткуда — ровно та немота, на которой мы потеряли два дня
+        с самим ботом. */}
+    <section className="adm-section">
+      <h2>Расшифровка голосовых</h2>
+      <table className="adm-table">
+        <tbody>
+          <tr>
+            <th>Режим</th>
+            <td>
+              {speech.mode === "off"
+                ? <><b>выключена</b> — кнопки записи нет ни в Mini App, ни в боте</>
+                : speech.mode === "mock"
+                  ? "заглушка: возвращает выдуманный текст, только для разработки"
+                  : "работает через свой сервис распознавания"}
+            </td>
+          </tr>
+          <tr>
+            <th>SPEECH_URL</th>
+            <td>{speech.hasUrl ? "задан" : "ПУСТ — отсюда и режим «выключена»"}</td>
+          </tr>
+        </tbody>
+      </table>
+      {speech.mode === "off" && <p className="adm-muted">
+        Это не поломка, а настройка: сервис распознавания не поднят. Как поднять —
+        docs/speech.md; после этого SPEECH_URL указывает на него, и кнопка появляется сама.
+      </p>}
     </section>
 
     <section className="adm-section">
