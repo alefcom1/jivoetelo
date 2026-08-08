@@ -759,6 +759,10 @@ footer>.footer-app:first-child{margin-top:0}
 /* Цена крупнее лимита: это то, ради чего блок и открывают. */
 .price-tariffs strong{font:600 30px var(--serif);letter-spacing:-.02em}
 .price-note{font-size:13px;color:var(--muted)}
+/* Кнопки под ценой и под приглашением. Раньше блок цены заканчивался
+   строкой про оферту, и дальше по странице шли вопросы: человек дочитывал
+   про тариф и упирался в пустоту. */
+.price-actions{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:22px 0 0}
 .price-note a{text-decoration:underline;text-underline-offset:3px}
 .price-note a:hover{color:var(--coral-text)}
 
@@ -768,6 +772,19 @@ footer>.footer-app:first-child{margin-top:0}
 .pay-links .black-button{flex:1 1 220px;text-align:center}
 .access-note{flex:1 1 100%;margin:4px 0 0;font-size:13px;color:var(--muted,#6b6560)}
 
+/* Полоса о доступе на «Сегодня». Появляется за неделю до конца — то есть
+   редко, — и потому может позволить себе заметность: рамка и своя подложка.
+   Закрытый доступ отличается только цветом рамки: паниковать нечему,
+   дневник на месте. */
+.access-strip{display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  margin:0 0 20px;padding:16px 18px;border:1px solid var(--line);background:var(--white)}
+.access-strip--closed{border-color:var(--coral)}
+.access-strip > div:first-child{flex:1 1 280px}
+.access-strip-title{margin:0 0 4px;font-weight:700}
+.access-strip-body{margin:0;font-size:14px;color:var(--muted)}
+.access-strip-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.access-strip-actions .link-button{white-space:nowrap}
+
 /* Отказ «пробный месяц закончился» — с выходом, а не строкой в пустоту.
    Кнопка на всю ширину: это единственное действие на экране, где человек
    только что упёрся, и делить её место не с чем. */
@@ -776,6 +793,24 @@ footer>.footer-app:first-child{margin-top:0}
 .access-error .black-button{text-align:center}
 .access-error .field-note{margin:0}
 .access-error .field-note a{text-decoration:underline;text-underline-offset:3px}
+
+/* Приглашение. Раскладка та же, что у блока цены: заголовок слева, текст
+   справа — на главной это единый ритм, и отдельный жанр здесь был бы
+   заметнее самого содержания. */
+.referral{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,2fr);gap:48px;
+  padding:168px 6vw;border-top:1px solid var(--line)}
+.referral h2{font:600 clamp(34px,5vw,58px)/1.02 var(--serif);letter-spacing:-.03em;margin:10px 0 0}
+.referral h2 em{font-style:italic;color:var(--coral-text)}
+.referral p{margin:0 0 16px;max-width:62ch}
+/* Шаги нумерованы цифрой в кружке, а не маркером списка: механика из трёх
+   действий читается по номерам, и порядок здесь — половина смысла. */
+.referral-steps{list-style:none;margin:0 0 24px;padding:0;display:flex;flex-direction:column;gap:14px}
+.referral-steps li{display:flex;gap:14px;align-items:flex-start}
+.referral-steps b{flex:0 0 34px;height:34px;display:grid;place-items:center;border-radius:50%;
+  background:var(--black);color:var(--white);font:600 15px var(--serif)}
+.referral-steps span{padding-top:6px}
+.referral-steps code{font-size:13px;background:var(--paper);padding:2px 6px}
+@media (max-width:860px){.referral{grid-template-columns:1fr;gap:24px;padding:96px 6vw}}
 
 /* ── Первый экран ─────────────────────────────────────────────────────────
    Фото еды больше не лежит под текстом.

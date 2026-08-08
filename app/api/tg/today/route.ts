@@ -1,4 +1,7 @@
+import { accessPrompt, accessPromptText } from "@/lib/access-prompt";
 import { freshest, newlyEarned } from "@/lib/awards";
+import { daysLeft, hasPaidAccess, inTrial } from "@/lib/paid";
+import { cheapestPayLink } from "@/lib/payments/access-links";
 import { awardCounters, grantAwards, storedAwardKeys } from "@/lib/awards-store";
 import { localToday, MEAL_TYPE_LABELS } from "@/lib/dates";
 import { countPending, everUsedInbox } from "@/lib/inbox";
@@ -15,6 +18,7 @@ export async function GET(request: Request) {
   if ("response" in auth) return auth.response;
 
   const today = localToday();
+  const now = new Date();
   // Независимые чтения — параллельно, а не одно за другим: ни одно не зависит
   // от результата другого.
   const [summary, inboxPending, weights, loggedDays, botEverUsed, counters, storedAwards] = await Promise.all([
@@ -51,8 +55,29 @@ export async function GET(request: Request) {
   // считаем их прямо здесь, рядом с остальными целями дня.
   const macros = summary.targets ? splitMacroTargets(summary.targets.kcalTarget, summary.targets.proteinTarget) : null;
 
+  /**
+   * Срок доступа на «Сегодня». Раньше об этом знал только экран профиля — то
+   * есть человек узнавал о конце пробного месяца, только если сам туда
+   * заходил. «Сегодня» открывают каждый день, и полоса там появляется лишь за
+   * неделю до конца (lib/access-prompt.ts).
+   */
+  const prompt = accessPrompt({
+    daysLeft: daysLeft(auth.user.accessUntil, auth.user.createdAt, now),
+    trial: !hasPaidAccess(auth.user.accessUntil, now) && inTrial(auth.user.createdAt, now),
+  });
+
   return Response.json({
     showCalories: auth.user.showCalories,
+    // null — доступ открыт с запасом, и разговор про деньги на первом экране
+    // не нужен вовсе.
+    access: prompt && {
+      ...prompt,
+      ...accessPromptText(prompt),
+      // Ссылка с подписанной меткой человека собирается здесь, на сервере:
+      // секрет живёт тут (lib/payments/tribute.ts).
+      payUrl: cheapestPayLink(auth.user.id)?.url ?? null,
+      payPriceRub: cheapestPayLink(auth.user.id)?.priceRub ?? null,
+    },
     simpleMode: auth.user.simpleMode,
     // Умеем ли расшифровывать голос. Знает об этом только сервер (там лежит
     // SPEECH_URL), а прятать кнопку записи должен клиент — без этого поля он

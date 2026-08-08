@@ -84,6 +84,15 @@
 .tg-hint { margin: 0; color: var(--tg-hint); font-size: 13px; line-height: 1.6; }
 .tg-error { margin: 0; color: #b95353; font-size: 13px; line-height: 1.5; }
 
+/* Полоса о доступе на «Сегодня». Стоит первой на экране и появляется редко —
+   за неделю до конца, — поэтому оформлена карточкой, а не строкой. */
+.tg-access-strip { display: flex; flex-direction: column; gap: 8px; margin: 0 0 16px;
+  padding: 14px 16px; border-radius: 14px; background: var(--tg-surface);
+  border: 1px solid rgba(0,0,0,.08); }
+.tg-access-strip--closed { border-color: #e56d55; }
+.tg-access-strip-title { margin: 0; font-weight: 600; font-size: 15px; }
+.tg-access-strip-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+
 /* Отказ «пробный месяц закончился» — с выходом, а не строкой в пустоту.
    Кнопка на всю ширину: это единственное действие на экране, где человек
    только что упёрся. */
@@ -1048,7 +1057,11 @@
   gap: 10px;
   padding: 10px 12px;
   margin: 12px 0;
-  background: var(--tg-card);
+  /* Была var(--tg-card) — переменная, которой нигде нет: фон у реплики не
+     рисовался вовсе, и на светлой теме это незаметно, а на тёмной текст
+     ложился прямо на фон экрана. Карточки во всём Mini App берут
+     --tg-surface. */
+  background: var(--tg-surface);
   border-radius: 14px;
   animation: tg-say-in 320ms ease-out both;
 }

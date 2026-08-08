@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { accessPrompt, accessPromptText, ACCESS_PROMPT_DAYS } from "../lib/access-prompt.ts";
 import { ACCESS_ANCHOR, TARIFFS } from "../lib/paid.ts";
 import { accessOffer, cheapestPayLink, payLinksFor } from "../lib/payments/access-links.ts";
 import { parseRef } from "../lib/payments/tribute.ts";
@@ -143,4 +144,51 @@ test("текст называет дату, что останется и оба 
   // «Завтра» вместо «через 1 дн.» — иначе фраза читается как машинная.
   assert.ok(trialWarningText(1, "5 сентября").includes("завтра"));
   assert.ok(!trialWarningText(1, "5 сентября").includes("через 1"));
+});
+
+/**
+ * Полоса о доступе на «Сегодня».
+ *
+ * Правило одно на два интерфейса — веб-кабинет и Mini App считают его тем же
+ * модулем. Разойдись они, человек увидел бы на одном экране «ещё 5 дней», а
+ * на другом «закрыт», и поверил бы худшему.
+ */
+
+test("полоса молчит, пока доступ с запасом", () => {
+  for (const daysLeft of [8, 15, 30, 365]) {
+    assert.equal(accessPrompt({ daysLeft, trial: true }), null, `${daysLeft} дн. — рано`);
+  }
+});
+
+test("за неделю до конца полоса появляется", () => {
+  for (let daysLeft = 1; daysLeft <= ACCESS_PROMPT_DAYS; daysLeft += 1) {
+    const prompt = accessPrompt({ daysLeft, trial: true });
+    assert.ok(prompt, `${daysLeft} дн. — пора говорить`);
+    assert.equal(prompt.closed, false);
+  }
+});
+
+test("закрытый доступ — отдельное состояние, а не «ноль дней»", () => {
+  const prompt = accessPrompt({ daysLeft: 0, trial: false });
+  assert.equal(prompt?.closed, true);
+  // Текст про закрытый доступ начинается не с «заплатите»: человек с месяцами
+  // записей в первую очередь боится потерять их, а не лимит.
+  const text = accessPromptText(prompt);
+  assert.ok(/дневник/i.test(text.body), "не сказано, что записи на месте");
+});
+
+test("пробный месяц и оплаченный доступ говорят разное", () => {
+  const trial = accessPromptText(accessPrompt({ daysLeft: 3, trial: true }));
+  const paid = accessPromptText(accessPrompt({ daysLeft: 3, trial: false }));
+  assert.notEqual(trial.title, paid.title, "«у вас платный доступ» тому, кто не платил, — обещание списания");
+  assert.match(trial.title, /Пробный месяц/);
+  assert.ok(/не сгорает/.test(paid.body), "продлевающему важно, что остаток сохранится");
+});
+
+test("дни склоняются по-русски", () => {
+  const title = (daysLeft) => accessPromptText(accessPrompt({ daysLeft, trial: true })).title;
+  assert.match(title(1), /1 день/);
+  assert.match(title(2), /2 дня/);
+  assert.match(title(5), /5 дней/);
+  assert.match(title(7), /7 дней/);
 });

@@ -441,6 +441,7 @@ export default function MiniApp() {
               }}
             />}
             {tab === "today" && <TodayTab
+              onOpenAccess={openAccess}
               data={today}
               firstName={firstName}
               hideStreak={!!shownHint}

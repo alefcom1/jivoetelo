@@ -61,6 +61,21 @@ export type TodayResponse = {
    * Считается сервером при обычной загрузке экрана (lib/awards.ts).
    */
   freshAward: FreshAward | null;
+  /**
+   * Срок доступа — только когда о нём пора говорить: за неделю до конца или
+   * после. `null` в остальных случаях, и это самый частый ответ: на первом
+   * экране должен быть день человека, а не разговор про деньги.
+   */
+  access: {
+    daysLeft: number;
+    trial: boolean;
+    closed: boolean;
+    title: string;
+    body: string;
+    /** null — приём денег выключен, остаётся приглашение. */
+    payUrl: string | null;
+    payPriceRub: number | null;
+  } | null;
   /** Состояние первых шагов — из чего собирается подсказка (lib/first-run.ts). */
   firstRun: {
     seen: string[];

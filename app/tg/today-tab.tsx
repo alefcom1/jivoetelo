@@ -11,6 +11,7 @@ import { TgPhoto } from "./photo";
 import { AwardCard, type FreshAward } from "./award-card";
 import { StreakCard } from "./streak-card";
 import { SuggestCard } from "./suggest-card";
+import { TgAccessStrip } from "./access-strip";
 import { haptic } from "./telegram";
 import { WeightTrend } from "./weight-trend";
 
@@ -141,9 +142,12 @@ export function TodayTab({
   award = null,
   onShareAward,
   onInvite,
+  onOpenAccess,
 }: {
   data: TodayResponse;
   firstName: string | null;
+  /** Открыть раздел «Доступ» — на вкладке профиля, ею владеет оболочка. */
+  onOpenAccess: () => void;
   onOpenCamera: () => void;
   onOpenInbox: () => void;
   /** Открыть правку сохранённого приёма пищи — тем же экраном, что и «Дневник». */
@@ -182,6 +186,12 @@ export function TodayTab({
         ? totals.kcal >= kcalMid ? "День набран." : "Ваш день идёт."
         : "Ваш день идёт."}</h1>
     </header>
+
+    {/* Про доступ — сразу под приветствием и выше всего остального: человеку,
+        у которого через три дня закроется разбор, это самая срочная новость
+        на экране. Появляется только за неделю до конца — правило считает
+        сервер, общее с веб-кабинетом (lib/access-prompt.ts). */}
+    {data.access && <TgAccessStrip access={data.access} onOpenAccess={onOpenAccess} />}
 
     {/* Живело стоит выше кольца сознательно: серия — это повод открыть
         приложение, и повод должен быть виден до того, как человек начнёт

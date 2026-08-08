@@ -3,7 +3,10 @@ import { redirect } from "next/navigation";
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/db";
 import { mealItems, meals, profiles } from "@/db/schema";
+import { accessPrompt } from "@/lib/access-prompt";
 import { getCurrentUser } from "@/lib/auth";
+import { daysLeft, hasPaidAccess, inTrial } from "@/lib/paid";
+import { cheapestPayLink } from "@/lib/payments/access-links";
 import { formatDayRu, isValidDay, localToday, MEAL_TYPE_LABELS, shiftDay } from "@/lib/dates";
 import { sumTotals } from "@/lib/nutrition";
 import { splitMacroTargets } from "@/lib/macro-split";
@@ -16,6 +19,7 @@ import { everUsedInbox } from "@/lib/inbox";
 import { mascotSpeech } from "@/lib/mascot";
 import { computeStreak } from "@/lib/streak";
 import { getLatestWeightKg } from "@/lib/weight";
+import { AccessStrip } from "./access-strip";
 import { AppInvite } from "../app-invite";
 import { MealIcon } from "../food-icon";
 import { EnergyRing, MacroBar } from "./day-visuals";
@@ -112,6 +116,15 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const freshlyPassed = passedByData(firstRunState).filter((key) => !alreadyPassed.has(key));
   if (freshlyPassed.length > 0) await markHints(freshlyPassed);
 
+  // Полоса о доступе. Считается тем же кодом, что и раздел «Доступ» в
+  // настройках: два места, считающих срок по-своему, однажды разойдутся —
+  // и человек увидит на одном экране «ещё 5 дней», а на другом «закрыт».
+  const now = new Date();
+  const accessBanner = accessPrompt({
+    daysLeft: daysLeft(user.accessUntil, user.createdAt, now),
+    trial: !hasPaidAccess(user.accessUntil, now) && inTrial(user.createdAt, now),
+  });
+
   return <main className="day">
     <GoalReporter saved={saved} loggedDays={streak.totalDays} telegramLinked={user.telegramLinked} />
     {shownHint && <FirstRunHint hint={shownHint} />}
@@ -121,6 +134,11 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       <h1>{formatDayRu(day)}</h1>
       <Link href={`/app?date=${shiftDay(day, 1)}`} aria-label="Следующий день">→</Link>
     </div>
+
+    {/* Про доступ — выше плана и выше всего остального: у человека, которому
+        через три дня закроется разбор, это самая срочная новость на экране.
+        Появляется только за неделю до конца (lib/access-prompt.ts). */}
+    {accessBanner && <AccessStrip prompt={accessBanner} payLink={cheapestPayLink(user.id)} />}
 
     {!targets && <section className="plan-banner">
       <p>Настройте стартовый план — и мы покажем, сколько энергии и белка стоит добирать за день.</p>
