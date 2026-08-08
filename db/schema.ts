@@ -580,8 +580,28 @@ export const specialists = pgTable("specialists", {
   specialization: text("specialization"),
   city: text("city"),
   about: text("about"),
-  // pending | approved | rejected | suspended
+  /**
+   * pending | approved | rejected | suspended.
+   *
+   * Отвечает на один вопрос: может ли этот человек работать в кабинете.
+   * `approved` теперь значит «может», а не «мы его одобрили»: при
+   * самостоятельной регистрации строка сразу создаётся с ним, потому что
+   * кабинет сам по себе не открывает ни одного байта чужих данных — он
+   * позволяет выдать код, а что откроется, решает клиент.
+   *
+   * `pending` остаётся у строк прежнего, ручного пути и означает «заведён,
+   * но работать ещё не пускали».
+   */
   status: text("status").notNull().default("pending"),
+  /**
+   * Когда специалиста подтвердил человек. `null` — зарегистрировался сам.
+   *
+   * Отдельно от `status` сознательно: «может работать» и «мы проверили, что
+   * за именем стоит практика» — разные вопросы, и склеивать их значит либо
+   * держать людей в очереди без нужды, либо выдавать непроверенного за
+   * проверенного. Клиент видит эту разницу на экране согласия.
+   */
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   approvedAt: timestamp("approved_at", { withTimezone: true }),
 });

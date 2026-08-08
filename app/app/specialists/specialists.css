@@ -64,3 +64,10 @@
 @media(max-width:850px){
   .spec-code-form,.spec-consent-form,.spec-scope-form{max-width:none}
 }
+
+/* Откуда взялось имя специалиста. Непроверенный — не предупреждение красным
+   (человек чаще всего действительно узнал того, кто дал ему код), а факт
+   рядом с именем; проверенный — тоже факт, просто другой. */
+.spec-consent-unverified,.spec-consent-verified{margin:0 0 18px;padding:11px 13px;font-size:13px;line-height:1.55;border-radius:4px}
+.spec-consent-unverified{background:#fdf3ee;border-left:2px solid var(--coral);color:#5c4d47}
+.spec-consent-verified{background:#f2f5ea;border-left:2px solid #7d9b3f;color:#4a5238}

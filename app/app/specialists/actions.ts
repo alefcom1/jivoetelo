@@ -14,7 +14,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { checkInvite, normalizeInviteCode } from "@/lib/pro/invite";
 import { normalizeScopes } from "@/lib/pro/access";
-import { acceptInvite, findInvite, specialistNameFor, revokeLink, updateScopes } from "@/lib/pro/store";
+import { acceptInvite, findInvite, specialistCardFor, revokeLink, updateScopes } from "@/lib/pro/store";
 
 const SPECIALISTS_PATH = "/app/specialists";
 
@@ -23,6 +23,8 @@ export type CheckCodeState = {
   /** Нормализованный код — переносится на второй шаг формы как есть. */
   code?: string;
   specialistName?: string;
+  /** Проверял ли профиль человек. С самостоятельной регистрацией — не всегда. */
+  specialistVerified?: boolean;
 };
 
 /**
@@ -46,14 +48,18 @@ export async function checkCode(_prev: CheckCodeState, formData: FormData): Prom
   // приводим типы принудительно.
   if (!invite) return { status: "not_found" };
 
-  const specialistName = await specialistNameFor(invite.specialistUserId);
-  // Специалист мог перестать быть подтверждённым уже после выпуска кода
-  // (см. `specialistNameFor`, она смотрит только на approved). Отдаём тот же
+  const card = await specialistCardFor(invite.specialistUserId);
+  // Специалист мог потерять доступ к разделу уже после выпуска кода
+  // (см. `specialistCardFor`, она смотрит только на approved). Отдаём тот же
   // отказ, что и для несуществующего кода: разница не помогает клиенту, а
-  // специалисту в неподтверждённом статусе клиентов иметь не полагается.
-  if (!specialistName) return { status: "not_found" };
+  // закрытому специалисту клиентов иметь не полагается.
+  if (!card) return { status: "not_found" };
 
-  return { status: "found", code: normalized, specialistName };
+  // Отметка о проверке едет вместе с именем, а не запрашивается отдельно.
+  // Имя без неё — утверждение, которого мы не делали: человек, увидевший
+  // «Марина Соколова, нутрициолог», по умолчанию решит, что сервис её знает.
+  // С тех пор как регистрация стала самостоятельной, это неправда.
+  return { status: "found", code: normalized, specialistName: card.displayName, specialistVerified: card.verified };
 }
 
 export type GrantAccessState = {

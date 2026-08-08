@@ -1,6 +1,6 @@
 import { listApplications, listSpecialists } from "@/lib/pro/store";
 import type { SpecialistStatus } from "@/lib/pro/access";
-import { confirmSpecialistAction, setSpecialistStatusAction } from "../actions";
+import { confirmSpecialistAction, setSpecialistStatusAction, setSpecialistVerifiedAction } from "../actions";
 
 const dateTimeFormat = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
 
@@ -148,6 +148,7 @@ export default async function AdminPage({
                   <th>Имя</th>
                   <th>Почта</th>
                   <th>Статус</th>
+                  <th>Проверен</th>
                   <th>Клиентов</th>
                   <th>Заведён</th>
                   <th>Действия</th>
@@ -168,6 +169,20 @@ export default async function AdminPage({
                     <td>{s.email}</td>
                     <td>
                       <span className={`adm-status adm-status-${s.status}`}>{STATUS_LABELS[s.status] ?? s.status}</span>
+                    </td>
+                    <td>
+                      {/* Отметка ничего не открывает: она меняет строку,
+                          которую видит клиент на экране согласия. Раньше это
+                          и было предварительной проверкой — теперь она идёт
+                          после, а не до. */}
+                      <form action={setSpecialistVerifiedAction}>
+                        <input type="hidden" name="userId" value={s.userId} />
+                        <input type="hidden" name="verified" value={s.verifiedAt ? "no" : "yes"} />
+                        <button className="link-button" type="submit">
+                          {s.verifiedAt ? "Снять отметку" : "Отметить проверенным"}
+                        </button>
+                      </form>
+                      {!s.verifiedAt && <span className="adm-muted">клиенту написано, что имя указано самим специалистом</span>}
                     </td>
                     <td>{s.clientCount}</td>
                     <td>{dateTimeFormat.format(s.createdAt)}</td>

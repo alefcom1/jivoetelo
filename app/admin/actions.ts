@@ -289,3 +289,27 @@ export async function offerCatalogPhotoAction(formData: FormData): Promise<void>
 
   revalidatePath("/admin/photos");
 }
+
+/**
+ * Отметка «профиль проверен».
+ *
+ * Отдельным действием от смены статуса, потому что это разные решения.
+ * Статус закрывает или открывает доступ к разделу; отметка ничего не
+ * открывает — она лишь меняет строку, которую видит клиент на экране
+ * согласия: «имя специалист указал сам» или «профиль проверен сервисом».
+ *
+ * Ставить её нужно, посмотрев на человека, а не на строку в таблице: она и
+ * есть то, ради чего раньше держали предварительную проверку.
+ */
+export async function setSpecialistVerifiedAction(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  if (!admin) notFound();
+
+  const userId = Number(formData.get("userId"));
+  const verified = formData.get("verified") === "yes";
+  if (!Number.isInteger(userId) || userId <= 0) notFound();
+
+  const { setSpecialistVerified } = await import("@/lib/pro/store");
+  await setSpecialistVerified(userId, verified);
+  revalidatePath("/admin/pro");
+}

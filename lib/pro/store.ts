@@ -283,6 +283,8 @@ export type SpecialistAdminRow = {
   city: string | null;
   about: string | null;
   status: string;
+  /** `null` — зарегистрировался сам и проверку не проходил. */
+  verifiedAt: Date | null;
   createdAt: Date;
   clientCount: number;
 };
@@ -307,6 +309,7 @@ export async function listSpecialists(): Promise<SpecialistAdminRow[]> {
       city: specialists.city,
       about: specialists.about,
       status: specialists.status,
+      verifiedAt: specialists.verifiedAt,
       createdAt: specialists.createdAt,
       clientCount: counts.clientCount,
     })
@@ -352,5 +355,107 @@ export async function setSpecialistStatus(userId: number, status: string, now: D
   await getDb()
     .update(specialists)
     .set({ status, approvedAt: status === "approved" ? now : null })
+    .where(eq(specialists.userId, userId));
+}
+
+/**
+ * Завести кабинет самому.
+ *
+ * Строка сразу со статусом `approved` — то есть «может работать». Это не
+ * послабление: кабинет сам по себе не открывает ни одного байта чужих
+ * данных, он позволяет выдать код. Что откроется, решает клиент на экране
+ * согласия, по каждому разделу отдельно, и отзывает в один клик. Настоящая
+ * дверь стоит у клиента и охраняется `canAccess`; предварительная проверка
+ * сторожила прихожую.
+ *
+ * `verifiedAt` при этом пустой, и клиент это видит: имя специалист указал
+ * себе сам. Отметка появится, когда заявку посмотрит человек.
+ *
+ * `onConflictDoNothing` вместо проверки «а есть ли уже профиль»: между
+ * чтением и вставкой человек успевает нажать кнопку во второй вкладке, а
+ * ключ здесь — сам `user_id`.
+ */
+export async function registerSpecialist(input: {
+  userId: number;
+  displayName: string;
+  specialization: string | null;
+  city: string | null;
+  about: string | null;
+  now?: Date;
+}): Promise<{ created: boolean }> {
+  const now = input.now ?? new Date();
+  const inserted = await getDb()
+    .insert(specialists)
+    .values({
+      userId: input.userId,
+      displayName: input.displayName,
+      specialization: input.specialization,
+      city: input.city,
+      about: input.about,
+      status: "approved",
+      approvedAt: now,
+    })
+    .onConflictDoNothing({ target: specialists.userId })
+    .returning({ userId: specialists.userId });
+  return { created: inserted.length > 0 };
+}
+
+/** Правка профиля самим специалистом. Статус и отметку проверки не трогает. */
+export async function updateSpecialistProfile(input: {
+  userId: number;
+  displayName: string;
+  specialization: string | null;
+  city: string | null;
+  about: string | null;
+}): Promise<void> {
+  await getDb()
+    .update(specialists)
+    .set({
+      displayName: input.displayName,
+      specialization: input.specialization,
+      city: input.city,
+      about: input.about,
+      // Правка имени сбрасывает отметку проверки: проверяли конкретного
+      // человека под конкретным именем, и молча переносить доверие на новое
+      // значило бы отдать отметку любому, кто зарегистрировался и
+      // переименовался.
+      verifiedAt: null,
+    })
+    .where(eq(specialists.userId, input.userId));
+}
+
+/**
+ * Имя специалиста для клиента — вместе с тем, проверяли ли мы его.
+ *
+ * Два значения возвращаются одним запросом и одной функцией намеренно. Имя
+ * без отметки о проверке — это утверждение, которого мы не делали: клиент,
+ * увидев «Марина Петрова, нутрициолог», по умолчанию решит, что сервис
+ * человека знает. С тех пор как регистрация стала самостоятельной, это
+ * неправда, и раздельные вызовы рано или поздно дали бы экран с именем и
+ * без оговорки.
+ */
+export async function specialistCardFor(
+  userId: number,
+): Promise<{ displayName: string; verified: boolean } | null> {
+  const rows = await getDb()
+    .select({ displayName: specialists.displayName, verifiedAt: specialists.verifiedAt })
+    .from(specialists)
+    .where(and(eq(specialists.userId, userId), eq(specialists.status, "approved")))
+    .limit(1);
+  const row = rows[0];
+  return row ? { displayName: row.displayName, verified: row.verifiedAt !== null } : null;
+}
+
+/**
+ * Отметка «профиль проверен человеком».
+ *
+ * Отдельно от статуса: статус отвечает «может ли работать», отметка — «мы
+ * убедились, что за именем стоит практика». С самостоятельной регистрацией
+ * это разные вопросы, и клиент видит именно второй.
+ */
+export async function setSpecialistVerified(userId: number, verified: boolean, now = new Date()): Promise<void> {
+  await getDb()
+    .update(specialists)
+    .set({ verifiedAt: verified ? now : null })
     .where(eq(specialists.userId, userId));
 }

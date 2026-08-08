@@ -6,7 +6,6 @@ import { SPECIALIST_PRICE_RUB } from "@/lib/pro/pricing";
 import { proFaq } from "@/lib/pro/faq";
 import { REFERRAL_REWARD_DAYS } from "@/lib/referral";
 import { breadcrumbsJsonLd, jsonLdScript } from "@/lib/schema-org";
-import { ProApplyForm } from "./apply-form";
 import { ArtAccessFlow, ProGlyph } from "./illustrations";
 
 export const metadata: Metadata = {
@@ -74,7 +73,7 @@ export default function ProPage() {
           проходили недели: регулярность, средние, дни, когда записей не было.
         </p>
         <div className="pro-hero-actions">
-          <Link className="black-button" href="#apply">Подключить кабинет <b>↗</b></Link>
+          <Link className="black-button" href="/pro/registraciya">Открыть кабинет <b>↗</b></Link>
           <Link className="pro-textlink" href="/pro/kak-rabotaet">Как проходит работа →</Link>
         </div>
       </section>
@@ -304,16 +303,25 @@ export default function ProPage() {
 
       <section className="pro-apply" id="apply">
         <div className="pro-apply-text">
-          <h2>Подключить кабинет</h2>
+          <h2>Открыть кабинет</h2>
           <p>
-            Заполните форму — ответим в течение рабочего дня и откроем кабинет. Заявку читает
-            человек: кабинет даёт доступ к записям о питании других людей, и открывать его по
-            нажатию кнопки было бы неправильно.
+            Бесплатно и сразу: имя, специализация — и можно приглашать клиентов. Ждать нашего
+            ответа не нужно.
           </p>
-          <ProApplyForm />
+          {/* Почему это можно открыть без предварительной проверки — самый
+              частый вопрос и к нам, и у самого специалиста. Ответ стоит
+              рядом с кнопкой, а не в FAQ. */}
+          <p>
+            Кабинет сам по себе не показывает ничьих данных: он позволяет выдать клиенту код, а
+            что именно откроется — решает клиент, по каждому разделу отдельно и с отзывом в один
+            клик. Профиль мы смотрим после и ставим рядом с именем отметку «проверен сервисом»;
+            до неё клиенту честно написано, что имя вы указали себе сами.
+          </p>
+          <div className="pro-hero-actions">
+            <Link className="black-button" href="/pro/registraciya">Открыть кабинет <b>↗</b></Link>
+            <Link className="pro-textlink" href="/pro/clients">Уже открыт — войти →</Link>
+          </div>
         </div>
-        {/* Форма ограничена 520 точками, и правая половина секции пустовала
-            во всю высоту анкеты — семь полей это немало. */}
         <figure className="pro-shot pro-shot-apply">
           <Image
             src="/site/pro-review.webp"

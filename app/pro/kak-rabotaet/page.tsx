@@ -122,7 +122,7 @@ export default function ProHowPage() {
 
         <h2>Что дальше</h2>
         <p className="pro-more">
-          <Link href="/pro#apply">Подключить кабинет</Link>
+          <Link href="/pro/registraciya">Открыть кабинет</Link>
           {" · "}
           <Link href="/pro/pamyatka">Памятка для клиента</Link>
           {" · "}
