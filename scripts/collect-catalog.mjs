@@ -47,6 +47,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { dirname } from "node:path";
 import {
   extractLinks,
+  extractVerticalRecord,
   findNutritionTable,
   probePage,
   robotsAllows,
@@ -191,9 +192,16 @@ async function runProbe(url) {
     for (const row of probe.sampleRows) console.log(`  ${row.join(" | ")}`);
     console.log("");
     console.log("Общего разбора достаточно — можно запускать сбор.");
+  } else if (probe.vertical) {
+    console.log("");
+    console.log("Это карточка одного продукта, состав снят вертикально:");
+    console.log(`  название: ${probe.vertical.name}`);
+    for (const [field, value] of Object.entries(probe.vertical.values)) console.log(`  ${field}: ${value}`);
+    console.log("");
+    console.log("Общего разбора достаточно — можно запускать сбор по карточкам.");
   } else {
     console.log("");
-    console.log("Таблицу с составом опознать не удалось.");
+    console.log("Ни списка, ни карточки продукта опознать не удалось.");
     if (probe.headers.length > 0) {
       console.log("Заголовки найденных таблиц:");
       for (const headers of probe.headers) console.log(`  ${headers.join(" | ")}`);
@@ -296,7 +304,22 @@ async function runCollect(args) {
       }
       console.log(`[${pages}] ${url} — строк ${lines.length}, всего ${written}`);
     } else {
-      console.log(`[${pages}] ${url} — таблицы нет`);
+      // Списка нет — возможно, это карточка одного продукта. У каталогов
+      // обычно есть и то и другое: страница раздела со списком и страницы
+      // товаров, и пропускать вторые значило бы собрать половину.
+      const record = extractVerticalRecord(result.html);
+      if (record && !seenNames.has(record.name)) {
+        seenNames.add(record.name);
+        const v = record.values;
+        appendFileSync(out, toCsvLine([
+          record.name, v.kcal ?? "", v.protein ?? "", v.fat ?? "", v.carbs ?? "",
+          v.fiber ?? "", v.portion ?? "", url,
+        ]) + "\n");
+        written += 1;
+        console.log(`[${pages}] ${url} — карточка «${record.name}», всего ${written}`);
+      } else {
+        console.log(`[${pages}] ${url} — ни списка, ни карточки`);
+      }
     }
 
     for (const link of extractLinks(result.html, url, linkPattern)) {

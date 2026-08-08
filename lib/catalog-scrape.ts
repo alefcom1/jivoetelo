@@ -21,7 +21,7 @@
  * данные во встроенном JSON (`__NEXT_DATA__` и подобное). Оба тоже здесь.
  */
 
-import { guessColumns, missingColumns, type ColumnMap } from "./catalog-import.ts";
+import { COLUMN_HINTS, guessColumns, missingColumns, type ColumnMap } from "./catalog-import.ts";
 
 export type HtmlTable = {
   headers: string[];
@@ -110,6 +110,85 @@ export function findNutritionTable(html: string): HtmlTable | null {
   return tables.filter((t) => t.usable).sort((a, b) => b.rows.length - a.rows.length)[0] ?? null;
 }
 
+/**
+ * ## Вертикальная таблица — страница одного продукта
+ *
+ * Всё выше рассчитано на список: продукты строками, нутриенты в шапке. Но у
+ * страницы **отдельного** продукта состав почти всегда свёрстан наоборот —
+ * нутриент в первой ячейке, число во второй:
+ *
+ *     Калорийность | 110 ккал
+ *     Белки        | 4.2 г
+ *     Жиры         | 1.1 г
+ *
+ * Заголовков в нашем смысле там нет вовсе (шапка — «Показатель | Значение»
+ * или её нет), и общий разбор такую таблицу не узнаёт. Поэтому отдельный
+ * проход: ищем строки, где первая ячейка похожа на название нутриента, и
+ * разворачиваем их в одну запись.
+ *
+ * Имя продукта берём из `h1`, а если его нет — из `title`: на карточке
+ * товара это он и есть.
+ */
+export type VerticalRecord = { name: string; values: Record<string, string> };
+
+/** Первая ячейка строки → наше поле. */
+function nutrientField(label: string): string | null {
+  const low = label.toLowerCase().replace(/ё/g, "е").trim();
+  if (low === "") return null;
+  for (const [field, hints] of Object.entries(COLUMN_HINTS)) {
+    // Имя продукта в вертикальной таблице не ищем: оно в заголовке страницы,
+    // а ячейка «Наименование» увела бы разбор не туда.
+    if (field === "name" || field === "ref") continue;
+    if (hints.some((hint) => low === hint || low.startsWith(hint))) return field;
+  }
+  return null;
+}
+
+export function extractPageTitle(html: string): string {
+  const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (h1) {
+    const text = stripTags(h1[1]);
+    if (text !== "") return text;
+  }
+  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  return title ? stripTags(title[1]) : "";
+}
+
+/**
+ * Состав со страницы одного продукта или `null`, если её не опознать.
+ *
+ * Требуем как минимум калорийность и один макронутриент: одинокая строчка
+ * «Белки | 4 г» на странице рецепта — не карточка продукта, и принимать её
+ * за таковую значило бы засорить каталог.
+ */
+export function extractVerticalRecord(html: string): VerticalRecord | null {
+  const values: Record<string, string> = {};
+
+  // Таблицы и списки определений: и то и другое встречается.
+  const pairs: Array<[string, string]> = [];
+  for (const rowMatch of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = [...rowMatch[1].matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((m) => stripTags(m[1]));
+    if (cells.length >= 2) pairs.push([cells[0], cells[1]]);
+  }
+  for (const dlMatch of html.matchAll(/<dt[^>]*>([\s\S]*?)<\/dt>\s*<dd[^>]*>([\s\S]*?)<\/dd>/gi)) {
+    pairs.push([stripTags(dlMatch[1]), stripTags(dlMatch[2])]);
+  }
+
+  for (const [label, value] of pairs) {
+    const field = nutrientField(label);
+    // Первое вхождение выигрывает: ниже по странице обычно идут таблицы
+    // «на порцию» и «% суточной нормы», и они бы затёрли состав на 100 г.
+    if (field && !(field in values)) values[field] = value;
+  }
+
+  const macros = ["protein", "fat", "carbs"].filter((f) => f in values);
+  if (!("kcal" in values) || macros.length === 0) return null;
+
+  const name = extractPageTitle(html);
+  if (name === "") return null;
+  return { name, values };
+}
+
 /** Строки таблицы → объекты с заголовками в ключах, как их ждёт импортёр. */
 export function tableToRows(table: HtmlTable): Array<Record<string, string>> {
   return table.rows.map((cells) =>
@@ -191,6 +270,8 @@ export type PageProbe = {
   columns: Partial<ColumnMap> | null;
   missing: string[];
   sampleRows: string[][];
+  /** Опознана ли страница как карточка одного продукта. */
+  vertical: VerticalRecord | null;
   links: number;
   jsonLd: number;
   embeddedJson: number;
@@ -206,6 +287,7 @@ export function probePage(html: string, base: string, linkPattern?: RegExp): Pag
     columns: best?.columns ?? null,
     missing: best ? [] : missingColumns(tables[0]?.columns ?? {}),
     sampleRows: best ? best.rows.slice(0, 3) : [],
+    vertical: best ? null : extractVerticalRecord(html),
     links: extractLinks(html, base, linkPattern).length,
     jsonLd: extractJsonLd(html).length,
     embeddedJson: extractEmbeddedJson(html).length,

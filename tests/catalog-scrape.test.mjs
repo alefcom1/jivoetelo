@@ -12,8 +12,9 @@ import {
   robotsDisallows,
   stripTags,
   tableToRows,
+  extractVerticalRecord,
 } from "../lib/catalog-scrape.ts";
-import { parseAll } from "../lib/catalog-import.ts";
+import { parseAll, parseNumber } from "../lib/catalog-import.ts";
 
 /** Таблица с настоящей шапкой из `th`. */
 const PROPER_TABLE = `
@@ -206,4 +207,89 @@ test("разведка страницы без таблиц не падает и
 test("служебное: теги снимаются, сущности раскрываются", () => {
   assert.equal(stripTags("<b>Творог</b>&nbsp;5&#37;"), "Творог 5%");
   assert.equal(decodeEntities("&laquo;Гречка&raquo; &mdash; 110"), "«Гречка» — 110");
+});
+
+// ─── Карточка одного продукта ──────────────────────────────────────────────
+// У страницы отдельного продукта состав свёрстан наоборот: нутриент в
+// строке, а не в шапке. Общий разбор такую таблицу не узнаёт, и без
+// отдельного прохода сборщик прошёл бы мимо всех карточек каталога.
+
+const PRODUCT_PAGE = `
+<html><head><title>Гречка отварная — калорийность | Сайт</title></head><body>
+<h1>Гречка отварная</h1>
+<table class="nutrition">
+  <tr><th>Показатель</th><th>Значение</th></tr>
+  <tr><td>Калорийность</td><td>110 ккал</td></tr>
+  <tr><td>Белки</td><td>4,2 г</td></tr>
+  <tr><td>Жиры</td><td>1,1 г</td></tr>
+  <tr><td>Углеводы</td><td>21,3 г</td></tr>
+  <tr><td>Клетчатка</td><td>2,7 г</td></tr>
+</table>
+</body></html>`;
+
+test("карточка продукта разбирается вертикально", () => {
+  const record = extractVerticalRecord(PRODUCT_PAGE);
+  assert.ok(record, "карточка не опознана");
+  assert.equal(record.name, "Гречка отварная");
+  assert.equal(record.values.kcal, "110 ккал");
+  assert.equal(record.values.protein, "4,2 г");
+  assert.equal(record.values.fiber, "2,7 г");
+});
+
+test("единицы в значениях не мешают: их снимает разбор чисел импортёра", () => {
+  const record = extractVerticalRecord(PRODUCT_PAGE);
+  assert.equal(parseNumber(record.values.kcal), 110);
+  assert.equal(parseNumber(record.values.protein), 4.2);
+});
+
+test("таблица «на порцию» ниже по странице не затирает состав на 100 г", () => {
+  // Типичная ловушка: под основной таблицей идёт вторая, с теми же
+  // подписями, но другими числами. Выигрывает первое вхождение.
+  const html = PRODUCT_PAGE.replace("</body>", `
+    <h2>В порции 180 г</h2>
+    <table>
+      <tr><td>Калорийность</td><td>198 ккал</td></tr>
+      <tr><td>Белки</td><td>7,6 г</td></tr>
+    </table></body>`);
+  const record = extractVerticalRecord(html);
+  assert.equal(record.values.kcal, "110 ккал", "состав подменён порционным");
+});
+
+test("список определений тоже читается", () => {
+  const html = `<h1>Творог 5%</h1><dl>
+    <dt>Калорийность</dt><dd>121 ккал</dd>
+    <dt>Белки</dt><dd>17,2 г</dd>
+    <dt>Жиры</dt><dd>5 г</dd></dl>`;
+  const record = extractVerticalRecord(html);
+  assert.equal(record.name, "Творог 5%");
+  assert.equal(record.values.kcal, "121 ккал");
+});
+
+test("страница без калорийности карточкой не считается", () => {
+  // Одинокая строчка «Белки» на странице рецепта — не карточка продукта.
+  const html = `<h1>Рецепт</h1><table><tr><td>Белки</td><td>4 г</td></tr></table>`;
+  assert.equal(extractVerticalRecord(html), null);
+});
+
+test("карточка без заголовка отбрасывается: имя брать неоткуда", () => {
+  const html = PRODUCT_PAGE.replace(/<h1>.*?<\/h1>/, "").replace(/<title>.*?<\/title>/, "");
+  assert.equal(extractVerticalRecord(html), null);
+});
+
+test("имя берётся из title, если h1 нет", () => {
+  const html = PRODUCT_PAGE.replace(/<h1>.*?<\/h1>/, "");
+  assert.match(extractVerticalRecord(html).name, /Гречка отварная/);
+});
+
+test("разведка сообщает про карточку, когда списка на странице нет", () => {
+  const probe = probePage(PRODUCT_PAGE, "https://site.ru/p/1");
+  assert.equal(probe.columns, null, "список опознан там, где его нет");
+  assert.ok(probe.vertical, "карточка не замечена");
+  assert.equal(probe.vertical.name, "Гречка отварная");
+});
+
+test("на странице со списком карточка не ищется", () => {
+  const probe = probePage(PROPER_TABLE, "https://site.ru/catalog/");
+  assert.ok(probe.columns, "список должен быть опознан");
+  assert.equal(probe.vertical, null);
 });
