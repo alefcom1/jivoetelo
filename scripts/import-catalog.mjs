@@ -35,7 +35,7 @@
 
 import { readFileSync } from "node:fs";
 import { FOOD_REFERENCE } from "../lib/food-reference.ts";
-import { formatReport, normalizeSearchKey, parseAll } from "../lib/catalog-import.ts";
+import { formatReport, guessColumns, missingColumns, normalizeSearchKey, parseAll } from "../lib/catalog-import.ts";
 import { CATALOG_SOURCES, isCatalogSource } from "../lib/catalog-sources.ts";
 
 function parseArgs(argv) {
@@ -119,37 +119,14 @@ function readRows(file) {
     .map((cells) => Object.fromEntries(header.map((name, at) => [name, cells[at] ?? ""])));
 }
 
-/** Синонимы заголовков у источников — русские и английские. */
-const COLUMN_HINTS = {
-  name: ["название", "наименование", "продукт", "блюдо", "name", "title", "food"],
-  kcal: ["ккал", "калорийность", "калории", "энергетическая", "kcal", "calories", "energy"],
-  protein: ["белки", "белок", "protein", "proteins"],
-  fat: ["жиры", "жир", "fat", "fats"],
-  carbs: ["углеводы", "углевод", "carbs", "carbohydrates"],
-  fiber: ["клетчатка", "пищевые волокна", "волокна", "fiber", "fibre"],
-  portion: ["порция", "вес порции", "portion", "serving"],
-  ref: ["id", "код", "артикул", "ref", "slug"],
-};
-
-function guessColumns(header, args) {
-  const columns = {};
-  const lower = header.map((h) => ({ raw: h, low: h.toLowerCase().trim() }));
-
-  for (const [field, hints] of Object.entries(COLUMN_HINTS)) {
-    const manual = args[`col-${field}`];
-    if (typeof manual === "string") { columns[field] = manual; continue; }
-    // Точное совпадение важнее вхождения: у «белки» и «белки, г» разный
-    // приоритет только в пользу читаемости, но «жиры» не должны поймать
-    // колонку «жирность».
-    const exact = lower.find((h) => hints.includes(h.low));
-    const partial = lower.find((h) => hints.some((hint) => h.low.startsWith(hint)));
-    const hit = exact ?? partial;
-    if (hit) columns[field] = hit.raw;
+/** Ключи вида `--col-name Продукт` — ручное задание колонок. */
+function manualColumns(args) {
+  const manual = {};
+  for (const [key, value] of Object.entries(args)) {
+    if (key.startsWith("col-") && typeof value === "string") manual[key.slice(4)] = value;
   }
-  return columns;
+  return manual;
 }
-
-const REQUIRED_COLUMNS = ["name", "kcal", "protein", "fat", "carbs"];
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
@@ -168,9 +145,9 @@ async function main() {
 
   const rows = readRows(file);
   const header = Object.keys(rows[0] ?? {});
-  const columns = guessColumns(header, args);
+  const columns = guessColumns(header, manualColumns(args));
 
-  const missing = REQUIRED_COLUMNS.filter((field) => !columns[field]);
+  const missing = missingColumns(columns);
   if (missing.length > 0) {
     console.error(`Не нашёл колонки: ${missing.join(", ")}`);
     console.error(`Заголовки в файле: ${header.join(" | ")}`);

@@ -129,6 +129,53 @@ export function atwaterAgrees(row: {
   return ratio > 1 - ATWATER_TOLERANCE && ratio < 1 + ATWATER_TOLERANCE;
 }
 
+/**
+ * Синонимы заголовков у источников — русские и английские.
+ *
+ * Живут здесь, а не в скрипте импорта, потому что ими пользуются двое:
+ * импортёр разбирает по ним заголовок CSV, сборщик (scripts/collect-catalog.mjs)
+ * по ним же опознаёт нужную таблицу на странице. Две копии этого списка
+ * разошлись бы, и разошлись бы молча.
+ */
+export const COLUMN_HINTS: Record<string, string[]> = {
+  name: ["название", "наименование", "продукт", "блюдо", "name", "title", "food"],
+  kcal: ["ккал", "калорийность", "калории", "энергетическая", "kcal", "calories", "energy"],
+  protein: ["белки", "белок", "protein", "proteins"],
+  fat: ["жиры", "жир", "fat", "fats"],
+  carbs: ["углеводы", "углевод", "carbs", "carbohydrates"],
+  fiber: ["клетчатка", "пищевые волокна", "волокна", "fiber", "fibre"],
+  portion: ["порция", "вес порции", "portion", "serving"],
+  ref: ["id", "код", "артикул", "ref", "slug"],
+};
+
+/** Без этих колонок строка бесполезна: дневник считает по ним. */
+export const REQUIRED_COLUMNS = ["name", "kcal", "protein", "fat", "carbs"];
+
+/**
+ * Сопоставляет заголовки файла или таблицы с нашими полями.
+ *
+ * Точное совпадение важнее вхождения: «жиры» не должны поймать колонку
+ * «жирность», а «белки» — «белки, г» и «белки» одинаково хороши.
+ */
+export function guessColumns(header: string[], manual: Record<string, string> = {}): Partial<ColumnMap> {
+  const columns: Record<string, string> = {};
+  const lower = header.map((h) => ({ raw: h, low: h.toLowerCase().trim() }));
+
+  for (const [field, hints] of Object.entries(COLUMN_HINTS)) {
+    if (manual[field]) { columns[field] = manual[field]; continue; }
+    const exact = lower.find((h) => hints.includes(h.low));
+    const partial = lower.find((h) => hints.some((hint) => h.low.startsWith(hint)));
+    const hit = exact ?? partial;
+    if (hit) columns[field] = hit.raw;
+  }
+  return columns as Partial<ColumnMap>;
+}
+
+/** Каких обязательных колонок не хватает. */
+export function missingColumns(columns: Partial<ColumnMap>): string[] {
+  return REQUIRED_COLUMNS.filter((field) => !columns[field as keyof ColumnMap]);
+}
+
 /** Как названы колонки в файле источника. */
 export type ColumnMap = {
   name: string;
