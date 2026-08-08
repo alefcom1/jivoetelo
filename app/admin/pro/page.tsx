@@ -59,7 +59,7 @@ export default async function AdminPage({
   return (
     <>
       <section className="adm-section" id="applications">
-        <h2>Заявки в пилот</h2>
+        <h2>Заявки на кабинет</h2>
         <p className="adm-section-lead">
           Первую группу набираем руками: каждую заявку читаем и решаем сами, а не по галочке в форме.
           «Подтвердить как специалиста» заводит профиль по указанной почте — сработает только для тех, у кого уже
