@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ARTICLES, findArticle, formatArticleDate } from "@/lib/articles";
 import { NOT_MEDICAL_DISCLAIMER } from "@/lib/legal";
-import { blogPostingJsonLd, breadcrumbsJsonLd, jsonLdScript } from "@/lib/schema-org";
+import { blogPostingJsonLd, breadcrumbsJsonLd, faqPageJsonLd, jsonLdScript } from "@/lib/schema-org";
 import { ArticleHero } from "../heroes";
 
 import KakUstroen from "../content/kak-ustroen-dnevnik-po-foto";
@@ -16,6 +16,7 @@ import Sahar from "../content/kak-umenshit-skachki-sahara-posle-edy";
 import RazniyeCifry from "../content/pochemu-u-odnogo-blyuda-v-raznyh-prilozheniyah-raznaya-kalor";
 import Grechka from "../content/grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods";
 import TriKilogramma from "../content/tri-kilogramma-kotorye-ne-zhir-chto-pokazyvayut-vesy-na-samo";
+import IiPodschet from "../content/ii-podschet-kalorij-po-foto";
 
 /**
  * Тексты статей — компоненты, а не markdown: им нужны скриншоты с
@@ -24,6 +25,7 @@ import TriKilogramma from "../content/tri-kilogramma-kotorye-ne-zhir-chto-pokazy
  * tests/articles.test.mjs следит, чтобы ни одна статья не осталась без текста.
  */
 const CONTENT: Record<string, () => React.ReactElement> = {
+  "ii-podschet-kalorij-po-foto": IiPodschet,
   "kak-ustroen-dnevnik-po-foto": KakUstroen,
   "sravnenie-prilozhenij-dlya-podscheta-kalorij": Sravnenie,
   "dnevnik-pitaniya-v-telegram": Telegram,
@@ -167,6 +169,8 @@ export default async function ArticlePage({ params }: Params) {
             { name: "Журнал", path: "/blog" },
             { name: article.titleShort, path: `/blog/${article.slug}` },
           ]),
+          // FAQPage — только у статей, где раздел с вопросами есть в тексте.
+          ...(article.faq?.length ? [faqPageJsonLd(article.faq)] : []),
         ]),
       }}
     />

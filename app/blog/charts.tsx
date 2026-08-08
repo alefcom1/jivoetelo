@@ -141,3 +141,94 @@ export function CompareScoreChart({ rows }: { rows: Array<{ name: string; score:
     <text x={left} y={20} fontSize="13" fill={MUTED}>Закрыто признаков из 10 — по таблице выше</text>
   </svg>;
 }
+
+/**
+ * Где модель ошибается сильнее: белок, углеводы, жиры.
+ *
+ * ## Почему это самый важный график статьи про ИИ
+ *
+ * Разговор «точно или нет» обычно ведут про итоговые калории, и это тупик:
+ * общая ошибка складывается из трёх очень разных и прячет главное. Белок и
+ * углеводы модель по снимку оценивает прилично — их видно: кусок мяса имеет
+ * размер, гарнира на тарелке столько-то. Жир не виден **принципиально**: он
+ * впитался в сковороду, лежит в заправке, растворён в соусе.
+ *
+ * Полосы показывают типичный разброс оценки по каждому макросу — не нашу
+ * метрику качества, а свойство самой задачи: столько неопределённости в
+ * фотографии есть, и никакая модель её оттуда не достанет.
+ *
+ * Числа передаются из статьи, а не зашиты здесь: график обязан повторять
+ * таблицу над ним, а не заводить второй источник.
+ */
+export function MacroErrorChart({ rows }: { rows: Array<{ name: string; low: number; high: number; note: string }> }) {
+  const width = 760;
+  const rowH = 62;
+  const top = 44;
+  const height = top + rows.length * rowH + 34;
+  const left = 130;
+  const max = 60;
+  const x = (percent: number) => left + (percent / max) * (width - left - 150);
+
+  return <svg viewBox={`0 0 ${width} ${height}`} role="img"
+    aria-label={`Типичный разброс оценки по фотографии: ${rows.map((r) => `${r.name} — от ${r.low} до ${r.high} процентов`).join("; ")}`}>
+    <rect width={width} height={height} fill="#fffefa" />
+    {[0, 15, 30, 45, 60].map((percent) => <g key={percent}>
+      <line x1={x(percent)} y1={top - 14} x2={x(percent)} y2={height - 28} stroke={LINE} strokeWidth="1" />
+      <text x={x(percent)} y={height - 8} fontSize="13" fill={MUTED} textAnchor="middle">{percent}%</text>
+    </g>)}
+    {rows.map((row, i) => {
+      const y = top + i * rowH;
+      // Чем шире полоса, тем гуще цвет: коралловый — там, где смотреть на
+      // одну цифру бессмысленно.
+      const wide = row.high >= 30;
+      return <g key={row.name}>
+        <text x={left - 12} y={y + 20} fontSize="15" fill={INK} textAnchor="end" fontWeight="700">{row.name}</text>
+        <rect x={x(row.low)} y={y + 5} width={Math.max(4, x(row.high) - x(row.low))} height="22" rx="11"
+          fill={wide ? CORAL : LIME} stroke={INK} strokeWidth="1.5" />
+        <text x={x(row.high) + 10} y={y + 21} fontSize="14" fill={INK} fontWeight="700">{row.low}–{row.high}%</text>
+        <text x={left} y={y + 44} fontSize="13" fill={MUTED}>{row.note}</text>
+      </g>;
+    })}
+    <text x={left} y={22} fontSize="13" fill={MUTED}>Типичный разброс оценки по одной фотографии</text>
+  </svg>;
+}
+
+/**
+ * Куда уходят деньги за один разбор фотографии.
+ *
+ * Нужен разделу про «бесплатно». Утверждение «каждый снимок стоит сервису
+ * живых денег» на слух звучит как отговорка продавца — а на столбиках видно,
+ * что это просто себестоимость, и видно её порядок: центы, а не рубли и не
+ * доли копейки. Из этого сам собой следует вывод раздела: бесплатно навсегда
+ * и без ограничений не бывает, вопрос только в том, чем платят вместо денег.
+ */
+export function CostBarChart({ rows }: { rows: Array<{ name: string; cents: number; note: string }> }) {
+  const width = 760;
+  const barW = 108;
+  const gap = 44;
+  const height = 300;
+  const base = 214;
+  const max = Math.max(...rows.map((row) => row.cents), 1);
+  const scale = (cents: number) => Math.max(6, (cents / max) * 150);
+  const startX = (width - (rows.length * barW + (rows.length - 1) * gap)) / 2;
+
+  return <svg viewBox={`0 0 ${width} ${height}`} role="img"
+    aria-label={`Себестоимость одного действия в центах: ${rows.map((r) => `${r.name} — ${r.cents}`).join("; ")}`}>
+    <rect width={width} height={height} fill="#fffefa" />
+    <line x1="40" y1={base} x2={width - 40} y2={base} stroke={INK} strokeWidth="1.5" />
+    {rows.map((row, i) => {
+      const x = startX + i * (barW + gap);
+      const h = scale(row.cents);
+      return <g key={row.name}>
+        <rect x={x} y={base - h} width={barW} height={h} fill={i === 0 ? CORAL : LIME} stroke={INK} strokeWidth="1.5" />
+        <text x={x + barW / 2} y={base - h - 12} fontSize="19" fill={INK} textAnchor="middle" fontWeight="700"
+          fontFamily="Georgia, serif">
+          {row.cents === 0 ? "0" : `${row.cents}¢`}
+        </text>
+        <text x={x + barW / 2} y={base + 24} fontSize="14" fill={INK} textAnchor="middle" fontWeight="700">{row.name}</text>
+        <text x={x + barW / 2} y={base + 44} fontSize="12" fill={MUTED} textAnchor="middle">{row.note}</text>
+      </g>;
+    })}
+    <text x="40" y="26" fontSize="13" fill={MUTED}>Себестоимость одного действия, центы США</text>
+  </svg>;
+}
