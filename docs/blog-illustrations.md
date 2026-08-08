@@ -108,3 +108,81 @@ SVG-обложки в `app/blog/heroes.tsx` остаются запасным в
   рекламной подачей «магического ИИ» — и обложка не должна её повторять.
 - **Тел, весов с человеком, «до и после».** Правило журнала: мы про еду и
   цифры, не про внешний вид.
+
+## Промпт для статьи «Как считать калории самостоятельно»
+
+Статья держится на одном тезисе: **ошибка распределена неравномерно, и
+взвешивать надо только плотное и маленькое**. Обложка обязана взять именно
+его — не «подсчёт калорий» вообще, иначе получится стоковая картинка про
+диету, каких в выдаче тысячи.
+
+Ход, который делает это без единой буквы: **на весах лежит крошечное, а
+огромное стоит рядом мимо весов**. Зрительный парадокс («почему взвешивают
+ложку, а не миску?») и есть вопрос, ответ на который даёт статья.
+
+### Обложка — `hero-kak-schitat-kalorii.webp`
+
+> Editorial illustration, flat graphic style with subtle paper texture. Warm
+> palette: cream paper background (#f4f1ea), near-black ink (#171917), coral
+> accent (#e56d55), soft lime (#d9e49c). Clean composition, generous negative
+> space, no text, no letters, no numbers, no logos. Aspect ratio 16:9.
+>
+> A kitchen counter seen from a low three-quarter angle. On the left, a small
+> flat digital kitchen scale with a tiny object on its platform: a single
+> tablespoon holding a bead of golden oil, drawn small and precise, rendered
+> with the most detail in the whole image. The scale's display panel is drawn
+> as a blank dark rounded rectangle with no digits on it. A soft coral glow
+> outlines the spoon, marking it as the thing that matters.
+>
+> On the right, occupying twice the visual area, a large wide bowl heaped with
+> leafy salad, cucumber rounds and herbs — drawn in loose soft lime and ink
+> strokes, deliberately less detailed, standing directly on the counter beside
+> the scale, clearly NOT being weighed. A comfortable gap of empty cream
+> counter separates them.
+>
+> The size relationship is the subject: the tiny item is measured, the huge
+> one is not. Calm, matter-of-fact kitchen mood, warm daylight from the left,
+> soft long shadows on the counter. No hands, no people.
+
+### Что здесь важно и почему
+
+- **Дисплей весов пустой.** Обложка идёт в OpenGraph, и любая цифра на ней
+  станет обещанием точности — ровно тем, против чего написана статья. По той
+  же причине ни одной буквы.
+- **Разная степень проработки — часть смысла.** Ложка выписана детально,
+  салат нарисован размашисто. Это визуальный перевод правила: точность нужна
+  там, где она стоит килокалорий, и не нужна там, где не стоит.
+- **Масштаб обязан читаться сразу.** Если миска и ложка окажутся сопоставимы
+  по площади кадра, парадокс исчезнет и останется просто натюрморт. Миска
+  должна занимать заметно больше места — примерно вдвое.
+- **Коралловый — только на ложке.** Один акцент на весь кадр; он и говорит,
+  куда смотреть.
+- **Без рук и людей.** Правило журнала: мы про еду и числа, не про внешний
+  вид и не про «правильный образ жизни».
+
+### Запасной вариант, если первый выйдет вялым
+
+Тот же тезис через ряд, а не через пару. Сработает, если генератор не
+удержит разницу масштабов:
+
+> Five objects in a single horizontal row on cream paper, sharply decreasing
+> in physical size from right to left but INCREASING in drawn precision: a
+> loose bushel of leafy greens, a whole cucumber, a wedge of cheese, a small
+> handful of walnuts, and finally a single tablespoon of oil. The three items
+> on the right are sketchy and pale; the two on the left are crisp, detailed
+> and outlined in coral. A thin ink baseline runs under all five. Flat,
+> diagrammatic, no text, no numbers. Aspect ratio 16:9.
+
+Тут смысл читается как шкала: чем меньше и плотнее предмет, тем внимательнее
+он нарисован.
+
+### Чего на этой обложке быть не должно
+
+- **Цифр на дисплее весов, ярлыков, любых надписей.** Это первое, что
+  генератор захочет добавить, и это придётся отдельно запрещать в промпте.
+- **Сантиметровой ленты, напольных весов, тел, талий, «до и после».**
+  Статья про арифметику еды, а не про внешний вид.
+- **Калькулятора, блокнота с расчётами, телефона с приложением.** Соблазн
+  показать «подсчёт» буквально — и картинка сразу становится стоковой.
+- **Тарелки, поделённой на секторы.** Это чужой метод (тарелочный), и он
+  предмет другой статьи кластера — «Похудеть без подсчёта калорий».

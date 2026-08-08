@@ -194,6 +194,64 @@ export function MacroErrorChart({ rows }: { rows: Array<{ name: string; low: num
 }
 
 /**
+ * Откуда берётся ошибка дневного подсчёта — вклад каждого источника в ккал.
+ *
+ * ## Почему в килокалориях, а не в процентах
+ *
+ * Процент здесь ничего не решает: «ошибка 12%» не подсказывает, что делать
+ * завтра. А «ложка масла, которую вы не записали, — это 90 ккал» подсказывает
+ * ровно одно действие, и оно выполнимо.
+ *
+ * ## Почему полосы, а не стопка
+ *
+ * Стопка читалась бы как «сложите и получите свою ошибку». Так нельзя:
+ * источники частично гасят друг друга (порцию можно и переоценить), и сумма
+ * крайних значений — величина, которой не бывает. Полосы говорят честнее:
+ * вот порядок каждого, сравнивайте между собой, а не суммируйте.
+ *
+ * ## Что тут главное
+ *
+ * Последняя строка — самая короткая. Это и есть вывод: спорят обычно о том,
+ * чья таблица калорийности правильнее, а это наименьший из источников. Чтобы
+ * это читалось глазами, а не только из подписи, последняя полоса рисуется
+ * приглушённой и подписана отдельно.
+ */
+export function ErrorShareChart({ rows }: { rows: Array<{ name: string; low: number; high: number; note: string }> }) {
+  const width = 760;
+  const rowH = 66;
+  const top = 44;
+  const height = top + rows.length * rowH + 34;
+  const left = 210;
+  const max = Math.max(...rows.map((row) => row.high), 1);
+  const x = (kcal: number) => left + (kcal / max) * (width - left - 120);
+  const ticks = [0, 100, 200, 300].filter((tick) => tick <= max);
+
+  return <svg viewBox={`0 0 ${width} ${height}`} role="img"
+    aria-label={`Вклад источников в дневную ошибку подсчёта: ${rows.map((r) => `${r.name} — от ${r.low} до ${r.high} ккал`).join("; ")}`}>
+    <rect width={width} height={height} fill="#fffefa" />
+    {ticks.map((kcal) => <g key={kcal}>
+      <line x1={x(kcal)} y1={top - 14} x2={x(kcal)} y2={height - 28} stroke={LINE} strokeWidth="1" />
+      <text x={x(kcal)} y={height - 8} fontSize="13" fill={MUTED} textAnchor="middle">{kcal}</text>
+    </g>)}
+    {rows.map((row, i) => {
+      const y = top + i * rowH;
+      // Приглушаем последнюю строку: она короче всех и в этом весь смысл
+      // картинки. Признак — позиция, а не порог по числу: порог однажды
+      // разойдётся с данными, а «последняя» останется последней.
+      const minor = i === rows.length - 1;
+      return <g key={row.name}>
+        <text x={left - 12} y={y + 20} fontSize="15" fill={minor ? MUTED : INK} textAnchor="end" fontWeight="700">{row.name}</text>
+        <rect x={x(row.low)} y={y + 5} width={Math.max(4, x(row.high) - x(row.low))} height="22" rx="11"
+          fill={minor ? PAPER : CORAL} stroke={INK} strokeWidth="1.5" opacity={minor ? 1 : 0.9} />
+        <text x={x(row.high) + 10} y={y + 21} fontSize="14" fill={INK} fontWeight="700">{row.low}–{row.high}</text>
+        <text x={left} y={y + 46} fontSize="13" fill={MUTED}>{row.note}</text>
+      </g>;
+    })}
+    <text x={left} y={22} fontSize="13" fill={MUTED}>Порядок вклада в ошибку за день, ккал</text>
+  </svg>;
+}
+
+/**
  * Куда уходят деньги за один разбор фотографии.
  *
  * Нужен разделу про «бесплатно». Утверждение «каждый снимок стоит сервису

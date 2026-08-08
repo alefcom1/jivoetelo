@@ -17,6 +17,7 @@ import RazniyeCifry from "../content/pochemu-u-odnogo-blyuda-v-raznyh-prilozheni
 import Grechka from "../content/grechka-92-ili-330-kkal-kak-odno-chislo-lomaet-polovinu-pods";
 import TriKilogramma from "../content/tri-kilogramma-kotorye-ne-zhir-chto-pokazyvayut-vesy-na-samo";
 import IiPodschet from "../content/ii-podschet-kalorij-po-foto";
+import KakSchitat from "../content/kak-schitat-kalorii";
 
 /**
  * Тексты статей — компоненты, а не markdown: им нужны скриншоты с
@@ -25,6 +26,7 @@ import IiPodschet from "../content/ii-podschet-kalorij-po-foto";
  * tests/articles.test.mjs следит, чтобы ни одна статья не осталась без текста.
  */
 const CONTENT: Record<string, () => React.ReactElement> = {
+  "kak-schitat-kalorii": KakSchitat,
   "ii-podschet-kalorij-po-foto": IiPodschet,
   "kak-ustroen-dnevnik-po-foto": KakUstroen,
   "sravnenie-prilozhenij-dlya-podscheta-kalorij": Sravnenie,
