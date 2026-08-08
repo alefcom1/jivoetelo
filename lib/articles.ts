@@ -80,7 +80,7 @@ export const ARTICLES: Article[] = [
     updated: "2026-08-08",
     heroImage: null,
     heroAlt:
-      "Кухонный стол сверху: цифровые весы с небольшой миской орехов, рядом бутылочка масла и ложка, поодаль — крупная миска салата без весов",
+      "Женщина у кухонного стола смотрит на небольшие весы: на них ложка масла, орехи и ломтик сыра, а рядом стоит большая миска салата, которую никто не взвешивает",
     sources: [
       {
         title: "Lichtman S. W. et al. Discrepancy between self-reported and actual caloric intake in obese subjects (NEJM, 1992)",
