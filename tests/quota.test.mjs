@@ -66,7 +66,13 @@ test("закрытый доступ означает ноль обращений
  * молча, не тронув ни одной строки текста.
  */
 test("за деньги — только работа модели, дневник в этой таблице не участвует", () => {
-  const MODEL_ONLY = ["analyze_photo", "analyze_text", "suggest", "read_scale", "transcribe"];
+  const MODEL_ONLY = [
+    "analyze_photo", "analyze_text", "suggest", "read_scale",
+    // Разбор питания в отчёте — тоже обращение к модели, и в платном контуре
+    // он по той же причине, что остальные: за токены платим мы.
+    "review_insight",
+    "transcribe",
+  ];
   assert.deepEqual(
     [...AI_OPERATIONS].sort(),
     [...MODEL_ONLY].sort(),

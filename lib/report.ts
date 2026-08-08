@@ -38,6 +38,12 @@ export type ReportInput = {
   streak: StreakResult;
   /** Готовый раздел «Еда и вес» (lib/dish-impact.ts) или null, если рано. */
   impact: { title: string; text: string } | null;
+  /**
+   * Разбор питания и напоминания о привычках (lib/report-insight.ts). Пусто —
+   * законный исход: модель выключена, данных мало или запрос не прошёл.
+   * Отчёт без этих разделов остаётся полным отчётом.
+   */
+  insight?: ReportSection[];
 };
 
 export type ReportHighlight = { value: string; label: string };
@@ -90,6 +96,11 @@ export function buildReport(input: ReportInput): Report {
   // заставлять человека складывать одно с другим самому.
   const rhythm = rhythmText(input.streak);
   if (rhythm) sections.splice(1, 0, { title: "Ритм", text: rhythm });
+
+  // Разбор питания — после чисел и ритма, но до «Еды и веса». Порядок читается
+  // как разговор: сначала что произошло, потом что из этого видно, и только
+  // потом самое осторожное — связь еды с весом.
+  if (input.insight) sections.push(...input.insight);
 
   // «Еда и вес» — в самом конце и только когда наблюдений хватило. Это самый
   // осторожный раздел из всех, и стоять выше разбора питания ему нечего.

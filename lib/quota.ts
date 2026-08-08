@@ -24,7 +24,7 @@ export async function getUsageToday(userId: number): Promise<Record<AiOperation,
     .groupBy(aiUsage.kind);
 
   const used: Record<AiOperation, number> = {
-    analyze_photo: 0, analyze_text: 0, suggest: 0, read_scale: 0, transcribe: 0,
+    analyze_photo: 0, analyze_text: 0, suggest: 0, read_scale: 0, review_insight: 0, transcribe: 0,
   };
   for (const row of rows) {
     if (row.kind in used) used[row.kind as AiOperation] = Number(row.count);

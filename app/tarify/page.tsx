@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { ACCESS_ANCHOR, priceRub, TARIFFS, TRIAL_DAYS } from "@/lib/paid";
 import { payLinksFor } from "@/lib/payments/access-links";
-import { AI_OPERATIONS, OPERATION_LABELS, PLAN_LIMITS } from "@/lib/quota-policy";
+import { OPERATION_LABELS, PLAN_LIMITS, USER_FACING_OPERATIONS } from "@/lib/quota-policy";
 import { breadcrumbsJsonLd, jsonLdScript } from "@/lib/schema-org";
 
 export const metadata: Metadata = {
@@ -77,7 +77,7 @@ export default async function TarifyPage() {
       <h2>Что становится платным</h2>
       <p>Обращение к модели. Вот сколько его в сутки при открытом доступе:</p>
       <ul className="price-limits">
-        {AI_OPERATIONS.map((operation) => (
+        {USER_FACING_OPERATIONS.map((operation) => (
           <li key={operation}>
             <b>{PLAN_LIMITS.premium[operation]}</b>
             <span>{OPERATION_LABELS[operation]}</span>

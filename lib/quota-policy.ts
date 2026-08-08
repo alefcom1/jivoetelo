@@ -34,7 +34,22 @@
  * AiOperation, потому что у них есть то, чего нет у расшифровки: модель,
  * таймаут, число повторов и цена за токен (lib/ai/client.ts).
  */
-export const MODEL_OPERATIONS = ["analyze_photo", "analyze_text", "suggest", "read_scale"] as const;
+export const MODEL_OPERATIONS = [
+  "analyze_photo",
+  "analyze_text",
+  "suggest",
+  "read_scale",
+  /**
+   * Разбор питания в недельном и месячном отчёте (lib/report-insight.ts).
+   *
+   * Операция здесь ради двух вещей: правильной цены за токены (разбор идёт на
+   * Sonnet, и списывать его по ставке Haiku значило бы недосчитывать расход) и
+   * общего предохранителя расходов. Дневного лимита в человеческом смысле у
+   * неё нет — отчёт приходит раз в неделю, а не по нажатию, — поэтому в списке
+   * возможностей на странице цены её нет: см. USER_FACING_OPERATIONS.
+   */
+  "review_insight",
+] as const;
 
 export type ModelOperation = (typeof MODEL_OPERATIONS)[number];
 
@@ -61,14 +76,20 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
    * Дневник при этом остаётся полным. Ноль стоит здесь и только здесь —
    * в таблице обращений к модели.
    */
-  free: { analyze_photo: 0, analyze_text: 0, suggest: 0, read_scale: 0, transcribe: 0 },
+  free: { analyze_photo: 0, analyze_text: 0, suggest: 0, read_scale: 0, review_insight: 0, transcribe: 0 },
   /**
    * Доступ открыт — пробным месяцем, оплатой, ваучером или приглашением.
    * Числа не «в разы больше для красоты»: при 100 разборах по фото в день
    * человек упирается в них, только если снимает не свою еду, а подряд всё,
    * что видит, — то есть там, где начинается уже не дневник.
    */
-  premium: { analyze_photo: 100, analyze_text: 200, suggest: 60, read_scale: 40, transcribe: 300 },
+  /**
+   * `review_insight` — пять в сутки при одном отчёте в неделю. Число здесь не
+   * лимит для человека, а предохранитель от зацикленной отправки: сколько
+   * раз подряд можно сходить в модель, если что-то пойдёт не так с очередью
+   * отчётов.
+   */
+  premium: { analyze_photo: 100, analyze_text: 200, suggest: 60, read_scale: 40, review_insight: 5, transcribe: 300 },
 };
 
 export const OPERATION_LABELS: Record<AiOperation, string> = {
@@ -76,8 +97,21 @@ export const OPERATION_LABELS: Record<AiOperation, string> = {
   analyze_text: "разборов по описанию",
   suggest: "подборов «что съесть дальше»",
   read_scale: "снимков весов",
+  review_insight: "разборов отчёта",
   transcribe: "расшифровок голосом",
 };
+
+/**
+ * Что показывать в списке возможностей на странице цены и на главной.
+ *
+ * Не все операции туда годятся. `review_insight` считается раз в неделю, при
+ * отправке отчёта, а не по нажатию человека — строка «5 разборов отчёта в
+ * день» описывала бы предохранитель, а не возможность, и читалась бы как
+ * ограничение там, где никакого ограничения человек не почувствует.
+ */
+export const USER_FACING_OPERATIONS = AI_OPERATIONS.filter(
+  (operation) => operation !== "review_insight",
+);
 
 /**
  * Те же операции одним-двумя словами — для заголовков таблиц.
@@ -92,6 +126,7 @@ export const OPERATION_SHORT: Record<AiOperation, string> = {
   analyze_photo: "фото",
   analyze_text: "текст",
   suggest: "подсказки",
+  review_insight: "отчёт",
   read_scale: "весы",
   transcribe: "голос",
 };
@@ -119,6 +154,7 @@ const PRICE_PER_MTOK: Record<AiOperation, { input: number; output: number }> = {
   analyze_text: { input: 1, output: 5 }, // Haiku 4.5
   suggest: { input: 1, output: 5 }, // Haiku 4.5
   read_scale: { input: 3, output: 15 }, // Sonnet 5
+  review_insight: { input: 3, output: 15 }, // Sonnet 5
   // Своя установка на нашем же сервере: денег наружу не уходит вовсе, и
   // токенов у неё нет. Ноль здесь — не заглушка, а точная цена.
   transcribe: { input: 0, output: 0 },

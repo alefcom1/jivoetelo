@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { latestArticles } from "@/lib/articles";
 import { priceRub, TARIFFS } from "@/lib/paid";
-import { AI_OPERATIONS, OPERATION_LABELS, PLAN_LIMITS } from "@/lib/quota-policy";
+import { OPERATION_LABELS, PLAN_LIMITS, USER_FACING_OPERATIONS } from "@/lib/quota-policy";
 import { AppEntry } from "./app-invite";
 import { ArticleHero } from "./blog/heroes";
 import { HeroCalc } from "./hero-calc";
@@ -394,7 +394,7 @@ export default function Home() {
           Дальше платным становится обращение к модели — вот сколько его в сутки:
         </p>
         <ul className="price-limits">
-          {AI_OPERATIONS.map((operation) => (
+          {USER_FACING_OPERATIONS.map((operation) => (
             <li key={operation}>
               <b>{PLAN_LIMITS.premium[operation]}</b>
               <span>{OPERATION_LABELS[operation]}</span>

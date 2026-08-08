@@ -82,6 +82,10 @@ const TIMEOUTS: Record<ModelOperation, number> = {
   // секунды. Держать здесь двухминутный предел значило бы заставлять человека
   // столько же смотреть на крутилку, когда до модели просто не достучались.
   read_scale: 40_000,
+  // Разбор отчёта никто не ждёт у экрана: он считается в фоне при отправке.
+  // Предел здесь не про терпение человека, а про то, чтобы зависший запрос не
+  // держал заход планировщика.
+  review_insight: 60_000,
 };
 
 /**
@@ -109,6 +113,9 @@ const RETRIES: Record<ModelOperation, number> = {
   analyze_text: 1,
   suggest: 1,
   read_scale: 1,
+  // Повтор безопасен: отчёт уходит из фона, лишние секунды никого не ждут, а
+  // разбор, потерянный из-за одного обрыва, вернётся только через неделю.
+  review_insight: 1,
 };
 
 export function timeoutFor(operation: ModelOperation): number {
@@ -169,6 +176,11 @@ const DEFAULT_MODEL_BY_OPERATION: Record<ModelOperation, string> = {
   analyze_photo: "claude-sonnet-5",
   analyze_text: "claude-haiku-4-5-20251001",
   suggest: "claude-haiku-4-5-20251001",
+  // Sonnet, а не Haiku: связать шесть показателей в наблюдение, которое
+  // читается как про человека, а не как пересказ таблицы, — работа для
+  // модели покрупнее. Цена терпима из-за частоты: раз в неделю, а не на
+  // каждое действие.
+  review_insight: "claude-sonnet-5",
   // Не haiku, хотя задача выглядит крошечной: семисегментные цифры под бликом
   // на тёмном стекле — не «прочитать текст», а разобрать плохую картинку, и
   // цена ошибки здесь выше, чем экономия на модели.
@@ -179,6 +191,7 @@ const MODEL_ENV_BY_OPERATION: Record<ModelOperation, string> = {
   analyze_photo: "ANTHROPIC_MODEL_VISION",
   analyze_text: "ANTHROPIC_MODEL_TEXT",
   suggest: "ANTHROPIC_MODEL_SUGGEST",
+  review_insight: "ANTHROPIC_MODEL_INSIGHT",
   read_scale: "ANTHROPIC_MODEL_SCALE",
 };
 

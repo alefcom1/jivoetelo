@@ -15,7 +15,12 @@ import { getDishImpact } from "./dish-impact.ts";
 import { computeMealStats, type PeriodStats } from "./meal-stats.ts";
 import { listLoggedDays } from "./meals.ts";
 import { sumTotals } from "./nutrition.ts";
-import { buildReport, type Report } from "./report.ts";
+import { getInsightProvider } from "./ai/insight.ts";
+import { checkQuota, recordUsage } from "./quota.ts";
+import { buildInsightFacts, canAnalyze, habitReminders, insightSections } from "./report-insight.ts";
+import { buildReport, type Report, type ReportSection } from "./report.ts";
+import { effectivePlan } from "./paid.ts";
+import type { Plan } from "./quota-policy.ts";
 import type { ReportPeriod } from "./report-period.ts";
 import { DEFAULT_REPORT_PREFERENCES, type ReportPreferences } from "./report-prefs.ts";
 import type { DayStat } from "./review.ts";
@@ -101,6 +106,12 @@ export type ReportRecipient = {
   telegramUserId: string | null;
   showCalories: boolean;
   prefs: ReportPreferences;
+  /**
+   * Действующий тариф — от него зависит, будет ли в отчёте разбор питания:
+   * это обращение к модели, то есть платная часть (lib/quota-policy.ts).
+   * Вычисляется из срока доступа, как и везде, а не читается из колонки.
+   */
+  plan: Plan;
 };
 
 /** Настройки отчётов пользователя. Нет строки — значит всё по умолчанию. */
@@ -116,19 +127,70 @@ export function readPreferences(row: {
   };
 }
 
+/**
+ * Частые блюда за период и был ли алкоголь.
+ *
+ * Считается здесь же, а не отдельным модулем: тот же список позиций уже
+ * прочитан для дневных сумм, и второй запрос за теми же строками означал бы
+ * два источника одного факта.
+ */
+async function dishesInPeriod(
+  userId: number,
+  from: string,
+  to: string,
+): Promise<{ frequent: Array<{ name: string; times: number }>; hadAlcohol: boolean }> {
+  const db = getDb();
+  const rows = await db
+    .select({ name: mealItems.name })
+    .from(mealItems)
+    .innerJoin(meals, eq(meals.id, mealItems.mealId))
+    .where(and(eq(meals.userId, userId), gte(meals.eatenOn, from), lte(meals.eatenOn, to)));
+
+  const counts = new Map<string, { name: string; times: number }>();
+  for (const row of rows) {
+    const name = row.name.trim();
+    if (!name) continue;
+    // Ключ по нижнему регистру: «Гречка» и «гречка» — одно блюдо, а в
+    // списке из пяти позиций такая пара съедает два места из пяти.
+    const key = name.toLowerCase();
+    const seen = counts.get(key);
+    if (seen) seen.times += 1;
+    else counts.set(key, { name, times: 1 });
+  }
+
+  const frequent = [...counts.values()].sort((a, b) => b.times - a.times || a.name.localeCompare(b.name));
+  const hadAlcohol = [...counts.keys()].some((name) => ALCOHOL_WORDS.some((word) => name.includes(word)));
+  return { frequent: frequent.slice(0, 5), hadAlcohol };
+}
+
+/**
+ * Слова, по которым видно алкоголь в записях.
+ *
+ * Список короткий и намеренно грубый: он решает единственный вопрос —
+ * добавлять ли в отчёт одну нейтральную строку. Ошибка в любую сторону стоит
+ * этой строки, и точность здесь не нужна. Оценок по нему не делается никаких.
+ */
+const ALCOHOL_WORDS = [
+  "пив", "вин", "шампан", "виск", "водк", "конья", "ликёр", "ликер",
+  "коктейл", "джин", "ром", "текил", "сидр", "настойк", "аперол", "мохито", "глинтвейн",
+];
+
 /** Готовый отчёт за период. */
 export async function buildUserReport(
-  recipient: Pick<ReportRecipient, "userId" | "showCalories" | "prefs">,
+  recipient: Pick<ReportRecipient, "userId" | "showCalories" | "prefs" | "plan">,
   period: ReportPeriod,
 ): Promise<Report> {
-  const [data, loggedDays, impact] = await Promise.all([
+  const [data, loggedDays, impact, dishes] = await Promise.all([
     collectPeriodData(recipient.userId, period.from, period.to, period.kind === "weekly" ? "week" : "month"),
     listLoggedDays(recipient.userId),
     // Разбор «еда и вес» — только в месячном отчёте. В недельном он почти
     // всегда молчит (нужно 14 дней данных минимум), и повторять «пока рано»
     // каждую неделю значит приучать пролистывать раздел.
     period.kind === "monthly" ? getDishImpact(recipient.userId, period.to) : Promise.resolve({ section: null }),
+    dishesInPeriod(recipient.userId, period.from, period.to),
   ]);
+
+  const insight = await collectInsight(recipient, period, data, dishes);
 
   return buildReport({
     period,
@@ -143,7 +205,70 @@ export async function buildUserReport(
     // неделю «серия: 3 дня» должна означать состояние на воскресенье.
     streak: computeStreak(loggedDays, period.to),
     impact: impact.section,
+    insight,
   });
+}
+
+/**
+ * Разбор питания моделью — или пусто, и это нормальный исход.
+ *
+ * ## Четыре причины промолчать, и все обязательные
+ *
+ * 1. **Мало данных.** Меньше трёх дней с записями — наблюдение о двух днях,
+ *    звучащее как вывод о человеке (см. MIN_DAYS_FOR_INSIGHT).
+ * 2. **Модель выключена.** `getInsightProvider` вернёт null, и ходить некуда.
+ * 3. **Доступ закрыт или предохранитель сработал.** `checkQuota` отвечает на
+ *    оба вопроса разом: у тарифа без доступа лимит нулевой, а общий дневной
+ *    потолок расходов проверяется там же.
+ * 4. **Запрос не прошёл.** Тогда отчёт уходит без раздела — и это в точности
+ *    то, каким он был вчера. Ронять из-за разбора целое письмо нельзя:
+ *    числа в нём человек ждёт, а наблюдение — приятное дополнение.
+ *
+ * Строка про привычки при этом остаётся всегда: она наша, детерминированная,
+ * и модели для неё не нужно.
+ */
+async function collectInsight(
+  recipient: Pick<ReportRecipient, "userId" | "showCalories" | "plan">,
+  period: ReportPeriod,
+  data: PeriodData,
+  dishes: { frequent: Array<{ name: string; times: number }>; hadAlcohol: boolean },
+): Promise<ReportSection[]> {
+  // Номер периода — от даты конца, а не счётчиком: он должен быть одинаковым
+  // при повторной сборке того же отчёта, иначе строка про привычки менялась
+  // бы между предпросмотром и отправкой.
+  const periodIndex = Math.floor(Date.parse(`${period.to}T00:00:00Z`) / 86_400_000 / 7);
+  const habits = habitReminders({ periodIndex, hadAlcohol: dishes.hadAlcohol });
+
+  const facts = buildInsightFacts({
+    periodLabel: period.kind === "weekly" ? "неделя" : "месяц",
+    daysInPeriod: Math.round(
+      (Date.parse(`${period.to}T12:00:00Z`) - Date.parse(`${period.from}T12:00:00Z`)) / 86_400_000,
+    ) + 1,
+    dayStats: data.dayStats,
+    targets: data.targets,
+    frequentDishes: dishes.frequent,
+    weightChangeKg: data.weeklyTrendChangeKg,
+    showCalories: recipient.showCalories,
+  });
+
+  if (!canAnalyze(facts)) return insightSections(null, habits);
+
+  const provider = getInsightProvider();
+  if (!provider) return insightSections(null, habits);
+
+  // Тариф настоящий, а не подставленный: у закрытого доступа лимит нулевой,
+  // и разбор — платная часть ровно так же, как разбор фотографии.
+  const decision = await checkQuota(recipient.userId, recipient.plan, "review_insight");
+  if (!decision.allowed) return insightSections(null, habits);
+
+  try {
+    const result = await provider.analyze(facts);
+    await recordUsage(recipient.userId, "review_insight", result.usage);
+    return insightSections(result.insight, habits);
+  } catch (error) {
+    console.error("[report] разбор питания не получился", error);
+    return insightSections(null, habits);
+  }
 }
 
 /**
@@ -161,6 +286,8 @@ export async function getRecipient(userId: number): Promise<ReportRecipient | nu
       email: users.email,
       telegramUserId: users.telegramUserId,
       showCalories: users.showCalories,
+      accessUntil: users.accessUntil,
+      createdAt: users.createdAt,
       weekly: reportPreferences.weekly,
       monthly: reportPreferences.monthly,
       weightNumbers: reportPreferences.weightNumbers,
@@ -178,5 +305,6 @@ export async function getRecipient(userId: number): Promise<ReportRecipient | nu
     telegramUserId: user.telegramUserId,
     showCalories: user.showCalories,
     prefs: readPreferences({ weekly: user.weekly, monthly: user.monthly, weight_numbers: user.weightNumbers }),
+    plan: effectivePlan(user.accessUntil, user.createdAt, new Date()),
   };
 }
