@@ -161,6 +161,117 @@
 буквально, и обложка со взвешиванием тянула бы ровно в обратную сторону — а
 заодно к теме внешнего вида, которой в журнале не место.
 
+## Иллюстрации внутри статей
+
+Это отдельный жанр, и правила у него другие, чем у обложек.
+
+**Зачем они нужны.** Восьмиминутный текст без пауз читают по диагонали.
+У двух семиминутных статей журнала внутри по три-четыре фотографии, а у двух
+самых длинных — только схемы и ни одного снимка. Это перекос, который видно
+глазами: самые содержательные тексты выглядят самыми утомительными.
+
+**Чем отличаются от обложек.**
+
+| | Обложка | Фигура внутри |
+|---|---|---|
+| Кадр | сцена целиком, человек в полный рост за столом | еда крупно, человек — руками или поясным планом |
+| Пропорции | строго 16:9, кадрируется скриптом | родные, скрипт только уменьшает до 1400 px |
+| Человек | почти всегда | по обстоятельствам: половина фигур — чистая еда |
+| Задача | остановить взгляд | дать отдохнуть глазу и показать то, о чём абзац |
+
+**Еда здесь главная.** На обложке она часть сцены, а в фигуре — герой:
+крупный план, ресторанная подача, тёплое дерево, боковой свет, пар, блеск
+масла на корочке, зелень сверху. Ровно как в готовых `poryadok-edy.webp` и
+`sobrannaya-tarelka.webp` — на них стоит посмотреть перед заказом.
+
+К каждому промпту ниже добавлять общий стиль из раздела выше, но **без
+строки про 16:9** — пропорции указаны у каждой фигуры своей.
+
+### Для статьи «Как считать калории»
+
+**1. `schitat-cena-lozhki` — после раздела «Правило плотности».** 3:2
+
+Тезис абзаца: в ложке масла столько же энергии, сколько в целой миске
+овощей. Показать это едой, а не цифрами.
+
+> A warm wooden table, dramatic low side light. On the left, three tiny
+> things arranged in a precise row, lit like jewellery: a spoon pooled with
+> golden olive oil, a small heap of shelled walnuts, a thin shaving of
+> parmesan. On the right, filling most of the frame, three generous ceramic
+> bowls brimming with vegetables — roasted broccoli with charred edges,
+> ripe cherry tomatoes, crisp cucumber and green leaves — glistening,
+> beautifully plated, restaurant quality. The tiny row and the abundant
+> bowls balance each other visually, as if weighing the same. Close-up food
+> photography, deep shadows, no people. Aspect ratio 3:2.
+
+**2. `schitat-kastryulya` — в разделе «Домашняя еда».** 4:3
+
+> Close-up of a woman's hands ladling thick fragrant vegetable and chicken
+> soup from a big enamel pot into a pale ceramic bowl, steam rising through
+> a shaft of afternoon light. On the wooden table beside the pot: a board
+> with chopped carrots and herbs, a wooden spoon, a linen towel. Rich
+> colour, glossy broth, appetising and homely. Only hands and forearms in
+> frame. Aspect ratio 4:3.
+
+**3. `schitat-svoya-tarelka` — в разделе «Первая неделя».** 16:9
+
+Тезис: запись занимает секунды и не мешает ужинать.
+
+> Evening in a warm kitchen. The woman sits at a beautifully set wooden
+> table with a gorgeous dinner in front of her — grilled fish, roasted
+> vegetables, a bright side salad, a glass of water — softly lit by a low
+> warm lamp. She is relaxed, mid-meal, holding her fork; her phone lies flat
+> on the table beside her, screen down, forgotten. Calm, unhurried, the food
+> is the brightest thing in the frame. Aspect ratio 16:9.
+
+### Для статьи «ИИ считает калории по фото»
+
+**1. `ii-razobrannaya-tarelka` — после «Как это устроено внутри».** 16:9
+
+Тезис: разбор раскладывает блюдо на продукты. Показать буквально и красиво.
+
+> Top-down view of a warm wooden table. On the left, one beautifully plated
+> dish: grilled chicken with couscous, roasted peppers and greens, glossy
+> and appetising. On the right, the very same meal taken apart into neat
+> separate little piles and small bowls — sliced chicken, a mound of
+> couscous, roasted peppers, fresh herbs, and a tiny dish of golden oil —
+> arranged in a tidy grid with generous space between them. Rich colour,
+> soft directional light, no people, no text. Aspect ratio 16:9.
+
+**2. `ii-shtrihkod` — в разделе «Когда ИИ не нужен вовсе».** 4:3
+
+Тезис: у упаковки состав уже напечатан, оценивать нечего.
+
+> Close-up of a woman's hands holding a plain unbranded tub of Greek yoghurt
+> over a wooden table, tilting it as if reading the side. On the table below:
+> a stunning breakfast bowl of thick yoghurt topped with raspberries,
+> blueberries, toasted nuts and a drizzle of honey, catching the morning
+> light, plus a small jug of milk and a spoon. The packaging is completely
+> blank — no labels, no lettering, no logos. Only hands in frame.
+> Aspect ratio 4:3.
+
+**3. `ii-nedelya-zavtrakov` — в разделе «Главное про точность».** 3:2
+
+Тезис: регулярность важнее точности одного снимка.
+
+> Top-down grid of seven breakfast bowls on a warm wooden surface, arranged
+> in an even row of four and three. Each is the same kind of breakfast but
+> slightly different day to day: porridge with berries, yoghurt with nuts,
+> eggs with greens, cottage cheese with peaches — all beautifully styled,
+> colourful and appetising, in matching pale ceramic. Soft even daylight,
+> gentle shadows, a linen cloth at one corner. No people, no text.
+> Aspect ratio 3:2.
+
+### Когда файлы придут
+
+1. Вписать имена в `FIGURES` в `scripts/blog-heroes.mjs` (там пропорции
+   родные, кадрирования нет) и собрать.
+2. Вставить `<figure className="blog-figure">` с подписью в нужные разделы
+   статей — места указаны у каждого промпта.
+
+Подпись под фигурой обязательна и пишется по делу, а не «иллюстрация к
+разделу»: она читается вместе с текстом и должна добавлять мысль.
+
 ## Первая партия — сцены, записанные задним числом
 
 Семь обложек от 4 и 7 августа. Промптов от них не осталось: прежняя таблица
