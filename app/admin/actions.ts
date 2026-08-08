@@ -247,3 +247,45 @@ export async function attachPaymentAction(
   revalidatePath("/admin/users");
   return { ok: true, until: until ? until.toLocaleDateString("ru-RU") : "—" };
 }
+
+/**
+ * Предложить автору опубликовать снимок из его дневника.
+ *
+ * Это первый шаг нового пути в каталог: раньше единственная дорога вела из
+ * карточки приёма пищи руками автора, и очередь модерации годами оставалась
+ * пустой. Теперь разговор начинает модератор — но заканчивает его всё равно
+ * автор: строка создаётся в состоянии `offered`, без согласия и без версии
+ * документов, и до ответа человека снимок не виден никому, кроме них двоих.
+ */
+export async function offerCatalogPhotoAction(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  if (!admin) notFound();
+
+  const userId = Number(formData.get("userId"));
+  const photoKey = String(formData.get("photoKey") ?? "");
+  const slug = String(formData.get("productSlug") ?? "").trim();
+  const grams = Number(formData.get("grams"));
+  if (!Number.isInteger(userId) || userId <= 0 || !photoKey) notFound();
+
+  const { findProduct } = await import("@/lib/products");
+  const product = findProduct(slug);
+  if (!product) notFound();
+
+  // Ключ пришёл из формы, а форму отдаёт наша же страница — но проверка
+  // принадлежности стоит одну строку, а цена ошибки здесь предложение
+  // человеку опубликовать чужой снимок.
+  const { photoBelongsTo } = await import("@/lib/storage");
+  if (!photoBelongsTo(photoKey, userId)) notFound();
+
+  const { buildCaption } = await import("@/lib/catalog-photos");
+  const { offerPhoto } = await import("@/lib/catalog-photos-store");
+  await offerPhoto({
+    userId,
+    productSlug: slug,
+    photoKey,
+    caption: buildCaption(product.name, Number.isFinite(grams) && grams > 0 ? grams : product.portionG),
+    moderatorId: admin.id,
+  });
+
+  revalidatePath("/admin/photos");
+}
