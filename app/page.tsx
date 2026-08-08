@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { featuredArticles } from "@/lib/articles";
 import { AppInvite } from "./app-invite";
 import { Logo } from "./logo";
 import { SiteFooter } from "./site-footer";
@@ -307,13 +308,9 @@ export default function Home() {
       </div>
     </section>
 
-    {/* Три карточки — это заявка на тон, а не навигация: материалов пока нет.
-        Раньше у каждой стояло «Читать статью →» со ссылкой на `#journal`, то
-        есть на саму же секцию: три битые ссылки на первой странице сайта.
-        Ссылки сняты до появления раздела — вернуть их вместе со статьями,
-        которые пишет ночной конвейер (docs/seo-pipeline.md, раздел
-        «Глоссарий»). */}
-    <section className="journal" id="journal"><div className="section-top"><p className="kicker">Журнал <i /></p><div><h2>О теле —<br /><em>с уважением.</em></h2><p>Понятные материалы о еде, энергии и привычках, написанные без давления.</p></div></div><div className="articles"><article><span>ЗНАНИЯ · 6 МИН</span><h3>Почему регулярность важнее «идеального» рациона</h3></article><article><span>ПРАКТИКА · 4 МИН</span><h3>Как вернуть себе чувство голода и насыщения</h3></article><article><span>ВЗГЛЯД · 8 МИН</span><h3>Тело не обязано быть проектом по улучшению</h3></article></div></section>
+    {/* Витрина журнала: три первые статьи из lib/articles.ts. Карточки и
+        ссылки настоящие — раздел /blog существует, битых якорей больше нет. */}
+    <section className="journal" id="journal"><div className="section-top"><p className="kicker">Журнал <i /></p><div><h2>О теле —<br /><em>с уважением.</em></h2><p>Как устроен сервис и почему он считает именно так — без давления и обещаний «минус десять к лету».</p></div></div><div className="articles">{featuredArticles().map((article) => <article key={article.slug}><span>{article.kicker.toUpperCase()} · {article.minutes} МИН</span><h3>{article.titleShort}</h3><p>{article.description}</p><Link href={`/blog/${article.slug}`}>Читать статью →</Link></article>)}</div><p className="journal-all"><Link href="/blog">Все статьи журнала →</Link></p></section>
 
     {/* Крупный призыв — только здесь: в конце соглашения он был бы неуместен,
         поэтому живёт снаружи подвала, а не внутри него. */}

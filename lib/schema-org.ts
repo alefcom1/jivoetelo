@@ -165,6 +165,35 @@ export function definedTermJsonLd(input: {
 }
 
 /**
+ * Статья журнала. `BlogPosting`, а не голый `Article`: у нас именно блог
+ * сервиса, и этот тип поисковики понимают одинаково хорошо, а перепутать
+ * его с новостной статьёй сложнее. Автор — организация: тексты пишутся
+ * командой и вычитываются, персонального автора у них нет.
+ */
+export function blogPostingJsonLd(input: {
+  title: string;
+  description: string;
+  path: string;
+  published: string;
+  image?: string | null;
+}): JsonLd {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: input.title,
+    description: input.description,
+    url: absoluteUrl(input.path),
+    datePublished: input.published,
+    dateModified: input.published,
+    inLanguage: "ru",
+    ...(input.image ? { image: absoluteUrl(input.image) } : {}),
+    author: { "@id": absoluteUrl("/#organization") },
+    publisher: { "@id": absoluteUrl("/#organization") },
+    isPartOf: { "@type": "Blog", name: "Журнал «Живого Тела»", url: absoluteUrl("/blog") },
+  };
+}
+
+/**
  * Готовая строка для `dangerouslySetInnerHTML`.
  *
  * Экранируем `<` — иначе последовательность вроде `</script>` внутри строки

@@ -1,0 +1,320 @@
+/* Журнал: хаб и страницы статей.
+   Та же типографика, что у расчётов, — засечковые заголовки, спокойная
+   бумага, коралловый акцент, — но колонка текста шире карточной сетки,
+   а статьям нужны фигуры «во всю ширину»: скриншоты, графики, таблицы. */
+
+.blog-shell {
+  min-height: 100vh;
+  background: var(--white);
+}
+
+/* ===== Хаб ===== */
+
+.blog-hub {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 56px 24px 96px;
+}
+
+.blog-hub > .kicker { margin-bottom: 18px; }
+
+.blog-hub h1 {
+  margin: 0 0 16px;
+  font: 500 clamp(34px, 5vw, 58px) / 0.95 var(--serif);
+  letter-spacing: -0.05em;
+}
+
+.blog-hub-lead {
+  max-width: 640px;
+  margin: 0 0 48px;
+  color: #3d3f3a;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+/* Первая статья — во всю ширину, обложка рядом с текстом. */
+.blog-featured {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 0;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  text-decoration: none;
+  color: inherit;
+}
+
+.blog-featured:hover .blog-card-title { color: var(--coral); }
+
+.blog-featured-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 36px;
+}
+
+.blog-featured .blog-card-title {
+  margin: 0;
+  font: 500 clamp(26px, 3vw, 38px) / 1.05 var(--serif);
+  letter-spacing: -0.04em;
+}
+
+.blog-featured-copy p {
+  margin: 0;
+  color: #3d3f3a;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.blog-featured-hero { min-height: 260px; }
+.blog-featured-hero svg, .blog-featured-hero img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Остальные статьи — сетка 2×2 под главной карточкой. Ровно две колонки, а
+   не auto-fill: при четырёх статьях автосетка давала 3+1, и последняя
+   карточка висела одна в ряду рядом с пустой клеткой. */
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  margin-top: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+@media (max-width: 720px) {
+  .blog-grid { grid-template-columns: 1fr; }
+}
+
+.blog-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px;
+  background: var(--white);
+  text-decoration: none;
+  color: inherit;
+}
+
+.blog-card:hover .blog-card-title { color: var(--coral); }
+
+.blog-card-hero { margin: -26px -26px 4px; }
+.blog-card-hero svg, .blog-card-hero img {
+  display: block;
+  width: 100%;
+  height: 190px;
+  object-fit: cover;
+}
+
+.blog-card-title {
+  margin: 0;
+  font: 500 22px/1.15 var(--serif);
+  letter-spacing: -0.03em;
+}
+
+.blog-card p {
+  margin: 0;
+  color: #3d3f3a;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.blog-meta {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.blog-card .blog-meta { margin-top: auto; padding-top: 6px; }
+
+/* ===== Статья ===== */
+
+.blog-article {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 56px 24px 96px;
+}
+
+.blog-article > .kicker { margin-bottom: 18px; }
+
+.blog-article h1 {
+  max-width: 820px;
+  margin: 0 0 14px;
+  font: 500 clamp(30px, 4.6vw, 52px) / 1 var(--serif);
+  letter-spacing: -0.045em;
+}
+
+.blog-article-meta { margin: 0 0 28px; }
+
+.blog-article-lead {
+  max-width: 680px;
+  margin: 0 0 36px;
+  color: #3d3f3a;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.blog-article-hero { margin: 0 0 48px; border: 1px solid var(--line); }
+.blog-article-hero svg, .blog-article-hero img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Текст статьи — колонка 680px; фигуры и таблицы могут выходить шире. */
+.blog-article section { max-width: 680px; margin-top: 48px; }
+
+.blog-article section.blog-wide { max-width: 1080px; }
+
+.blog-article h2 {
+  margin: 0 0 16px;
+  font: 500 clamp(24px, 3vw, 32px) / 1.1 var(--serif);
+  letter-spacing: -0.035em;
+}
+
+.blog-article h3 {
+  margin: 24px 0 10px;
+  font: 500 21px var(--serif);
+  letter-spacing: -0.02em;
+}
+
+.blog-article p, .blog-article li {
+  color: #3d3f3a;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.blog-article p { margin: 0 0 16px; }
+.blog-article ul, .blog-article ol { margin: 0 0 16px; padding-left: 22px; }
+.blog-article li { margin-bottom: 8px; }
+.blog-article a { text-decoration: underline; text-underline-offset: 3px; }
+.blog-article a:hover { color: var(--coral); }
+
+/* Врезка-вывод: одна мысль, которую читатель должен унести. */
+.blog-callout {
+  margin: 24px 0;
+  padding: 18px 20px;
+  background: var(--lime);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.blog-callout p:last-child { margin-bottom: 0; }
+
+/* Фигуры: скриншоты и графики. */
+.blog-figure { margin: 28px 0; }
+.blog-figure figcaption {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Ряд телефонных экранов: на десктопе рядом, на телефоне столбиком. */
+.blog-phones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.blog-phones img,
+.blog-phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 18px 40px #2b2d2014;
+}
+
+.blog-phone { max-width: 300px; }
+
+.blog-screen img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 40px #2b2d2014;
+}
+
+/* Графики-SVG: рисуются во всю ширину колонки, подписи читаемы и в тёмной
+   таблице не нуждаются. */
+.blog-chart { border: 1px solid var(--line); background: var(--white); }
+.blog-chart svg { display: block; width: 100%; height: auto; }
+
+/* Сравнительная таблица: прокрутка внутри, страница без скролла. */
+.blog-compare-scroll { overflow-x: auto; }
+
+.blog-compare {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.blog-compare th, .blog-compare td {
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.blog-compare thead th {
+  background: var(--paper);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.blog-compare thead th:nth-child(2) { background: var(--black); color: var(--white); }
+.blog-compare tbody td:nth-child(2) { background: #f2f6e2; }
+
+.blog-compare .yes { color: #3e6b34; font-weight: 700; }
+.blog-compare .no { color: #b95353; font-weight: 700; }
+.blog-compare .part { color: #8a6d1f; font-weight: 700; }
+
+.blog-compare-note { margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+/* Читайте также + приглашение попробовать. */
+.blog-related { max-width: 1080px; margin-top: 72px; }
+.blog-related h2 { margin-bottom: 18px; }
+
+.blog-related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+
+.blog-cta {
+  max-width: 680px;
+  margin-top: 56px;
+  padding: 28px;
+  background: var(--black);
+  color: var(--white);
+}
+
+.blog-cta h2 { color: var(--white); }
+.blog-cta p { color: #bcbdb5; font-size: 14px; }
+.blog-cta .black-button { background: var(--coral); color: #201b18; }
+
+.blog-disclaimer { max-width: 680px; margin-top: 48px; }
+
+@media (max-width: 850px) {
+  .blog-hub, .blog-article { padding: 40px 20px 72px; }
+  .blog-featured { grid-template-columns: 1fr; }
+  .blog-featured-hero { order: -1; min-height: 180px; }
+  .blog-featured-copy { padding: 24px 20px; }
+  .blog-cta { padding: 22px 20px; }
+}

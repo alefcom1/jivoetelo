@@ -475,3 +475,22 @@ input[type=checkbox],input[type=radio]{width:24px;height:24px;flex:none;margin:0
   /* «пересчитывается» в 28px шире колонки сетки 44px+1fr+20px */
   .principles-list h3{font-size:22px}
 }
+
+/* Ссылка «Все статьи журнала» под карточками — как .tools-all у расчётов. */
+.journal-all{margin:28px 0 0;font-size:12px;font-weight:800}
+.journal-all a:hover{color:var(--coral)}
+
+/* Карточка журнала на главной. Раньше между рубрикой и заголовком стоял
+   отступ 58px под пустоту — карточки были без текста. Теперь у каждой есть
+   подводка, и воздух отдан ей. Карточка — колонка, ссылка прижата вниз,
+   чтобы «Читать статью» стояли на одной линии при разной длине подводок. */
+.articles article{display:flex;flex-direction:column}
+.articles h3{margin:26px 0 12px}
+.articles article>p{margin:0 0 22px;color:#5c5e57;font-size:13px;line-height:1.6}
+.articles article>a{margin-top:auto}
+
+/* Ссылки подвала: сама строка 21px, и при отступе 12px между ними палец
+   попадал сразу в две. Переносим воздух внутрь ссылки — расстояние между
+   строками на глаз то же, но каждая цель становится ~39px. */
+.footer-links div{gap:2px}
+.footer-links a{padding:9px 0}
