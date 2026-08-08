@@ -963,3 +963,68 @@ export const waterEntries = pgTable(
     index("water_entries_user_date").on(table.userId, table.onDate),
   ],
 );
+
+/**
+ * ## Каталог продуктов: длинный хвост
+ *
+ * Выверенный справочник на ~300 позиций живёт в коде (`lib/food-reference.ts`)
+ * и уезжает в клиентский бандл — оттуда мгновенный поиск без сети. Сюда
+ * попадает всё остальное: десятки тысяч позиций из внешних источников,
+ * которые в бандл не поместятся и ищутся на сервере.
+ *
+ * Ключевое отличие от справочника — **у каждой строки есть происхождение**.
+ * Импортированное число это гипотеза, а не факт: у чужих таблиц одно точное
+ * значение неизвестного качества, и взяв его как есть, мы унаследуем чужие
+ * ошибки. Поэтому здесь хранится, откуда строка взялась и трогали ли её
+ * люди, а поиск умеет предпочитать выверенное (docs/catalog-import.md).
+ */
+export const foodCatalog = pgTable(
+  "food_catalog",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name").notNull(),
+    /**
+     * Ключ для поиска: имя в нижнем регистре без ё и знаков препинания.
+     * Хранится колонкой, а не считается на лету, потому что по нему идёт
+     * поиск, а функциональный индекс по выражению с нашей нормализацией
+     * пришлось бы держать в двух местах — в SQL и в TypeScript.
+     */
+    searchKey: text("search_key").notNull(),
+    kcalPer100: doublePrecision("kcal_per_100").notNull(),
+    proteinPer100: doublePrecision("protein_per_100").notNull().default(0),
+    fatPer100: doublePrecision("fat_per_100").notNull().default(0),
+    carbsPer100: doublePrecision("carbs_per_100").notNull().default(0),
+    fiberPer100: doublePrecision("fiber_per_100").notNull().default(0),
+    /** Типичная порция, г. Ноль — «не знаем», тогда интерфейс берёт 100. */
+    portionG: doublePrecision("portion_g").notNull().default(0),
+    /**
+     * Откуда строка: `fic-tables` (таблицы ФИЦ питания, Скурихин–Тутельян),
+     * `health-diet`, `user`. От источника зависит подпись в интерфейсе:
+     * атрибуция первоисточника — условие, на котором мы этими данными
+     * пользуемся, а не украшение (lib/catalog-sources.ts).
+     */
+    source: text("source").notNull(),
+    /** Идентификатор на стороне источника — чтобы повторный импорт обновлял, а не плодил. */
+    sourceRef: text("source_ref"),
+    /**
+     * Сошлась ли калорийность с БЖУ по Атуотеру. `false` не выбрасывает
+     * строку, но убирает её из поиска: так видно объём проблемы и есть что
+     * чинить, а человек не получает заведомо кривое число.
+     */
+    verified: boolean("verified").notNull().default(false),
+    /**
+     * Сколько раз строку правили люди. Ноль отличает нетронутый импорт от
+     * выверенного использованием — тот же приём, что `confirmations`
+     * у штрихкодов.
+     */
+    corrections: integer("corrections").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // Повторный импорт находит строку по паре «источник + его идентификатор»
+    // и обновляет её. Без этого второй прогон удвоил бы каталог.
+    uniqueIndex("food_catalog_source_ref").on(table.source, table.sourceRef),
+    index("food_catalog_search").on(table.searchKey),
+  ],
+);
