@@ -57,26 +57,38 @@ import { dirname } from "node:path";
 let extractLinks, extractVerticalRecord, findNutritionTable, probePage;
 let robotsAllows, robotsDisallows, tableToRows, CATALOG_SOURCES, isCatalogSource;
 
-/** С этой версии Node исполняет TypeScript сам, без сборки. */
-const MIN_NODE_MAJOR = 22;
-const MIN_NODE_MINOR = 6;
-
-function checkNodeVersion() {
-  const [major, minor] = process.versions.node.split(".").map(Number);
-  if (major > MIN_NODE_MAJOR || (major === MIN_NODE_MAJOR && minor >= MIN_NODE_MINOR)) return;
-  console.error(`Node ${process.versions.node} не умеет исполнять TypeScript, а скрипт импортирует .ts-модули.`);
+/** Подсказка, когда среда не умеет исполнять TypeScript. */
+function explainNoTypeScript(script) {
+  console.error("Не удалось загрузить .ts-модули: эта среда не исполняет TypeScript.");
+  console.error(`Node здесь ${process.versions.node}; сам, без сборки, он умеет это с 22.6.`);
   console.error("");
   console.error("Два пути:");
-  console.error("  1. Запустить через tsx:  npx tsx scripts/collect-catalog.mjs ...");
-  console.error(`  2. Обновить Node до ${MIN_NODE_MAJOR}.${MIN_NODE_MINOR}+ (проекту всё равно нужен >=22.13).`);
+  console.error(`  1. Запустить через tsx:  npx --yes tsx scripts/${script} ...`);
+  console.error("  2. Обновить Node до 22.6+ (проекту всё равно нужен >=22.13).");
   process.exit(1);
 }
 
+/**
+ * Ошибка именно про «не умею .ts», а не про поломку внутри модуля.
+ * Различать обязательно: иначе настоящая ошибка в коде выдавалась бы за
+ * старый Node, и чинили бы не то.
+ */
+function isTypeScriptUnsupported(error) {
+  return error?.code === "ERR_UNKNOWN_FILE_EXTENSION"
+    || error?.code === "ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING"
+    || (error?.code === "ERR_MODULE_NOT_FOUND" && /\.ts/.test(error.message ?? ""));
+}
+
 async function loadModules() {
-  const scrape = await import("../lib/catalog-scrape.ts");
-  const sources = await import("../lib/catalog-sources.ts");
-  ({ extractLinks, extractVerticalRecord, findNutritionTable, probePage, robotsAllows, robotsDisallows, tableToRows } = scrape);
-  ({ CATALOG_SOURCES, isCatalogSource } = sources);
+  try {
+    const scrape = await import("../lib/catalog-scrape.ts");
+    const sources = await import("../lib/catalog-sources.ts");
+    ({ extractLinks, extractVerticalRecord, findNutritionTable, probePage, robotsAllows, robotsDisallows, tableToRows } = scrape);
+    ({ CATALOG_SOURCES, isCatalogSource } = sources);
+  } catch (error) {
+    if (isTypeScriptUnsupported(error)) explainNoTypeScript("collect-catalog.mjs");
+    throw error;
+  }
 }
 
 /**
@@ -362,7 +374,6 @@ async function runCollect(args) {
 }
 
 async function main() {
-  checkNodeVersion();
   await loadModules();
   const args = parseArgs(process.argv.slice(2));
   if (typeof args.probe === "string") return runProbe(args.probe);
