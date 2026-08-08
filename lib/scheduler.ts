@@ -41,6 +41,7 @@ import { dispatchDueReports, enqueueDueReports } from "./report-dispatch.ts";
 import { siteUrl } from "./site.ts";
 import { botToken, createTelegramClient, trySend } from "./telegram-api.ts";
 import { digestKeyboard } from "./bot/handle-update.ts";
+import { sendMissingYou } from "./bot/media.ts";
 import { botLinks, premiumButton } from "./bot/links.ts";
 
 const TICK_MS = 60_000;
@@ -163,7 +164,7 @@ export async function dispatchDueReminders(now: Date, limit = REMINDER_BATCH): P
 
   const db = getDb();
   const candidates = (await db.execute(sql`
-    SELECT u.id, u.telegram_user_id,
+    SELECT u.id, u.telegram_user_id, u.created_at,
            COALESCE(p.reminders_enabled, TRUE) AS reminders_enabled,
            COALESCE(p.digest_hour, 20) AS digest_hour,
            p.snoozed_until,
@@ -180,6 +181,7 @@ export async function dispatchDueReminders(now: Date, limit = REMINDER_BATCH): P
   `)) as unknown as Rows<{
     id: number;
     telegram_user_id: string;
+    created_at: string | Date;
     reminders_enabled: boolean;
     digest_hour: number;
     snoozed_until: Date | null;
@@ -206,6 +208,7 @@ export async function dispatchDueReminders(now: Date, limit = REMINDER_BATCH): P
         now,
         localDay: moment.day,
         localHour: moment.hour,
+        silentDays: silentDays(loggedDays, asDate(row.created_at), moment.day),
         remindersEnabled: row.reminders_enabled,
         digestHour: row.digest_hour,
         snoozedUntil: row.snoozed_until,
@@ -228,12 +231,18 @@ export async function dispatchDueReminders(now: Date, limit = REMINDER_BATCH): P
       `)) as unknown as Rows<{ user_id: number }>;
       if ((claimed.rows ?? []).length === 0) continue;
 
-      const ok = await trySend(client, row.telegram_user_id, plan.text, {
-        replyMarkup: digestKeyboard(links),
-        disablePreview: true,
-        // Тексты напоминаний размечены так же, как остальные ответы бота.
-        parseMode: "HTML",
-      });
+      /**
+       * Седьмой день тишины уходит картинкой — грустным Живело. Единственное
+       * сообщение с картинкой на всей лестнице; при отказе `sendMissingYou`
+       * сам отправит текст, и напоминание не потеряется.
+       */
+      const options = { replyMarkup: digestKeyboard(links), disablePreview: true, parseMode: "HTML" as const };
+      let ok = true;
+      if (plan.kind === "silence_week") {
+        await sendMissingYou(client, row.telegram_user_id, plan.text, options);
+      } else {
+        ok = await trySend(client, row.telegram_user_id, plan.text, options);
+      }
       if (ok) sent += 1;
       else failed += 1;
     } catch (error) {
@@ -432,6 +441,28 @@ const TRIAL_DATE = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "lo
  */
 function asDate(value: string | Date): Date {
   return value instanceof Date ? value : new Date(value);
+}
+
+/**
+ * Сколько дней подряд человек ничего не записывает, считая сегодняшний.
+ *
+ * Отсчёт от последнего дня с записями, а у того, кто не записал ни разу, — от
+ * дня регистрации. Это два разных человека: один забросил дневник, второй его
+ * ещё не начинал, и говорить им «ваши записи ждут» одинаково нельзя — у
+ * второго записей нет.
+ *
+ * `loggedDays` уже прочитаны выше для подсчёта серии, поэтому запроса не
+ * добавляется: считаем по тому же массиву.
+ */
+function silentDays(loggedDays: string[], createdAt: Date, today: string): number {
+  const last = loggedDays.filter((day) => day < today).sort().at(-1);
+  const from = last ?? createdAt.toISOString().slice(0, 10);
+  const days = Math.round(
+    (Date.parse(`${today}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000,
+  );
+  // Не меньше единицы: сюда попадают только те, у кого сегодня пусто, и
+  // «ноль дней тишины» при пустом дне — это не число, а сбой отсчёта.
+  return Math.max(1, days);
 }
 
 /**

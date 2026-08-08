@@ -9,8 +9,11 @@ import {
   normalizeDigestHour,
   photoDigestText,
   planReminder,
+  silenceNudge,
+  SILENCE_STEPS,
   snoozeUntil,
 } from "../lib/reminders.ts";
+import { htmlProblem } from "../lib/bot/markup.ts";
 
 const NOW = new Date("2026-07-28T17:05:00Z");
 
@@ -26,6 +29,10 @@ function context(overrides = {}) {
     lastReminderOn: null,
     pendingPhotosToday: 1,
     mealsToday: 0,
+    // Первый вечер без записей: лестница молчания начинается отсюда
+    // (lib/reminders.ts). День выбран умолчанием, потому что именно он
+    // сохраняет прежнее поведение — лёгкое «как прошёл день».
+    silentDays: 1,
     ...overrides,
   };
 }
@@ -149,6 +156,7 @@ test("к найденному поводу дописывается реплик
     lastReminderOn: null,
     pendingPhotosToday: 0,
     mealsToday: 0,
+    silentDays: 1,
   };
   // Серия оборвалась пару дней назад: енот берёт пропуск на себя и называет
   // накопленное. Ушедшему на две недели (mood «asleep») он ничего не говорит —
@@ -165,4 +173,80 @@ test("к найденному поводу дописывается реплик
   // А вернувшемуся через две недели — только обычный текст, без реплики.
   const longGone = computeStreak(["2026-03-01", "2026-03-02"], "2026-03-18");
   assert.equal(planReminder({ ...base, streak: longGone }).text, GENTLE_NUDGE_TEXT);
+});
+
+/**
+ * Лестница молчания.
+ *
+ * До неё пустой день получал одну и ту же строку каждый вечер — бесконечно.
+ * Проверяется здесь не «сообщение отправилось», а два свойства, ради которых
+ * лестница и написана: в промежуточные вечера бот молчит, и после
+ * четырнадцатого дня он молчит навсегда.
+ */
+
+test("бот пишет только на своих ступенях, а между ними молчит", () => {
+  const speaks = [];
+  for (let day = 1; day <= 40; day += 1) {
+    if (silenceNudge(day, 20)) speaks.push(day);
+  }
+  assert.deepEqual(speaks, [...SILENCE_STEPS], "лишний вечер — это шаг к кнопке «заблокировать»");
+});
+
+test("после прощания бот молчит навсегда", () => {
+  for (const day of [15, 21, 60, 365, 1000]) {
+    assert.equal(silenceNudge(day, 100), null, `${day}-й день тишины`);
+  }
+});
+
+test("первый вечер остаётся лёгким", () => {
+  // Один пропущенный день — это обычная жизнь, а не повод для драмы.
+  const plan = silenceNudge(1, 30);
+  assert.equal(plan.kind, "gentle_nudge");
+  assert.equal(plan.text, GENTLE_NUDGE_TEXT);
+});
+
+test("тоска — по человеку, а не оценка его еды", () => {
+  // Главное правило всей лестницы. Дневник питания читают люди, у которых с
+  // едой непростые отношения: «вы ничего не записали» такой человек прочтёт
+  // как «ты опять сорвался», если рядом окажется хоть одно слово о питании.
+  //
+  // Проверка на оценочные обороты, а не на отдельные слова: прощание обещает,
+  // что «замеры веса останутся на месте», и это разговор про сохранность
+  // данных, а не про килограммы. Запрет на слово «вес» такую фразу тоже бы
+  // поймал — и тогда следующий человек просто вычеркнул бы слово из теста.
+  for (const day of SILENCE_STEPS) {
+    const { text } = silenceNudge(day, 12);
+    assert.doesNotMatch(text, /сорв|переел|недоел|набрали|похуде|калори|диет|стыд|ленив/i, text);
+    assert.doesNotMatch(text, /вы не смогли|вы опять|снова не|как всегда|надо было|вы обещали/i, text);
+  }
+});
+
+test("право забросить признаётся вслух, а возврат всегда назван", () => {
+  const week = silenceNudge(7, 12);
+  assert.match(week.text, /ваше право/i, "без этого получается не грусть, а претензия");
+  assert.match(week.text, /фото/i, "у каждого сообщения должен быть выход в одно действие");
+
+  const farewell = silenceNudge(14, 12);
+  assert.match(farewell.text, /последнее/i, "прощание обязано назвать себя прощанием");
+  assert.match(farewell.text, /останутся на месте|никуда/i, "человек боится потерять записи");
+});
+
+test("тому, кто не записал ни разу, не обещают сохранённых записей", () => {
+  // «Ваши дни с записями ждут» человеку без единой записи — обещание,
+  // рассыпающееся на первой же фразе.
+  const empty = silenceNudge(7, 0);
+  assert.doesNotMatch(empty.text, /дней с записями|дня с записями|день с записями/);
+  assert.match(silenceNudge(7, 12).text, /12 дней с записями/);
+});
+
+test("картинка идёт ровно с одним сообщением", () => {
+  // Повторённая на каждом шаге, она превращается из жеста в приём.
+  const withCard = SILENCE_STEPS.filter((day) => silenceNudge(day, 5).kind === "silence_week");
+  assert.deepEqual(withCard, [7]);
+});
+
+test("разметка всех сообщений лестницы корректна", () => {
+  for (const day of SILENCE_STEPS) {
+    assert.equal(htmlProblem(silenceNudge(day, 3).text), null, `день ${day}`);
+  }
 });

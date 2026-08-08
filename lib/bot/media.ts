@@ -36,6 +36,17 @@ import { reportBotProblem } from "./health.ts";
 const WELCOME_FILE = "public/bot/welcome.jpg";
 
 /**
+ * Грустный Живело для седьмого дня тишины. Собирается тем же скриптом из
+ * public/mascot/sad.webp.
+ *
+ * Картинка ровно одна на всю лестницу молчания (lib/reminders.ts) и намеренно:
+ * повторённая на каждом шаге, она из редкого жеста превращается в приём, а
+ * приём читается как манипуляция — тем более в сообщении, которое и так про
+ * чувства.
+ */
+const MISSING_FILE = "public/bot/missing.jpg";
+
+/**
  * Сколько раз подряд можно провалиться, прежде чем перестать пробовать.
  * Разовый обрыв связи не должен выключать картинки до перезапуска, а
  * неподдерживаемый multipart не должен добавлять по одному медленному
@@ -43,41 +54,56 @@ const WELCOME_FILE = "public/bot/welcome.jpg";
  */
 const MAX_FAILURES = 3;
 
-let cachedFileId: string | null = null;
-let cachedBytes: Buffer | null = null;
-let failures = 0;
+/**
+ * Состояние на каждую картинку своё. Общее было бы ошибкой: три неудачи
+ * приветствия выключили бы заодно и картинку в напоминании, хотя причина у
+ * них может быть разной, — а `file_id` у Telegram и вовсе свой на файл.
+ */
+type CardState = { fileId: string | null; bytes: Buffer | null; failures: number };
+
+const cards = new Map<string, CardState>();
+
+function stateFor(file: string): CardState {
+  let state = cards.get(file);
+  if (!state) {
+    state = { fileId: null, bytes: null, failures: 0 };
+    cards.set(file, state);
+  }
+  return state;
+}
 
 /** Для тестов: вернуть модуль в исходное состояние. */
 export function resetWelcomeCard(): void {
-  cachedFileId = null;
-  cachedBytes = null;
-  failures = 0;
+  cards.clear();
 }
 
-async function welcomeBytes(): Promise<Buffer | null> {
-  if (cachedBytes) return cachedBytes;
+async function cardBytes(file: string, state: CardState): Promise<Buffer | null> {
+  if (state.bytes) return state.bytes;
   try {
-    cachedBytes = await readFile(resolve(process.cwd(), WELCOME_FILE));
-    return cachedBytes;
+    state.bytes = await readFile(resolve(process.cwd(), file));
+    return state.bytes;
   } catch (error) {
-    console.warn(`[bot] картинка ${WELCOME_FILE} не читается: ${error instanceof Error ? error.message : error}`);
+    console.warn(`[bot] картинка ${file} не читается: ${error instanceof Error ? error.message : error}`);
     return null;
   }
 }
 
 /**
- * Отправляет приветствие картинкой с подписью. Возвращает `false`, если
- * картинку отправить не удалось, — тогда вызывающий шлёт обычный текст.
+ * Отправляет картинку с подписью. Возвращает `false`, если не удалось, —
+ * тогда вызывающий шлёт обычный текст.
  *
- * Никогда не бросает: приветствие — не то, ради чего стоит терять апдейт.
+ * Никогда не бросает: ни приветствие, ни напоминание не стоят потерянного
+ * апдейта.
  */
-export async function sendWelcomeCard(
+async function sendCard(
+  file: string,
   client: TelegramClient,
   chatId: number | string,
   caption: string,
   options?: SendMessageOptions,
 ): Promise<boolean> {
-  if (failures >= MAX_FAILURES) return false;
+  const state = stateFor(file);
+  if (state.failures >= MAX_FAILURES) return false;
 
   // Человек заблокировал бота — картинка ни при чём, и записывать это в
   // отказы нельзя: три таких подряд выключили бы картинки для всех.
@@ -89,47 +115,72 @@ export async function sendWelcomeCard(
   // логе. Ровно это и искали два дня.
   const blocked = (error: unknown) => error instanceof TelegramApiError && error.isBlockedByUser;
 
-  if (cachedFileId) {
+  if (state.fileId) {
     try {
-      await client.sendPhoto(chatId, { fileId: cachedFileId }, caption, options);
+      await client.sendPhoto(chatId, { fileId: state.fileId }, caption, options);
       return true;
     } catch (error) {
       if (blocked(error)) return true;
       // Идентификатор мог протухнуть — пробуем залить заново, но один раз.
-      cachedFileId = null;
+      state.fileId = null;
     }
   }
 
-  const bytes = await welcomeBytes();
+  const bytes = await cardBytes(file, state);
   if (!bytes) {
-    failures = MAX_FAILURES;
-    reportBotProblem(`картинка ${WELCOME_FILE} не читается — приветствие уходит текстом`);
+    state.failures = MAX_FAILURES;
+    reportBotProblem(`картинка ${file} не читается — сообщение уходит текстом`);
     return false;
   }
 
   try {
     const fileId = await client.sendPhoto(
       chatId,
-      { bytes, filename: "welcome.jpg", mime: "image/jpeg" },
+      { bytes, filename: file.split("/").at(-1) ?? "card.jpg", mime: "image/jpeg" },
       caption,
       options,
     );
-    if (fileId) cachedFileId = fileId;
-    failures = 0;
+    if (fileId) state.fileId = fileId;
+    state.failures = 0;
     return true;
   } catch (error) {
     if (blocked(error)) return true;
-    failures += 1;
+    state.failures += 1;
     const message = error instanceof Error ? error.message : String(error);
-    console.warn(`[bot] картинку отправить не удалось (${failures}/${MAX_FAILURES}): ${message}`);
+    console.warn(`[bot] картинку ${file} отправить не удалось (${state.failures}/${MAX_FAILURES}): ${message}`);
     // И в диагностику тоже: до этой строки единственным следом была консоль
     // контейнера, а до неё в разборе так ни разу и не добрались.
-    reportBotProblem(`картинка приветствия не отправилась (${failures}/${MAX_FAILURES}): ${message}`);
-    if (failures >= MAX_FAILURES) {
-      console.warn("[bot] дальше приветствие уходит текстом. Обычно причина — прокси не пропускает multipart.");
+    reportBotProblem(`картинка не отправилась (${state.failures}/${MAX_FAILURES}): ${message}`);
+    if (state.failures >= MAX_FAILURES) {
+      console.warn("[bot] дальше сообщение уходит текстом. Обычно причина — прокси не пропускает multipart.");
     }
     return false;
   }
+}
+
+export function sendWelcomeCard(
+  client: TelegramClient,
+  chatId: number | string,
+  caption: string,
+  options?: SendMessageOptions,
+): Promise<boolean> {
+  return sendCard(WELCOME_FILE, client, chatId, caption, options);
+}
+
+/**
+ * Седьмой день тишины — грустный Живело с подписью.
+ *
+ * Как и приветствие: не получилось картинкой — уходит текстом. Напоминание
+ * без картинки остаётся напоминанием, а вот молчание вместо него — нет.
+ */
+export async function sendMissingYou(
+  client: TelegramClient,
+  chatId: number | string,
+  text: string,
+  options?: SendMessageOptions,
+): Promise<void> {
+  if (await sendCard(MISSING_FILE, client, chatId, text, options)) return;
+  await trySend(client, chatId, text, options);
 }
 
 /**

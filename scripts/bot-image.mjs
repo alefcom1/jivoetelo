@@ -81,3 +81,34 @@ await sharp({
 
 const { size } = await sharp(OUT).metadata();
 console.log(`  ok   ${OUT} — ${canvasW}×${canvasH}, ${Math.round((size ?? 0) / 1024)} КБ`);
+
+/**
+ * Вторая карточка: грустный Живело для седьмого дня тишины
+ * (lib/reminders.ts, лестница молчания).
+ *
+ * Собирается здесь же, а не отдельным скриптом: обе картинки бота — это одна
+ * задача «пересобрать то, что бот показывает», и две команды вместо одной
+ * означают, что однажды выполнят только первую.
+ *
+ * Фон — фирменная бумага, а не чёрный: приветствие показывает экран
+ * приложения и требует контраста, а тут персонаж, и тёмная плашка делает из
+ * грусти траур.
+ */
+const MASCOT = resolve(root, "public/mascot/sad.webp");
+const MISSING_OUT = resolve(root, "public/bot/missing.jpg");
+const PAPER = { r: 0xf4, g: 0xf1, b: 0xea };
+/** Квадрат: Telegram показывает подпись под фото, и высокая картинка съедает
+ * экран целиком — а текст здесь важнее картинки. */
+const MISSING_SIDE = 640;
+
+const mascot = await sharp(MASCOT)
+  .resize({ width: Math.round(MISSING_SIDE * 0.62) })
+  .toBuffer();
+
+await sharp({ create: { width: MISSING_SIDE, height: MISSING_SIDE, channels: 3, background: PAPER } })
+  .composite([{ input: mascot, gravity: "center" }])
+  .jpeg({ quality: 86, progressive: true, mozjpeg: true })
+  .toFile(MISSING_OUT);
+
+const missing = await sharp(MISSING_OUT).metadata();
+console.log(`  ok   ${MISSING_OUT} — ${MISSING_SIDE}×${MISSING_SIDE}, ${Math.round((missing.size ?? 0) / 1024)} КБ`);
